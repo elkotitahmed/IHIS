@@ -39,9 +39,10 @@ class AIClinicalAssistant:
                            'primary': d.is_primary}
                           for d in diagnoses],
             'active_prescriptions': [
-                {'medication': p.medication.generic_name if p.medication else '-',
-                 'dosage': p.dosage, 'frequency': p.frequency, 'status': p.status}
-                for p in prescriptions if p.status == 'Active'],
+                {'medication': i.medication.generic_name if i.medication else '-',
+                 'dosage': i.dosage, 'frequency': i.frequency, 'status': i.status}
+                for p in prescriptions if p.status == 'Active'
+                for i in p.items],
             'record_count': len(records),
             'last_visit': records[0].visit_date.strftime('%Y-%m-%d') if records else 'None',
         }
@@ -107,17 +108,22 @@ class AIPrescriptionChecker:
         if not rx:
             return {'error': 'Prescription not found'}
         issues = []
-        if not rx.dosage:
-            issues.append({'level': 'warning', 'item': 'Missing dosage'})
-        if not rx.frequency:
-            issues.append({'level': 'warning', 'item': 'Missing frequency'})
-        if not rx.instructions:
+        meds = []
+        for i in rx.items:
+            meds.append(i.medication.generic_name if i.medication else '-')
+            if not i.dosage:
+                issues.append({'level': 'warning',
+                               'item': f"Missing dosage for {i.medication.generic_name if i.medication else 'item'}"})
+            if not i.frequency:
+                issues.append({'level': 'warning',
+                               'item': f"Missing frequency for {i.medication.generic_name if i.medication else 'item'}"})
+            if i.medication and i.medication.contraindications:
+                issues.append({'level': 'info',
+                               'item': f"Contraindications for {i.medication.generic_name}: {i.medication.contraindications}"})
+        if not rx.items:
             issues.append({'level': 'low', 'item': 'No administration instructions'})
-        if rx.medication and rx.medication.contraindications:
-            issues.append({'level': 'info',
-                           'item': f"Contraindications: {rx.medication.contraindications}"})
         return {
-            'medication': rx.medication.generic_name if rx.medication else '-',
+            'medications': meds,
             'status': rx.status,
             'issues': issues,
             'ok': not any(i['level'] == 'warning' for i in issues),
@@ -337,21 +343,40 @@ class AIRehabilitationAssistant:
         plan = TherapyPlan.query.filter_by(patient_id=patient_id,
                                            status='Active').first()
         item_ids = []
+        plan_category = None
         if plan:
             item_ids = [e.library_item_id for e in plan.exercises
                         if e.library_item_id]
-        cat = None
-        if plan:
-            cat = plan.title
+            plan_category = plan.title
+        # Prefer exercises already part of the active plan, then round out with
+        # exercises matching the plan's category, and finally general presets.
         items = ExerciseLibraryItem.query.all()
-        recommendations = items[:4]
+        items_by_id = {i.id: i for i in items}
+        chosen = []
+        seen = set()
+        def _add(ids):
+            added = False
+            for id_ in ids:
+                ex = items_by_id.get(id_)
+                if ex and id_ not in seen:
+                    chosen.append(ex)
+                    seen.add(id_)
+                    added = True
+            return added
+        _add(item_ids)
+        if plan_category:
+            _add([i.id for i in items if (i.category or '').lower() in
+                  plan_category.lower() and i.id not in seen][:6])
+        if len(chosen) < 4:
+            _add([i.id for i in items if i.id not in seen][: (4 - len(chosen)) * 2])
         return {
             'plan': plan.title if plan else 'No active plan',
             'recommended': [
                 {'name': ex.name, 'category': ex.category,
                  'reps': ex.repetitions, 'duration_s': ex.duration_seconds}
-                for ex in recommendations],
-            'note': 'Exercise suggestions based on active rehabilitation plan.',
+                for ex in chosen[:6]],
+            'note': ('Exercise suggestions based on the active rehabilitation '
+                     'plan and plan category.'),
         }
 
     def predict_recovery(self, patient_id):

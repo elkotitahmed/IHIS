@@ -241,12 +241,16 @@ def main():
                                      is_primary=True, date_diagnosed=visit))
 
             demo_prescription = Prescription(patient_id=demo_patient.id, doctor_id=demo_doctor.id,
-                                             medication_id=Medication.query.filter_by(generic_name='Metformin').first().id,
-                                             dosage='500 mg', frequency='Twice daily', duration='30 days',
-                                             instructions='Take after meals. Monitor blood glucose regularly.',
                                              refills=2, status='Active', prescribed_date=visit)
             db.session.add(demo_prescription)
             db.session.flush()
+            db.session.add(PrescriptionItem(
+                prescription_id=demo_prescription.id,
+                medication_id=Medication.query.filter_by(generic_name='Metformin').first().id,
+                dosage='500 mg', frequency='Twice daily', duration='30 days',
+                instructions='Take after meals. Monitor blood glucose regularly.',
+                quantity=1, status='Active',
+            ))
 
             hba1c = LabTestCatalog.query.filter_by(test_name='HbA1c').first()
             if hba1c:

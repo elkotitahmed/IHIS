@@ -164,11 +164,19 @@ def medical_record_pdf(patient_name, doctor_name, record, diagnoses, prescriptio
         if prescriptions:
             story.append(Spacer(1, 10))
             story.append(Paragraph("Prescriptions", h2))
+            rows = []
+            for p in prescriptions:
+                if p.items:
+                    for i in p.items:
+                        rows.append([
+                            (i.medication.generic_name if i.medication else "-"),
+                            i.dosage or "-", i.frequency or "-",
+                            i.duration or "-", p.status])
+                else:
+                    rows.append(["-", "-", "-", "-", p.status])
             story.append(_table(
                 ["Medication", "Dosage", "Frequency", "Duration", "Status"],
-                [[(p.medication.generic_name if p.medication else "-"),
-                  p.dosage or "-", p.frequency or "-", p.duration or "-", p.status]
-                 for p in prescriptions],
+                rows,
                 col_widths=[40 * mm] + [27.5 * mm] * 4,
             ))
     return _build(build, "Medical Record Report")
@@ -228,21 +236,25 @@ def prescription_pdf(prescription):
     """Printable prescription."""
     def build(story, h2, body, small):
         story.append(Paragraph("Prescription", h2))
-        med = prescription.medication
         story.append(_keyvalue([
             ("Patient", prescription.patient.user.full_name if prescription.patient else "-"),
             ("Prescribed By", prescription.doctor.user.full_name if prescription.doctor and prescription.doctor.user else "-"),
-            ("Medication", (med.generic_name + (f" ({med.brand_name})" if med.brand_name else "")) if med else "-"),
-            ("Dosage", prescription.dosage or "-"),
-            ("Frequency", prescription.frequency or "-"),
-            ("Duration", prescription.duration or "-"),
             ("Refills", prescription.refills or 0),
             ("Status", prescription.status),
             ("Date", prescription.prescribed_date.strftime("%Y-%m-%d") if prescription.prescribed_date else "-"),
         ]))
+        if prescription.items:
+            story.append(Spacer(1, 10))
+            story.append(_table(
+                ["Medication", "Dosage", "Frequency", "Duration", "Qty"],
+                [[(i.medication.generic_name + (f" ({i.medication.brand_name})" if i.medication.brand_name else "")) if i.medication else "-",
+                  i.dosage or "-", i.frequency or "-", i.duration or "-", i.quantity or 1]
+                 for i in prescription.items],
+                col_widths=[45 * mm, 28 * mm, 30 * mm, 25 * mm, 15 * mm],
+            ))
         story.append(Spacer(1, 10))
         story.append(Paragraph("Instructions", h2))
-        story.append(Paragraph(_wrap(prescription.instructions) or "-", body))
+        story.append(Paragraph(_wrap(prescription.items[0].instructions) if prescription.items and prescription.items[0].instructions else "-", body))
     return _build(build, "Prescription")
 
 

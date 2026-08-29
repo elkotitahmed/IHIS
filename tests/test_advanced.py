@@ -5,7 +5,7 @@ import unittest
 from app import create_app, db
 from app.models import (
     User, Role, Patient, Doctor, Specialty, Medication, MedicalRecord,
-    Prescription, LabTestCatalog, LabOrder, LabResult, ImagingType,
+    Prescription, PrescriptionItem, LabTestCatalog, LabOrder, LabResult, ImagingType,
     RadiologyOrder, RadiologyReport, Referral, CareTeamMember,
     MultidisciplinaryCase, LoginAttempt,
 )
@@ -152,9 +152,11 @@ class AdvancedTestCase(unittest.TestCase):
                                diagnosis='Hypertension', treatment_plan='Medication')
         db.session.add(record)
         db.session.commit()
-        rx = Prescription(patient_id=self.patient.id, doctor_id=doc.id, medication_id=med.id,
-                          dosage='500mg', frequency='twice daily', status='Active')
+        rx = Prescription(patient_id=self.patient.id, doctor_id=doc.id, status='Active')
         db.session.add(rx)
+        db.session.flush()
+        db.session.add(PrescriptionItem(prescription_id=rx.id, medication_id=med.id,
+                                        dosage='500mg', frequency='twice daily', status='Active'))
         db.session.commit()
         test = LabTestCatalog(test_name='CBC', normal_range='4-11', unit='x10^9/L')
         db.session.add(test)
@@ -267,8 +269,9 @@ class AdvancedTestCase(unittest.TestCase):
         # doctor can
         self._login(self.doc.email)
         r = self.client.post('/api/prescriptions', json={
-            'patient_id': self.patient.id, 'medication_id': med.id,
-            'dosage': '400mg', 'frequency': 'once daily', 'duration': '5 days'})
+            'patient_id': self.patient.id,
+            'items': [{'medication_id': med.id, 'dosage': '400mg',
+                       'frequency': 'once daily', 'duration': '5 days', 'quantity': 1}]})
         self.assertEqual(r.status_code, 201)
         self.assertEqual(Prescription.query.count(), 1)
 

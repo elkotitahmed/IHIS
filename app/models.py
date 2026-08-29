@@ -207,19 +207,38 @@ class Prescription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id', ondelete='CASCADE'), nullable=False)
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id', ondelete='SET NULL'))
-    medication_id = db.Column(db.Integer, db.ForeignKey('medications.id'))
-    dosage = db.Column(db.String(100))
-    frequency = db.Column(db.String(100))
-    duration = db.Column(db.String(100))
-    instructions = db.Column(db.Text)
-    refills = db.Column(db.Integer, default=0)
     status = db.Column(db.String(50), default='Active')  # Active / Dispensed / Completed / Cancelled
+    refills = db.Column(db.Integer, default=0)
     prescribed_date = db.Column(db.DateTime, default=datetime.utcnow)
     digital_signature = db.Column(db.Text)
 
     patient = db.relationship('Patient', backref=db.backref('prescriptions', lazy=True))
     doctor = db.relationship('Doctor', backref=db.backref('prescriptions', lazy=True))
-    medication = db.relationship('Medication', backref=db.backref('prescriptions', lazy=True))
+    items = db.relationship('PrescriptionItem', backref='prescription', lazy=True,
+                            cascade='all, delete-orphan',
+                            order_by='PrescriptionItem.id')
+
+    def dispensed(self):
+        return all(i.status == 'Dispensed' for i in self.items) if self.items else False
+
+    def total_items(self):
+        return len(self.items)
+
+
+class PrescriptionItem(db.Model):
+    __tablename__ = 'prescription_items'
+    id = db.Column(db.Integer, primary_key=True)
+    prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id', ondelete='CASCADE'),
+                                nullable=False)
+    medication_id = db.Column(db.Integer, db.ForeignKey('medications.id'), nullable=False)
+    dosage = db.Column(db.String(100))
+    frequency = db.Column(db.String(100))
+    duration = db.Column(db.String(100))
+    instructions = db.Column(db.Text)
+    quantity = db.Column(db.Integer, default=1)
+    status = db.Column(db.String(50), default='Active')  # Active / Dispensed / Cancelled
+
+    medication = db.relationship('Medication', backref=db.backref('prescription_items', lazy=True))
 
 
 class Appointment(db.Model):
@@ -348,11 +367,13 @@ class DispensingRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id', ondelete='CASCADE'),
                                 nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('prescription_items.id', ondelete='SET NULL'))
     pharmacist_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     quantity = db.Column(db.Integer, default=0)
     dispensed_at = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
     prescription = db.relationship('Prescription', backref=db.backref('dispensing_records', lazy=True))
+    item = db.relationship('PrescriptionItem', backref=db.backref('dispensing_records', lazy=True))
 
 
 class DrugInteraction(db.Model):

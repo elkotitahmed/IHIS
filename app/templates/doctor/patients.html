@@ -43,8 +43,11 @@
                             <td>{{ p.date_of_birth.strftime('%Y-%m-%d') if p.date_of_birth else 'N/A' }}</td>
                             <td>{{ p.gender or 'N/A' }}</td>
                             <td class="text-center">
+                                <a href="{{ url_for('doctor.patient_overview', patient_id=p.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-user-gear me-1"></i>Overview
+                                </a>
                                 <a href="{{ url_for('doctor.patient_detail', patient_id=p.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-file-medical me-1"></i>View Record
+                                    <i class="fas fa-file-medical me-1"></i>Record
                                 </a>
                             </td>
                         </tr>

@@ -174,14 +174,15 @@ def medication_schedule():
     for rec in records:
         patient = Patient.query.get(rec.patient_id)
         prescription = Prescription.query.get(rec.prescription_id) if rec.prescription_id else None
-        medication = prescription.medication if prescription else None
+        line = prescription.items[0] if prescription and prescription.items else None
+        medication = line.medication if line else None
         nurse = User.query.get(rec.nurse_id) if rec.nurse_id else None
         items.append({
             'record': rec,
             'patient': patient,
             'medication_name': medication.generic_name if medication else 'N/A',
-            'dosage': prescription.dosage if prescription else None,
-            'frequency': prescription.frequency if prescription else None,
+            'dosage': line.dosage if line else None,
+            'frequency': line.frequency if line else None,
             'nurse_name': nurse.full_name if nurse else 'N/A',
         })
     return render_template('nursing/med_schedule.html', title='Medication Schedule',

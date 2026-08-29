@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, g, session, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -98,15 +98,9 @@ def register_context_processors(app):
         from flask_login import current_user
         if not current_user.is_authenticated:
             return []
-        ut = current_user.user_type
-        if ut == 'admin':
-            return [
-                {'label': 'Patients', 'url': '/admin/patients', 'icon': 'fa-users'},
-                {'label': 'Dashboard', 'url': '/admin/dashboard', 'icon': 'fa-chart-line'},
-            ]
         items = []
-        if current_user.has_any_role('Patient') or ut == 'patient':
-            items = [
+        if current_user.has_any_role('Patient') or current_user.user_type == 'patient':
+            items += [
                 {'label': 'Medical History', 'url': '/patient/medical-history', 'icon': 'fa-history'},
                 {'label': 'Appointments', 'url': '/patient/appointments', 'icon': 'fa-calendar-check'},
                 {'label': 'Prescriptions', 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
@@ -115,42 +109,39 @@ def register_context_processors(app):
                 {'label': 'Documents', 'url': '/patient/documents', 'icon': 'fa-folder-open'},
                 {'label': 'Messages', 'url': '/patient/messages', 'icon': 'fa-envelope'},
             ]
-        if current_user.has_any_role('Doctor') or ut == 'doctor':
-            items = [
+        if current_user.has_any_role('Doctor'):
+            items += [
                 {'label': 'Patients', 'url': '/doctor/patients', 'icon': 'fa-user-md'},
                 {'label': 'Appointments', 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
                 {'label': 'Lab Results', 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
             ]
         if current_user.has_any_role('LabTechnician'):
-            items = [
+            items += [
                 {'label': 'Lab Orders', 'url': '/lab/orders', 'icon': 'fa-flask'},
                 {'label': 'Test Catalog', 'url': '/lab/catalog', 'icon': 'fa-book'},
             ]
         if current_user.has_any_role('Radiologist'):
-            items = [
-                {'label': 'Radiology Orders', 'url': '/radiology/orders', 'icon': 'fa-x-ray'},
-            ]
+            items += [{'label': 'Radiology Orders', 'url': '/radiology/orders', 'icon': 'fa-x-ray'}]
         if current_user.has_any_role('Pharmacist'):
-            items = [
-                {'label': 'Dashboard', 'url': '/pharmacy/dashboard', 'icon': 'fa-pills'},
-            ]
+            items += [{'label': 'Dashboard', 'url': '/pharmacy/dashboard', 'icon': 'fa-pills'}]
         if current_user.has_any_role('Nurse'):
-            items = [
-                {'label': 'Dashboard', 'url': '/nursing/dashboard', 'icon': 'fa-stethoscope'},
-            ]
+            items += [{'label': 'Dashboard', 'url': '/nursing/dashboard', 'icon': 'fa-stethoscope'}]
         if current_user.has_any_role('Receptionist'):
-            items = [
-                {'label': 'Dashboard', 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'},
-            ]
+            items += [{'label': 'Dashboard', 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'}]
         if current_user.has_any_role('Dentist'):
-            items = [
-                {'label': 'Dashboard', 'url': '/dentistry/dashboard', 'icon': 'fa-tooth'},
-            ]
+            items += [{'label': 'Dashboard', 'url': '/dentistry/dashboard', 'icon': 'fa-tooth'}]
         if current_user.has_any_role('Physiotherapist'):
-            items = [
-                {'label': 'Dashboard', 'url': '/physiotherapy/dashboard', 'icon': 'fa-person-walking'},
-            ]
-        return items
+            items += [{'label': 'Dashboard', 'url': '/physiotherapy/dashboard', 'icon': 'fa-person-walking'}]
+        # Admin / SuperAdmin additions are handled by the dashboard main card,
+        # so keep the sidebar portal-focused and merge by endpoint (dedupe).
+        seen = set()
+        merged = []
+        for item in items:
+            if item['url'] in seen:
+                continue
+            seen.add(item['url'])
+            merged.append(item)
+        return merged
 
     app.context_processor(lambda: {'current_user_menus': menus})
 
@@ -163,3 +154,12 @@ def register_context_processors(app):
             user_id=current_user.id, is_read=False).count()
 
     app.context_processor(lambda: {'unread_notifications': unread_count()})
+
+    @app.before_request
+    def set_language():
+        lang = request.args.get('lang')
+        if lang in ('en', 'ar'):
+            session['lang'] = lang
+        g.lang = session.get('lang', 'en')
+
+    app.context_processor(lambda: {'g': g})

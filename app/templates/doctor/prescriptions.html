@@ -15,41 +15,46 @@
                 <form method="POST" action="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <div class="mb-3">
-                        <label for="medication_id" class="form-label">Medication</label>
-                        <select class="form-select" id="medication_id" name="medication_id" required>
-                            <option value="" selected disabled>Select medication...</option>
-                            {% if meds %}
-                                {% for m in meds %}
-                                <option value="{{ m.id }}">{{ m.name }} ({{ m.dosage_form or '' }})</option>
-                                {% endfor %}
-                            {% endif %}
-                        </select>
+                    <div class="mb-2 d-flex justify-content-between align-items-center">
+                        <label class="form-label mb-0">Medication Lines</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="addMedLine"><i class="fas fa-plus me-1"></i>Add line</button>
+                    </div>
+
+                    <div id="medLines">
+                        <div class="med-line border rounded p-2 mb-2">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <select class="form-select form-select-sm" name="medication_id" required>
+                                        <option value="" selected disabled>Select medication...</option>
+                                        {% if meds %}
+                                            {% for m in meds %}
+                                            <option value="{{ m.id }}">{{ m.name }} ({{ m.dosage_form or '' }})</option>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <input type="text" class="form-control form-control-sm" name="dosage" placeholder="Dosage (500mg)">
+                                </div>
+                                <div class="col-4">
+                                    <input type="text" class="form-control form-control-sm" name="frequency" placeholder="Frequency">
+                                </div>
+                                <div class="col-4">
+                                    <input type="text" class="form-control form-control-sm" name="duration" placeholder="Duration">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" class="form-control form-control-sm" name="quantity" min="1" value="1" placeholder="Qty">
+                                </div>
+                                <div class="col-8">
+                                    <input type="text" class="form-control form-control-sm" name="instructions" placeholder="Instructions">
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="dosage" class="form-label">Dosage</label>
-                        <input type="text" class="form-control" id="dosage" name="dosage" required placeholder="e.g. 500mg">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="frequency" class="form-label">Frequency</label>
-                        <input type="text" class="form-control" id="frequency" name="frequency" required placeholder="e.g. Twice daily">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="duration" class="form-label">Duration</label>
-                        <input type="text" class="form-control" id="duration" name="duration" placeholder="e.g. 7 days">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="instructions" class="form-label">Instructions</label>
-                        <textarea class="form-control" id="instructions" name="instructions" rows="3" placeholder="Special instructions..."></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="refills" class="form-label">Refills</label>
-                        <input type="number" class="form-control" id="refills" name="refills" min="0" value="0">
+                        <label class="form-label">Refills</label>
+                        <input type="number" class="form-control" name="refills" min="0" value="0">
                     </div>
 
                     <button type="submit" class="btn btn-success w-100"><i class="fas fa-prescription me-1"></i>Add Prescription</button>
@@ -59,11 +64,15 @@
     </div>
 
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">Existing Prescriptions</h5>
-            </div>
-            <div class="card-body p-0">
+        {% if items %}
+            {% for rx in items %}
+            <div class="card card-shadow mb-3">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Rx #{{ rx.id }}
+                        <span class="text-muted fw-normal ms-1">{{ rx.prescribed_date.strftime('%Y-%m-%d') if rx.prescribed_date else '' }}</span>
+                    </span>
+                    <span class="badge {% if rx.status == 'Dispensed' %}bg-success{% elif rx.status == 'Cancelled' %}bg-secondary{% else %}bg-info{% endif %}">{{ rx.status }}</span>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
@@ -72,30 +81,59 @@
                                 <th>Dosage</th>
                                 <th>Frequency</th>
                                 <th>Duration</th>
-                                <th>Refills</th>
-                                <th>Date</th>
+                                <th>Qty</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if items %}
-                                {% for rx in items %}
-                                <tr>
-                                    <td>{{ rx.medication.name if rx.medication else 'N/A' }}</td>
-                                    <td>{{ rx.dosage or '-' }}</td>
-                                    <td>{{ rx.frequency or '-' }}</td>
-                                    <td>{{ rx.duration or '-' }}</td>
-                                    <td><span class="badge bg-info">{{ rx.refills or 0 }}</span></td>
-                                    <td>{{ rx.created_at.strftime('%Y-%m-%d') if rx.created_at else 'N/A' }}</td>
-                                </tr>
-                                {% endfor %}
+                            {% for li in rx.items %}
+                            <tr>
+                                <td>{{ li.medication.name if li.medication else 'N/A' }}</td>
+                                <td>{{ li.dosage or '-' }}</td>
+                                <td>{{ li.frequency or '-' }}</td>
+                                <td>{{ li.duration or '-' }}</td>
+                                <td>{{ li.quantity or 1 }}</td>
+                            </tr>
                             {% else %}
-                                <tr><td colspan="6" class="text-center text-muted py-4">No prescriptions found.</td></tr>
-                            {% endif %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No items.</td></tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
+            {% endfor %}
+        {% else %}
+            <div class="card card-shadow">
+                <div class="card-body text-center text-muted py-5">No prescriptions yet. Use the form to add one.</div>
+            </div>
+        {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const medLineTmpl = `
+<div class="med-line border rounded p-2 mb-2">
+    <div class="row g-2">
+        <div class="col-12">
+            <select class="form-select form-select-sm" name="medication_id" required>
+                <option value="" selected disabled>Select medication...</option>
+                {% if meds %}{% for m in meds %}<option value="{{ m.id }}">{{ m.name }} ({{ m.dosage_form or '' }})</option>{% endfor %}{% endif %}
+            </select>
+        </div>
+        <div class="col-4"><input type="text" class="form-control form-control-sm" name="dosage" placeholder="Dosage (500mg)"></div>
+        <div class="col-4"><input type="text" class="form-control form-control-sm" name="frequency" placeholder="Frequency"></div>
+        <div class="col-4"><input type="text" class="form-control form-control-sm" name="duration" placeholder="Duration"></div>
+        <div class="col-4"><input type="number" class="form-control form-control-sm" name="quantity" min="1" value="1" placeholder="Qty"></div>
+        <div class="col-8"><input type="text" class="form-control form-control-sm" name="instructions" placeholder="Instructions"></div>
+    </div>
+</div>`;
+
+document.getElementById('addMedLine').addEventListener('click', () => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = medLineTmpl.trim();
+    wrap.firstChild.querySelector('select').classList.add('added-line');
+    document.getElementById('medLines').appendChild(wrap.firstChild);
+});
+</script>
 {% endblock %}

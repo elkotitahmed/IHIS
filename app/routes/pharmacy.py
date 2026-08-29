@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, date
 from app import db
 from app.models import (
-    PharmacyInventory, Medication, Prescription,
+    PharmacyInventory, Medication, Prescription, PrescriptionItem,
     DispensingRecord, Patient, DrugInteraction,
 )
 from app.routes.decorators import roles_required, log_activity
@@ -85,22 +85,64 @@ def prescriptions():
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def dispense(id):
     rx = Prescription.query.get_or_404(id)
-    rx.status = 'Dispensed'
+    item_id = request.form.get('item_id')
+    item = None
+    if item_id:
+        item = PrescriptionItem.query.filter_by(id=int(item_id),
+                                                prescription_id=rx.id).first()
+    if item is None:
+        items = [i for i in rx.items if i.status != 'Dispensed']
+        if not items:
+            flash('All items already dispensed.', 'warning')
+            return redirect(url_for('pharmacy.prescriptions'))
+        item = items[0]
 
-    inv = PharmacyInventory.query.filter_by(medication_id=rx.medication_id).first()
-    if inv and inv.quantity > 0:
-        inv.quantity -= 1
+    if item.status == 'Dispensed':
+        flash('This item was already dispensed.', 'warning')
+        return redirect(url_for('pharmacy.prescriptions'))
 
+    try:
+        quantity = max(1, int(request.form.get('quantity') or item.quantity or 1))
+    except ValueError:
+        quantity = item.quantity or 1
+
+    # FEFO: dispense from the batch expiring soonest with sufficient stock.
+    inv = PharmacyInventory.query.filter(
+        PharmacyInventory.medication_id == item.medication_id,
+        PharmacyInventory.quantity > 0,
+    ).order_by(
+        PharmacyInventory.expiry_date.asc().nulls_last()
+    ).all()
+
+    available = sum(i.quantity for i in inv)
+    med_name = item.medication.generic_name if item.medication else 'medication'
+    if available < quantity:
+        flash(f'Insufficient stock for {med_name}. Available: {available}, '
+              f'requested: {quantity}.', 'danger')
+        return redirect(url_for('pharmacy.prescriptions'))
+
+    remaining = quantity
+    for stock in inv:
+        if remaining <= 0:
+            break
+        take = min(stock.quantity, remaining)
+        stock.quantity -= take
+        remaining -= take
+
+    item.status = 'Dispensed'
     record = DispensingRecord(
         prescription_id=rx.id,
+        item_id=item.id,
         pharmacist_id=current_user.id,
-        quantity=1,
+        quantity=quantity,
     )
     db.session.add(record)
     log_activity('DISPENSE_PRESCRIPTION', 'prescription', rx.id,
-                 f'medication_id={rx.medication_id}')
+                 f'medication_id={item.medication_id} qty={quantity}')
+    if rx.dispensed():
+        rx.status = 'Dispensed'
     db.session.commit()
-    flash('Prescription dispensed successfully.', 'success')
+    flash(f'Dispensed "{med_name}" ({quantity}).', 'success')
     return redirect(url_for('pharmacy.prescriptions'))
 
 

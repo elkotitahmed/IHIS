@@ -123,8 +123,16 @@ def prescription(prescription_id):
     checker = AIPrescriptionChecker()
     engine = AIDrugInteractionEngine()
     check = checker.check_prescription(prescription_id)
-    interactions = engine.check_interactions(
-        [rx.medication_id] if rx.medication_id else [])
+    # Evaluate the current prescription against ALL of the patient's other
+    # active medications, so drug-drug interactions are actually detected
+    # (a single-medication check can never fire the interaction engine).
+    active_ids = [p.medication_id for p in
+                  Prescription.query.filter_by(patient_id=rx.patient_id,
+                                               status='Active').all()
+                  if p.medication_id]
+    if rx.medication_id and rx.medication_id not in active_ids:
+        active_ids.append(rx.medication_id)
+    interactions = engine.check_interactions(active_ids)
     return render_template('ai/prescription.html',
                            title='AI Prescription Check', rx=rx,
                            check=check, interactions=interactions)

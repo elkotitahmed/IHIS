@@ -1,16 +1,27 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="{{ g.lang if g.lang else 'en' }}" dir="{{ 'rtl' if g.lang == 'ar' else 'ltr' }}" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iHIS - Intelligent Health Information System</title>
+    <title>iHIS - Integrated Hospital & Clinical Information System</title>
+    {% if g.lang == 'ar' %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    {% else %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% endif %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
         body { background: linear-gradient(135deg, #0d2b4e, #1f6feb); min-height: 100vh; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        [dir="rtl"] body { font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, sans-serif; letter-spacing: 0; }
         .hero { color: #fff; }
-        .card-plain { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 1rem; }
+        .card-plain { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 1rem; transition: transform .15s ease, background .15s ease; }
+        .card-plain:hover { transform: translateY(-3px); background: rgba(255,255,255,.12); }
         .feature-icon { font-size: 2rem; }
+        .pill { border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: .35rem 1rem; font-size: .8rem; }
+        .lang-btn { cursor: pointer; min-width: 40px; }
     </style>
 </head>
 <body>
@@ -19,7 +30,8 @@
             <a class="navbar-brand text-white fw-bold fs-3" href="{{ url_for('main.home') }}">
                 <i class="fas fa-heartbeat me-2 text-danger"></i>iHIS
             </a>
-            <div>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-light lang-btn me-2" id="langToggle" title="{{ 'التبديل إلى العربية' if g.lang == 'en' else 'Switch to English' }}"><i class="fas fa-language"></i></button>
                 {% if current_user.is_authenticated %}
                 <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light me-2"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light"><i class="fas fa-sign-out-alt me-1"></i>Logout</a>
@@ -31,8 +43,17 @@
         </nav>
 
         <div class="hero text-center py-5">
-            <h1 class="display-4 fw-bold">Intelligent Health Information System</h1>
-            <p class="lead mt-3">A centralized digital healthcare ecosystem connecting patients, doctors, laboratories, radiology, pharmacy, nursing, and administration.</p>
+            <h1 class="display-4 fw-bold">iHIS</h1>
+            <p class="lead mb-2">Integrated Hospital & Clinical Information System</p>
+            <p class="text-white-50 fw-semibold mb-3">One Patient · One Record · One Connected Hospital</p>
+            <div class="d-flex justify-content-center gap-2 mb-4 flex-wrap">
+                <span class="pill text-white"><i class="fas fa-user-md me-1"></i>Clinical</span>
+                <span class="pill text-white"><i class="fas fa-gears me-1"></i>Operations</span>
+                <span class="pill text-white"><i class="fas fa-pills me-1"></i>Pharmacy</span>
+                <span class="pill text-white"><i class="fas fa-flask me-1"></i>Diagnostics</span>
+                <span class="pill text-white"><i class="fas fa-clipboard-check me-1"></i>Administration</span>
+                <span class="pill text-white"><i class="fas fa-robot me-1"></i>AI</span>
+            </div>
             <div class="mt-4">
                 {% if not current_user.is_authenticated %}
                 <a href="{{ url_for('auth.register') }}" class="btn btn-danger btn-lg me-2"><i class="fas fa-user-plus me-2"></i>Get Started</a>
@@ -47,22 +68,15 @@
             <div class="col-md-4">
                 <div class="card-plain card p-4 text-white text-center">
                     <i class="fas fa-user-md feature-icon mb-3 text-info"></i>
-                    <h5>Doctors & EMR</h5>
-                    <p class="small">Electronic Medical Records, SOAP notes, ICD-10 coding, prescriptions, and treatment plans.</p>
+                    <h5>Clinical</h5>
+                    <p class="small">Electronic Medical Records, SOAP notes, ICD-10 coding, diagnosis, prescriptions, and treatment planning.</p>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-flask feature-icon mb-3 text-warning"></i>
-                    <h5>Laboratory</h5>
-                    <p class="small">Test ordering, sample tracking, result validation, and abnormal value alerts.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-x-ray feature-icon mb-3 text-success"></i>
-                    <h5>Radiology</h5>
-                    <p class="small">Imaging requests, study scheduling, image upload, and digital radiology reports.</p>
+                    <i class="fas fa-gears feature-icon mb-3 text-success"></i>
+                    <h5>Operations</h5>
+                    <p class="small">Appointment scheduling, patient flow, reception queue, referrals, and multidisciplinary care coordination.</p>
                 </div>
             </div>
             <div class="col-md-4">
@@ -74,21 +88,39 @@
             </div>
             <div class="col-md-4">
                 <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-tooth feature-icon mb-3 text-info"></i>
-                    <h5>Dentistry</h5>
-                    <p class="small">Interactive dental charting, procedures, imaging, and orthodontic case management.</p>
+                    <i class="fas fa-flask feature-icon mb-3 text-warning"></i>
+                    <h5>Diagnostics</h5>
+                    <p class="small">Laboratory test ordering, sample tracking, result validation, and radiology imaging with digital reports.</p>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-person-walking feature-icon mb-3 text-warning"></i>
-                    <h5>Physiotherapy</h5>
-                    <p class="small">Patient assessment, treatment plans, exercise library, and rehabilitation progress tracking.</p>
+                    <i class="fas fa-clipboard-check feature-icon mb-3 text-info"></i>
+                    <h5>Administration</h5>
+                    <p class="small">Staff management, departments, dashboards, audit logging, and hospital-wide analytics.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-plain card p-4 text-white text-center">
+                    <i class="fas fa-robot feature-icon mb-3 text-warning"></i>
+                    <h5>AI</h5>
+                    <p class="small">Clinical summaries, diagnosis support, prescription safety checks, risk estimation, and rehab insights.</p>
                 </div>
             </div>
         </div>
 
-        <p class="text-center text-white-50 mt-5 pb-4"><i class="fas fa-robot me-2"></i>Designed with a future-ready AI integration layer.</p>
+        <p class="text-center text-white-50 mt-5 pb-4"><i class="fas fa-shield-halved me-2"></i>Multi-portal, role-based electronic health record platform for connected care.</p>
     </div>
+    <script>
+        const langBtn = document.getElementById('langToggle');
+        if (langBtn) {
+            langBtn.addEventListener('click', () => {
+                const target = '{{ "ar" if g.lang == "en" else "en" }}';
+                const url = new URL(window.location.href);
+                url.searchParams.set('lang', target);
+                window.location.href = url.toString();
+            });
+        }
+    </script>
 </body>
 </html>

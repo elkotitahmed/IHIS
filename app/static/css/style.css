@@ -1,20 +1,99 @@
-/* iHIS custom styles */
+/* ============================================================
+   iHIS Design System
+   Design tokens (CSS custom properties) shared across all pages.
+   Light theme is the default; dark theme overrides via [data-bs-theme=dark].
+   RTL support is handled by the `dir` attribute + Bootstrap RTL utilities.
+   ============================================================ */
+
+:root {
+    /* Brand palette */
+    --ihis-primary: #1f6feb;
+    --ihis-primary-dark: #0d2b4e;
+    --ihis-primary-darker: #081c33;
+    --ihis-primary-soft: #e6eefb;
+    --ihis-danger: #d61f26;
+    --ihis-success: #2e9e5b;
+    --ihis-warning: #e8a13a;
+    --ihis-info: #2c9fb8;
+
+    /* Surfaces */
+    --ihis-bg: #f4f7fc;
+    --ihis-surface: #ffffff;
+    --ihis-border: #e6ebf2;
+
+    /* Text */
+    --ihis-text: #1f2430;
+    --ihis-text-muted: #6b7280;
+
+    /* Elevation & shape */
+    --ihis-shadow: 0 4px 15px rgba(13, 43, 78, .08);
+    --ihis-shadow-lg: 0 8px 30px rgba(13, 43, 78, .12);
+    --ihis-radius: 1rem;
+    --ihis-radius-sm: .5rem;
+
+    /* Spacing rhythm */
+    --ihis-space-1: .5rem;
+    --ihis-space-2: .75rem;
+    --ihis-space-3: 1rem;
+    --ihis-space-4: 1.5rem;
+    --ihis-space-5: 2rem;
+
+    --ihis-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --ihis-font-ar: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+}
+
+[data-bs-theme="dark"] {
+    --ihis-bg: #1a1d24;
+    --ihis-surface: #242833;
+    --ihis-border: #333946;
+    --ihis-text: #e5e7eb;
+    --ihis-text-muted: #9aa3b2;
+    --ihis-primary-soft: #23314a;
+    --ihis-shadow: 0 4px 15px rgba(0, 0, 0, .4);
+    --ihis-shadow-lg: 0 8px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- Base ---------- */
 
 body {
-    background-color: #f4f7fc;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--ihis-bg);
+    color: var(--ihis-text);
+    font-family: var(--ihis-font);
+    -webkit-font-smoothing: antialiased;
 }
+
+/* Arabic (RTL) typography: deeper fallback, better rendering */
+[dir="rtl"] body {
+    font-family: var(--ihis-font-ar);
+    letter-spacing: 0;
+}
+
+a { text-decoration: none; color: var(--ihis-primary); }
+
+/* ---------- Elevation / surfaces ---------- */
 
 .card-shadow {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, .08);
-    border: none;
-    border-radius: 1rem;
+    box-shadow: var(--ihis-shadow);
+    border: 1px solid var(--ihis-border);
+    border-radius: var(--ihis-radius);
+    background-color: var(--ihis-surface);
 }
 
+.card-shadow:hover {
+    box-shadow: var(--ihis-shadow-lg);
+}
+
+.shadow-lg-ihis { box-shadow: var(--ihis-shadow-lg); }
+
+.surface { background-color: var(--ihis-surface); }
+
+/* ---------- Stat cards ---------- */
+
 .stat-card {
-    border-radius: 1rem;
+    border-radius: var(--ihis-radius);
     border: none;
     color: #fff;
+    box-shadow: var(--ihis-shadow);
 }
 
 .stat-card .stat-icon {
@@ -22,39 +101,88 @@ body {
     opacity: .85;
 }
 
-.table thead th {
-    font-weight: 600;
-    color: #6b7280;
-    border-bottom-width: 1px;
+.stat-card .count {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.15;
 }
+
+/* ---------- Sidebar ---------- */
 
 .sidebar {
-    background: #0d2b4e;
+    background: linear-gradient(180deg, var(--ihis-primary-dark) 0%, var(--ihis-primary-darker) 100%);
+    color: #fff;
+    transition: width .2s ease;
 }
 
-.badge {
-    font-weight: 500;
+.sidebar .nav-link {
+    color: #c9d6e3;
+    border-radius: var(--ihis-radius-sm);
+    padding: .55rem var(--ihis-space-3);
+    margin-bottom: .15rem;
+    transition: all .15s ease;
 }
+
+.sidebar .nav-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .08);
+}
+
+.sidebar .nav-link.active {
+    background: var(--ihis-primary);
+    color: #fff;
+}
+
+.sidebar .brand-text {
+    font-weight: 700;
+}
+
+.sidebar .sidebar-divider {
+    border-color: rgba(255, 255, 255, .15);
+}
+
+.sidebar .user-chip {
+    color: #fff;
+}
+
+.sidebar .user-chip:hover { color: #fff; }
+
+/* ---------- Tables ---------- */
+
+.table thead th {
+    font-weight: 600;
+    color: var(--ihis-text-muted);
+    border-bottom-width: 1px;
+    background: var(--ihis-primary-soft);
+    white-space: nowrap;
+}
+
+.table tbody td { vertical-align: middle; }
+
+/* ---------- Badges ---------- */
+
+.badge { font-weight: 500; }
+
+/* ---------- Various helpers ---------- */
 
 .ai-placeholder {
-    border: 2px dashed #adb5bd;
-    border-radius: 1rem;
-    background: #f8f9fa;
-    padding: 1.25rem;
+    border: 2px dashed var(--ihis-border);
+    border-radius: var(--ihis-radius);
+    background: var(--ihis-surface);
+    padding: var(--ihis-space-4);
     text-align: center;
-    color: #6c757d;
+    color: var(--ihis-text-muted);
 }
 
-[data-bs-theme="dark"] body {
-    background-color: #1a1d24;
-    color: #e5e7eb;
-}
+.muted { color: var(--ihis-text-muted); }
 
-[data-bs-theme="dark"] .card,
-[data-bs-theme="dark"] .list-group-item {
-    background-color: #242833;
-    color: #e5e7eb;
-}
+/* RTL: keep MS icon flips sensible */
+[dir="rtl"] .fa-arrow-left { transform: scaleX(-1); }
+[dir="rtl"] .fa-arrow-right { transform: scaleX(-1); }
+[dir="rtl"] .ms-auto { margin-left: 0 !important; margin-right: auto !important; }
+[dir="rtl"] .me-2, [dir="rtl"] .me-1 { margin-left: .25rem !important; margin-right: 0 !important; }
+
+/* ---------- Tooth grid (dentistry) ---------- */
 
 .tooth-grid .tooth {
     display: inline-flex;
@@ -64,20 +192,48 @@ body {
     height: 38px;
     margin: 3px;
     border: 1px solid #ccc;
-    border-radius: .5rem;
+    border-radius: var(--ihis-radius-sm);
     cursor: pointer;
     font-weight: 600;
     background: #fff;
     transition: all .15s;
+    color: var(--ihis-text);
 }
 
-.tooth-grid .tooth:hover {
-    background: #1f6feb;
-    color: #fff;
-}
+.tooth-grid .tooth:hover { background: var(--ihis-primary); color: #fff; }
 
 .tooth-grid .tooth.selected {
-    background: #d61f26;
+    background: var(--ihis-danger);
     color: #fff;
-    border-color: #d61f26;
+    border-color: var(--ihis-danger);
+}
+
+[data-bs-theme="dark"] .tooth-grid .tooth {
+    background: #2a2f3a;
+    border-color: var(--ihis-border);
+    color: var(--ihis-text);
+}
+
+/* ---------- Dark theme refinements ---------- */
+
+[data-bs-theme="dark"] {
+    --bs-body-bg: var(--ihis-bg);
+}
+
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .list-group-item {
+    background-color: var(--ihis-surface);
+    color: var(--ihis-text);
+}
+
+[data-bs-theme="dark"] .table-light,
+[data-bs-theme="dark"] .table-light th,
+[data-bs-theme="dark"] .table-light td {
+    background-color: var(--ihis-primary-soft);
+    color: var(--ihis-text);
+}
+
+[data-bs-theme="dark"] .navbar.bg-white {
+    background-color: var(--ihis-surface) !important;
+    border-bottom: 1px solid var(--ihis-border);
 }

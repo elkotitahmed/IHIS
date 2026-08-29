@@ -13,7 +13,7 @@ from app import db, csrf
 from app.models import (
     Patient, Doctor, Specialty, LabTestCatalog, ImagingType, Medication,
     Appointment, LabOrder, LabResult, RadiologyOrder, RadiologyReport,
-    Prescription, PharmacyInventory, Referral, User,
+    MedicalRecord, Prescription, PrescriptionItem, PharmacyInventory, Referral, User,
 )
 
 
@@ -70,11 +70,20 @@ def _prescription_json(rx):
         'id': rx.id,
         'patient_id': rx.patient_id,
         'doctor_id': rx.doctor_id,
-        'medication': rx.medication.generic_name if rx.medication else None,
-        'dosage': rx.dosage,
-        'frequency': rx.frequency,
-        'duration': rx.duration,
-        'instructions': rx.instructions,
+        'medication': rx.items[0].medication.generic_name if rx.items and rx.items[0].medication else None,
+        'dosage': rx.items[0].dosage if rx.items else None,
+        'frequency': rx.items[0].frequency if rx.items else None,
+        'duration': rx.items[0].duration if rx.items else None,
+        'instructions': rx.items[0].instructions if rx.items else None,
+        'items': [{
+            'id': i.id,
+            'medication': i.medication.generic_name if i.medication else None,
+            'dosage': i.dosage,
+            'frequency': i.frequency,
+            'duration': i.duration,
+            'quantity': i.quantity,
+            'status': i.status,
+        } for i in rx.items],
         'refills': rx.refills,
         'status': rx.status,
         'prescribed_date': _iso(rx.prescribed_date),
@@ -300,28 +309,58 @@ def prescriptions():
 @csrf.exempt
 @login_required
 def create_prescription():
-    """Create a prescription. JSON body: patient_id, medication_id, dosage,
-    frequency, duration, instructions, refills."""
+    """Create a prescription. JSON body: patient_id, refills, and items:
+    [{"medication_id":1,"dosage":"500mg","frequency":"Twice daily",
+      "duration":"7 days","instructions":"...","quantity":1}].
+    For backward compatibility a single medication_id/dosage/... is also accepted."""
     data = request.get_json(silent=True) or {}
     doctor = _doctor_of(current_user)
     patient_id = data.get('patient_id')
-    medication_id = data.get('medication_id')
+    items_data = data.get('items')
     if not doctor:
         return jsonify({'error': 'Only doctors can create prescriptions'}), 403
-    if not (patient_id and medication_id):
-        return jsonify({'error': 'patient_id and medication_id are required'}), 400
+    if not patient_id:
+        return jsonify({'error': 'patient_id is required'}), 400
+    if not items_data:
+        if data.get('medication_id'):
+            items_data = [{
+                'medication_id': data.get('medication_id'),
+                'dosage': data.get('dosage', ''),
+                'frequency': data.get('frequency', ''),
+                'duration': data.get('duration', ''),
+                'instructions': data.get('instructions', ''),
+                'quantity': data.get('quantity', 1),
+            }]
+        else:
+            return jsonify({'error': 'at least one medication is required'}), 400
+    if not isinstance(items_data, list) or not items_data:
+        return jsonify({'error': 'items must be a non-empty list'}), 400
+
     rx = Prescription(
         patient_id=int(patient_id),
         doctor_id=doctor.id,
-        medication_id=int(medication_id),
-        dosage=data.get('dosage', ''),
-        frequency=data.get('frequency', ''),
-        duration=data.get('duration', ''),
-        instructions=data.get('instructions', ''),
         refills=int(data.get('refills', 0) or 0),
         status=data.get('status', 'Active'),
     )
     db.session.add(rx)
+    db.session.flush()
+    for it in items_data:
+        mid = it.get('medication_id')
+        if not mid:
+            continue
+        try:
+            qty = max(1, int(it.get('quantity') or 1))
+        except (TypeError, ValueError):
+            qty = 1
+        db.session.add(PrescriptionItem(
+            prescription_id=rx.id,
+            medication_id=int(mid),
+            dosage=it.get('dosage', ''),
+            frequency=it.get('frequency', ''),
+            duration=it.get('duration', ''),
+            instructions=it.get('instructions', ''),
+            quantity=qty,
+        ))
     db.session.commit()
     return jsonify({'id': rx.id, 'status': rx.status}), 201
 
