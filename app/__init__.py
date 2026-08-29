@@ -24,7 +24,8 @@ def create_app(config_name=None):
     app.config.from_object(config_map[config_name])
 
     if config_name == 'production':
-        if not app.config.get('SECRET_KEY') or app.config['SECRET_KEY'] == 'ihis-dev-secret-key-change-me':
+        weak = {'ihis-dev-secret-key-change-me', 'change-me-to-a-long-random-string'}
+        if not app.config.get('SECRET_KEY') or app.config['SECRET_KEY'] in weak:
             raise RuntimeError(
                 'Production requires a strong SECRET_KEY. '
                 'Set the SECRET_KEY environment variable before starting the app.')
