@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-pills me-2"></i>Prescriptions</h3>
+    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">New Prescription for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="medication_id" class="form-label">Medication</label>
+                        <select class="form-select" id="medication_id" name="medication_id" required>
+                            <option value="" selected disabled>Select medication...</option>
+                            {% if meds %}
+                                {% for m in meds %}
+                                <option value="{{ m.id }}">{{ m.name }} ({{ m.dosage_form or '' }})</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dosage" class="form-label">Dosage</label>
+                        <input type="text" class="form-control" id="dosage" name="dosage" required placeholder="e.g. 500mg">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="frequency" class="form-label">Frequency</label>
+                        <input type="text" class="form-control" id="frequency" name="frequency" required placeholder="e.g. Twice daily">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">Duration</label>
+                        <input type="text" class="form-control" id="duration" name="duration" placeholder="e.g. 7 days">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="instructions" class="form-label">Instructions</label>
+                        <textarea class="form-control" id="instructions" name="instructions" rows="3" placeholder="Special instructions..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="refills" class="form-label">Refills</label>
+                        <input type="number" class="form-control" id="refills" name="refills" min="0" value="0">
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100"><i class="fas fa-prescription me-1"></i>Add Prescription</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Existing Prescriptions</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Medication</th>
+                                <th>Dosage</th>
+                                <th>Frequency</th>
+                                <th>Duration</th>
+                                <th>Refills</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if items %}
+                                {% for rx in items %}
+                                <tr>
+                                    <td>{{ rx.medication.name if rx.medication else 'N/A' }}</td>
+                                    <td>{{ rx.dosage or '-' }}</td>
+                                    <td>{{ rx.frequency or '-' }}</td>
+                                    <td>{{ rx.duration or '-' }}</td>
+                                    <td><span class="badge bg-info">{{ rx.refills or 0 }}</span></td>
+                                    <td>{{ rx.created_at.strftime('%Y-%m-%d') if rx.created_at else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="6" class="text-center text-muted py-4">No prescriptions found.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

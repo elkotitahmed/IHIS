@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
+        <li class="breadcrumb-item active">Dental Imaging</li>
+    </ol>
+</nav>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-x-ray"></i> Upload Dental Images - {{ patient.user.full_name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('dentistry.imaging', patient_id=patient.id) }}"
+              enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Image Type</label>
+                    <select class="form-select" name="image_type">
+                        <option value="Periapical">Periapical</option>
+                        <option value="Bitewing">Bitewing</option>
+                        <option value="Panoramic">Panoramic</option>
+                        <option value="CBCT">CBCT</option>
+                        <option value="Intraoral">Intraoral</option>
+                        <option value="Extraoral">Extraoral</option>
+                        <option value="3D">3D</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Images (PNG / JPG / JPEG)</label>
+                    <input type="file" class="form-control" name="images" multiple accept=".png,.jpg,.jpeg">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-upload me-1"></i>Upload Images</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5><i class="fas fa-images"></i> Uploaded Images</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for image in images %}
+            <div class="col-md-3 col-sm-6">
+                <div class="card h-100">
+                    <a href="{{ image.url }}" target="_blank">
+                        <img src="{{ image.url }}" class="card-img-top" style="height:160px; object-fit:cover;"
+                             alt="Dental image {{ image.id }}">
+                    </a>
+                    <div class="card-body p-2">
+                        <span class="badge bg-primary">{{ image.image_type or 'Image' }}</span>
+                        <small class="d-block text-muted mt-1">{{ image.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <p class="text-muted mb-0">No images uploaded yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('dentistry.ortho') }}" class="btn btn-outline-secondary mt-3">
+    <i class="fas fa-arrow-right me-1"></i>Orthodontic Cases
+</a>
+{% endblock %}

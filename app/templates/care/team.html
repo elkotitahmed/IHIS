@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-users text-primary"></i> Care Team</h4>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('doctor.patients') if current_user.has_any_role('Doctor') else url_for('main.dashboard') }}">
+        <i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white fw-bold">Patient: {{ patient.user.full_name }}</div>
+    <div class="card-body">
+        <p class="text-muted mb-0">Multidisciplinary care team coordinating this patient's treatment.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white fw-bold">Team Members</div>
+            <div class="card-body">
+                {% if team and team.members %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead><tr><th>Member</th><th>Role</th><th></th></tr></thead>
+                        <tbody>
+                        {% for m in team.members %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-user-circle me-1"></i>{{ m.user.full_name if m.user else '-' }}
+                                    <span class="text-muted small">({{ m.user.email if m.user else '' }})</span>
+                                </td>
+                                <td><span class="badge bg-info text-dark">{{ m.role }}</span></td>
+                                <td>
+                                    <form method="post" action="{{ url_for('care.remove_member', patient_id=patient.id, member_id=m.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No care team members yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white fw-bold">Add Member</div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('care.add_member', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label class="form-label">Staff Member</label>
+                    <select name="user_id" class="form-select mb-2" required>
+                        <option value="">Select staff...</option>
+                        {% for u in staff %}
+                        <option value="{{ u.id }}">{{ u.full_name }} ({{ u.user_type }})</option>
+                        {% endfor %}
+                    </select>
+                    <label class="form-label">Role on Team</label>
+                    <input name="role" class="form-control mb-3" placeholder="e.g. Primary Physician, Nurse, PT">
+                    <button class="btn btn-primary w-100"><i class="fas fa-plus me-1"></i>Add Member</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

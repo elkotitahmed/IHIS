@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-stethoscope text-primary"></i> Nursing Dashboard</h4>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-users icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Assigned Patients</h5>
+                    <p class="display-6 mb-0">{{ assigned_patients }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-pills icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Medication Schedule</h5>
+                    <p class="display-6 mb-0">{{ med_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white {{ 'bg-danger' if critical_alerts > 0 else 'bg-success' }} card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Critical Alerts</h5>
+                    <p class="display-6 mb-0">{{ critical_alerts }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-user-injured"></i> Patients Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Gender</th>
+                                <th>Blood Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                            <tr>
+                                <td>{{ patient.id }}</td>
+                                <td>{{ patient.user.full_name }}</td>
+                                <td>{{ patient.gender or 'N/A' }}</td>
+                                <td>{{ patient.blood_type or 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('nursing.vitals', patient_id=patient.id) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-heartbeat"></i> Vitals
+                                    </a>
+                                    <a href="{{ url_for('nursing.notes', patient_id=patient.id) }}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-file-medical"></i> Notes
+                                    </a>
+                                    <a href="{{ url_for('care.team', patient_id=patient.id) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-users"></i> Care Team
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No patients found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-bolt"></i> Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('nursing.patients') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users text-primary"></i> All Patients
+                    </a>
+                    <a href="{{ url_for('nursing.medication_schedule') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-pills text-success"></i> Medication Schedule
+                    </a>
+                    <a href="{{ url_for('care.referrals') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-share-alt text-primary"></i> Referrals
+                    </a>
+                    <a href="{{ url_for('care.cases') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users text-primary"></i> MD Cases
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

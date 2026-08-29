@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-brain me-2 text-primary"></i>AI Patient Summary</h4>
+    <div>
+        <a class="btn btn-outline-primary btn-sm me-1"
+           href="{{ url_for('ai.diagnosis_support', patient_id=patient.id) }}">
+            <i class="fas fa-stethoscope me-1"></i>Diagnosis Support</a>
+        {% if current_user.has_any_role('Physiotherapist','Admin','SuperAdmin') %}
+        <a class="btn btn-outline-primary btn-sm"
+           href="{{ url_for('ai.rehab', patient_id=patient.id) }}">
+            <i class="fas fa-person-walking me-1"></i>Rehab Insights</a>
+        {% endif %}
+        <a class="btn btn-outline-primary btn-sm ms-1"
+           href="{{ url_for('reports.medical_record', record_id=patient.id) if False else '#' }}"
+           style="display:none"></a>
+        <a class="btn btn-outline-secondary btn-sm"
+           href="{{ url_for('doctor.patients') if current_user.has_any_role('Doctor') else
+           url_for('physiotherapy.patients') if current_user.has_any_role('Physiotherapist') else
+           url_for('main.dashboard') }}">
+            <i class="fas fa-arrow-left me-1"></i>Back</a>
+    </div>
+</div>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white fw-bold">{{ patient.user.full_name }}
+        <span class="text-muted fs-6">({{ patient.user.email }})</span></div>
+    <div class="card-body">
+        {% set level_color = 'danger' if risk.level=='High' else ('warning' if risk.level=='Moderate' else 'success') %}
+        <div class="row">
+            <div class="col-md-4 text-center">
+                <h1 class="{{ 'text-danger' if risk.level=='High' else ('text-warning' if risk.level=='Moderate' else 'text-success') }}">
+                    {{ risk.score }}</h1>
+                <span class="badge bg-{{ level_color }}">Risk: {{ risk.level }}</span>
+            </div>
+            <div class="col-md-8">
+                <p class="mb-1"><strong>Blood Type:</strong> {{ summary.blood_type }}
+                    &nbsp; <strong>Last Visit:</strong> {{ summary.last_visit }}</p>
+                <p class="mb-1"><strong>Allergies:</strong> {{ summary.allergies }}</p>
+                <p class="mb-0"><strong>Chronic Diseases:</strong> {{ summary.chronic_diseases }}</p>
+            </div>
+        </div>
+        {% if risk.reasons %}
+        <hr>
+        <small><strong>Risk factors:</strong>
+            {% for r in risk.reasons %}<span class="badge bg-light text-dark me-1">{{ r }}</span>{% endfor %}
+        </small>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold">Diagnoses</div>
+            <div class="card-body">
+                {% for d in summary.diagnoses %}
+                <span class="badge bg-info text-dark d-inline-block mb-1 me-1">{{ d.description }}</span>
+                {% else %}
+                <p class="text-muted mb-0">No diagnoses recorded.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold">Active Medications</div>
+            <div class="card-body">
+                <ul class="mb-0 ps-3">
+                {% for p in summary.active_prescriptions %}
+                    <li>{{ p.medication }} &mdash; {{ p.dosage }} {{ p.frequency }}</li>
+                {% else %}
+                    <li class="text-muted">None.</li>
+                {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

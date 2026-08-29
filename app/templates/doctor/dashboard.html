@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Welcome, Dr. {{ doctor.user.full_name if doctor and doctor.user else '' }}</h3>
+    <span class="text-muted">{{ now.strftime('%A, %B %d, %Y') if now is defined else '' }}</span>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card card-shadow stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon text-primary me-3"><i class="fas fa-calendar-check"></i></div>
+                <div>
+                    <h6 class="text-muted mb-1">Today's Appointments</h6>
+                    <h3 class="mb-0">{{ todays_appts|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-shadow stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon text-warning me-3"><i class="fas fa-flask"></i></div>
+                <div>
+                    <h6 class="text-muted mb-1">Pending Lab Reports</h6>
+                    <h3 class="mb-0">{{ pending_labs }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-shadow stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon text-info me-3"><i class="fas fa-x-ray"></i></div>
+                <div>
+                    <h6 class="text-muted mb-1">Pending Radiology Reports</h6>
+                    <h3 class="mb-0">{{ pending_radio }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-shadow stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon text-danger me-3"><i class="fas fa-heartbeat"></i></div>
+                <div>
+                    <h6 class="text-muted mb-1">Critical Patients</h6>
+                    <h3 class="mb-0">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Today's Appointments</h5>
+                <a href="{{ url_for('doctor.appointments') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Time</th>
+                                <th>Patient</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if todays_appts %}
+                                {% for appt in todays_appts %}
+                                <tr>
+                                    <td>{{ appt.scheduled_at.strftime('%H:%M') if appt.scheduled_at else 'N/A' }}</td>
+                                    <td>{{ appt.patient.user.full_name if appt.patient and appt.patient.user else 'N/A' }}</td>
+                                    <td>{{ appt.reason or '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if appt.status == 'confirmed' %}success{% elif appt.status == 'cancelled' %}danger{% elif appt.status == 'completed' %}secondary{% else %}warning{% endif %}">
+                                            {{ appt.status|capitalize }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No appointments scheduled for today.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-robot me-2"></i>AI Clinical Assistant</h5>
+            </div>
+            <div class="card-body text-center py-5" style="border: 2px dashed #dee2e6; border-radius: 0.5rem; margin: 0.75rem;">
+                <i class="fas fa-brain fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">AI Clinical Assistant coming soon</p>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('care.referrals') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-share-alt me-1"></i>Referrals
+                    </a>
+                    <a href="{{ url_for('care.cases') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-users me-1"></i>MD Cases
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

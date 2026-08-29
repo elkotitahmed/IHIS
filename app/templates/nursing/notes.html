@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('nursing.patients') }}">Patients</a></li>
+        <li class="breadcrumb-item active">Nursing Notes</li>
+    </ol>
+</nav>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-file-medical"></i> Add Nursing Note - {{ patient.user.full_name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('nursing.notes', patient_id=patient.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">Shift</label>
+                <select class="form-select" name="shift">
+                    <option value="Day">Day</option>
+                    <option value="Evening">Evening</option>
+                    <option value="Night">Night</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Note</label>
+                <textarea class="form-control" name="note" rows="4" placeholder="Enter clinical observations..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Note</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5><i class="fas fa-clipboard-list"></i> Nursing Notes History</h5>
+    </div>
+    <div class="card-body">
+        {% for note in notes %}
+        <div class="border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between">
+                <strong>{{ note.shift or 'Day' }} Shift</strong>
+                <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            <p class="mb-0 mt-2">{{ note.note }}</p>
+            <small class="text-muted">Recorded by Nurse ID {{ note.nurse_id }}</small>
+        </div>
+        {% else %}
+        <p class="text-center text-muted mb-0">No nursing notes recorded yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

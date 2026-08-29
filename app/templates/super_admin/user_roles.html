@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-user-tag text-primary"></i> User Roles</h4>
+    <a href="{{ url_for('super_admin.users') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Users
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5>{{ user.full_name }}</h5>
+                <small class="text-muted">{{ user.email }}</small>
+            </div>
+            <div class="card-body">
+                <h6>Current Roles</h6>
+                {% for role in user.roles %}
+                    <span class="badge bg-primary fs-6">{{ role.name }}</span>
+                {% else %}
+                    <p class="text-muted">No roles assigned yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-plus-circle"></i> Add Role</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('super_admin.user_roles', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="role_name" class="form-label">Role Name</label>
+                        <input type="text" class="form-control" id="role_name" name="role_name"
+                               placeholder="e.g. Nurse" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Role
+                    </button>
+                </form>
+                <hr>
+                <h6>Available Roles</h6>
+                <div>
+                    {% for role in all_roles %}
+                        {% if role not in user.roles %}
+                        <form method="post" action="{{ url_for('super_admin.user_roles', user_id=user.id) }}"
+                              class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="role_name" value="{{ role.name }}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary mb-1">
+                                <i class="fas fa-user-tag"></i> {{ role.name }}
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted">No roles defined yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

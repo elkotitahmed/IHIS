@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-share-alt text-primary"></i> Referrals</h4>
+
+{% if current_user.has_any_role('Doctor','Admin','SuperAdmin') %}
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white fw-bold">New Referral</div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('care.new_referral') }}" class="row g-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-4">
+                <select name="patient_id" class="form-select" required>
+                    <option value="">Select patient...</option>
+                    {% for p in patients %}
+                    <option value="{{ p.id }}">{{ p.user.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select name="to_doctor_id" class="form-select">
+                    <option value="">Referring doctor (optional)</option>
+                    {% for d in doctors %}
+                    <option value="{{ d.id }}">{{ d.user.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select name="to_specialty" class="form-select">
+                    <option value="">To specialty (optional)</option>
+                    {% for s in specialties %}
+                    <option value="{{ s.name }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-9">
+                <input name="reason" class="form-control" required placeholder="Referral reason / clinical question">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100"><i class="fas fa-paper-plane me-1"></i>Create Referral</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card card-shadow">
+    <div class="card-header bg-white fw-bold">Referral List</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Patient</th><th>From</th><th>To</th><th>Reason</th><th>Created</th><th>Status</th><th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in referrals %}
+                    <tr>
+                        <td>{{ r.patient.user.full_name if r.patient else '-' }}</td>
+                        <td>{{ r.from_doctor.user.full_name if r.from_doctor and r.from_doctor.user else '-' }}</td>
+                        <td>{{ r.to_doctor.user.full_name if r.to_doctor and r.to_doctor.user else (r.to_specialty or '-') }}</td>
+                        <td>{{ r.reason }}</td>
+                        <td>{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '-' }}</td>
+                        <td><span class="badge
+                            {% if r.status=='Pending' %}bg-warning text-dark
+                            {% elif r.status=='Accepted' %}bg-info
+                            {% elif r.status=='Completed' %}bg-success
+                            {% else %}bg-secondary{% endif %}">{{ r.status }}</span></td>
+                        <td>
+                            <form method="post" class="d-flex gap-1"
+                                  action="{{ url_for('care.update_referral_status', ref_id=r.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="Pending">Pending</option>
+                                    <option value="Accepted">Accepted</option>
+                                    <option value="Rejected">Rejected</option>
+                                    <option value="Completed">Completed</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-primary">Update</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" class="text-center text-muted">No referrals yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

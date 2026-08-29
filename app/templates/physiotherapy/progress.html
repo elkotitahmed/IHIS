@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">
+    <i class="fas fa-chart-line me-2"></i>Rehabilitation Progress
+    <small class="text-muted">- {{ patient.user.full_name }}</small>
+</h4>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-plus text-primary me-2"></i>Record Progress</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('physiotherapy.progress', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Plan</label>
+                            <select class="form-select" name="plan_id">
+                                <option value="">None</option>
+                                {% for p in plans %}
+                                <option value="{{ p.id }}">{{ p.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Session</label>
+                            <select class="form-select" name="session_id">
+                                <option value="">None</option>
+                                {% for s in sessions %}
+                                <option value="{{ s.id }}">{{ s.scheduled_at.strftime('%d %b %Y') if s.scheduled_at else s.id }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Pain Score (0-10)</label>
+                            <input class="form-control" type="number" name="pain_score" min="0" max="10" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Mobility (0-10)</label>
+                            <input class="form-control" type="number" name="mobility_score" min="0" max="10" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Strength (0-10)</label>
+                            <input class="form-control" type="number" name="strength_score" min="0" max="10" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Functional Outcome (0-10)</label>
+                            <input class="form-control" type="number" name="functional_outcome" min="0" max="10" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Balance (0-10)</label>
+                            <input class="form-control" type="number" name="balance_score" min="0" max="10" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Compliance (%)</label>
+                            <input class="form-control" type="number" name="compliance" min="0" max="100" value="100">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Range of Motion</label>
+                        <input class="form-control" name="range_of_motion">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>Record Progress</button>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('physiotherapy.patients') }}">Back to Patients</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-history text-info me-2"></i>Progress History</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Pain</th>
+                                <th>Mobility</th>
+                                <th>Strength</th>
+                                <th>ROM</th>
+                                <th>Balance</th>
+                                <th>Compliance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pr in progress_entries %}
+                            <tr>
+                                <td>{{ pr.recorded_at.strftime('%d %b %Y') }}</td>
+                                <td><span class="badge bg-{{ 'danger' if pr.pain_score >= 7 else ('warning' if pr.pain_score >= 4 else 'success') }}">{{ pr.pain_score }}</span></td>
+                                <td>{{ pr.mobility_score }}</td>
+                                <td>{{ pr.strength_score }}</td>
+                                <td>{{ pr.range_of_motion or '-' }}</td>
+                                <td>{{ pr.balance_score }}</td>
+                                <td>{{ pr.compliance }}%</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="text-center text-muted py-3">No progress records yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

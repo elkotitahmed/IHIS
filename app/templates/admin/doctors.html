@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-user-md text-primary"></i> Doctors</h4>
+    <span class="badge bg-primary">{{ doctors|length }} total</span>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>License</th>
+                        <th>Specialty</th>
+                        <th>Experience</th>
+                        <th>Consultation Fee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in doctors %}
+                    <tr>
+                        <td>{{ doc.id }}</td>
+                        <td><strong>{{ doc.user.full_name }}</strong><br><small class="text-muted">{{ doc.user.email }}</small></td>
+                        <td>{{ doc.license_number or 'N/A' }}</td>
+                        <td>
+                            {% if doc.specialty %}
+                                <span class="badge bg-info">{{ doc.specialty.name }}</span>
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ doc.years_of_experience or '-' }} years</td>
+                        <td>${{ "{:,.2f}".format(doc.consultation_fee) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No doctors found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

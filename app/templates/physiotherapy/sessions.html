@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">
+    <i class="fas fa-calendar-day me-2"></i>Sessions
+    <small class="text-muted">- {{ plan.title }}</small>
+</h4>
+<p class="text-muted">Patient: {{ plan.patient.user.full_name }}</p>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-plus text-primary me-2"></i>Schedule Session</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('physiotherapy.session', plan_id=plan.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Session Type</label>
+                        <select class="form-select" name="session_type">
+                            <option value="Individual">Individual</option>
+                            <option value="Group">Group</option>
+                            <option value="Home">Home</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Scheduled At</label>
+                        <input class="form-control" type="datetime-local" name="scheduled_at" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Duration (minutes)</label>
+                        <input class="form-control" type="number" name="duration_minutes" min="5" value="45">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status">
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="No Show">No Show</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-calendar-plus me-1"></i>Schedule</button>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('physiotherapy.plan', patient_id=plan.patient_id) }}">Back to Plan</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-list text-info me-2"></i>Sessions</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Scheduled At</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in sessions %}
+                            <tr>
+                                <td>{{ s.session_type }}</td>
+                                <td>{{ s.scheduled_at.strftime('%d %b %Y %H:%M') if s.scheduled_at else '-' }}</td>
+                                <td>{{ s.duration_minutes }} min</td>
+                                <td><span class="badge bg-primary">{{ s.status }}</span></td>
+                                <td>{{ s.notes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No sessions scheduled yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

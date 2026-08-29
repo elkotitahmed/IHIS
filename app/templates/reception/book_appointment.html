@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-calendar-plus text-primary"></i> Book Appointment</h4>
+    <a href="{{ url_for('reception.appointments') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card card-shadow">
+            <div class="card-body">
+                <form action="{{ url_for('reception.book_appointment') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Patient</label>
+                            <select name="patient_id" class="form-select" required>
+                                <option value="">-- Select Patient --</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">
+                                    {{ patient.user.full_name if patient.user else 'Patient #' + patient.id|string }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Doctor</label>
+                            <select name="doctor_id" class="form-select" required>
+                                <option value="">-- Select Doctor --</option>
+                                {% for doctor in doctors %}
+                                <option value="{{ doctor.id }}">
+                                    {{ doctor.user.full_name if doctor.user else 'Doctor #' + doctor.id|string }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date</label>
+                            <input type="date" name="date" class="form-control" value="{{ today }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Time</label>
+                            <input type="time" name="time" class="form-control" value="09:00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Duration (minutes)</label>
+                            <input type="number" name="duration_minutes" class="form-control" value="30" min="5" step="5">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="Normal">Normal</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason</label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Reason for the visit"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Book Appointment
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>New Lab Order</h4>
+    <a href="{{ url_for('lab.orders') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Orders</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-flask text-info me-2"></i>Order Details</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('lab.new_order') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="patient_id" class="form-label">Patient</label>
+                        <select class="form-select" id="patient_id" name="patient_id" required>
+                            <option value="" selected disabled>Select a patient...</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.user.full_name if patient.user else 'Patient #' ~ patient.id }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="test_id" class="form-label">Lab Test</label>
+                        <select class="form-select" id="test_id" name="test_id" required>
+                            <option value="" selected disabled>Select a test...</option>
+                            {% for test in tests %}
+                            <option value="{{ test.id }}">{{ test.test_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="Normal" selected>Normal</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Stat">Stat</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Additional instructions or clinical notes..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-info text-white"><i class="fas fa-paper-plane me-1"></i>Create Lab Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

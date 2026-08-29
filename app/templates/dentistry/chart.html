@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
+        <li class="breadcrumb-item active">Dental Chart</li>
+    </ol>
+</nav>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-tooth"></i> Dental Chart - {{ patient.user.full_name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('dentistry.add_chart', patient_id=patient.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Select Tooth (FDI)</label>
+                    <div class="d-grid gap-1">
+                        <input type="hidden" name="tooth_number" id="tooth_number">
+                        <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#toothModal" id="toothPickerBtn">
+                            <i class="fas fa-tooth me-1"></i>Pick Tooth
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Numbering System</label>
+                    <select class="form-select" name="numbering_system">
+                        <option value="FDI">FDI</option>
+                        <option value="Universal">Universal</option>
+                        <option value="Palmer">Palmer</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="Healthy">Healthy</option>
+                        <option value="Caries">Caries</option>
+                        <option value="Filling">Filling</option>
+                        <option value="Crown">Crown</option>
+                        <option value="Bridge">Bridge</option>
+                        <option value="Implant">Implant</option>
+                        <option value="RootCanal">Root Canal</option>
+                        <option value="Extraction">Extraction</option>
+                        <option value="Ortho">Ortho</option>
+                        <option value="Missing">Missing</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Optional notes">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add to Chart</button>
+        </form>
+    </div>
+</div>
+
+<!-- Tooth selector modal -->
+<div class="modal fade" id="toothModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-tooth me-1"></i>Select Tooth</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for n in range(1, 33) %}
+                    <button type="button" class="btn btn-outline-secondary tooth-btn" data-tooth="{{ n }}" style="min-width:48px;">
+                        {{ n }}
+                    </button>
+                    {% endfor %}
+                </div>
+                <p class="text-muted small mt-3 mb-0">Click a tooth number to select it. The selected tooth will be shown in bold.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5><i class="fas fa-list"></i> Charted Teeth</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tooth</th>
+                        <th>System</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for chart in charts %}
+                    <tr>
+                        <td>{{ chart.id }}</td>
+                        <td><span class="badge bg-dark">{{ chart.tooth_number }}</span></td>
+                        <td>{{ chart.numbering_system }}</td>
+                        <td><span class="badge bg-primary">{{ chart.status }}</span></td>
+                        <td>{{ chart.notes or 'N/A' }}</td>
+                        <td>{{ chart.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No teeth charted yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('dentistry.record', patient_id=patient.id) }}" class="btn btn-outline-secondary mt-3">
+    <i class="fas fa-arrow-right me-1"></i>Continue to Dental Record
+</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const toothInput = document.getElementById('tooth_number');
+const toothBtns = document.querySelectorAll('.tooth-btn');
+const pickerBtn = document.getElementById('toothPickerBtn');
+
+toothBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tooth = btn.dataset.tooth;
+        toothInput.value = tooth;
+        toothBtns.forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline-secondary');
+        });
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-primary');
+        pickerBtn.innerHTML = `<i class="fas fa-tooth me-1"></i>Tooth ${tooth}`;
+    });
+});
+
+if (toothInput.value) {
+    pickerBtn.innerHTML = `<i class="fas fa-tooth me-1"></i>Tooth ${toothInput.value}`;
+}
+</script>
+{% endblock %}

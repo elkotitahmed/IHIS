@@ -1,0 +1,59 @@
+# ---------- Python ----------
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.python-version
+
+# ---------- Environment & secrets ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# ---------- Databases & data ----------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+database/
+
+# ---------- Runtime & uploads ----------
+instance/
+uploads/
+app/static/uploads/
+logs/
+*.log
+
+# ---------- Test & coverage artifacts ----------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# ---------- Editor / IDE / OS ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---------- Build / temp ----------
+node_modules/
+dist/
+build/
+*.tmp
+*.temp
+*.bak

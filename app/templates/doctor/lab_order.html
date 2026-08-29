@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-flask me-2"></i>Request Lab Test</h3>
+    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">New Lab Order for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('doctor.lab_order', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="test_id" class="form-label">Lab Test</label>
+                        <select class="form-select" id="test_id" name="test_id" required>
+                            <option value="" selected disabled>Select a test...</option>
+                            {% if tests %}
+                                {% for t in tests %}
+                                <option value="{{ t.id }}">{{ t.name }}{% if t.description %} - {{ t.description }}{% endif %}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="Normal" selected>Normal</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Additional notes or clinical context..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-info text-white w-100"><i class="fas fa-paper-plane me-1"></i>Submit Lab Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

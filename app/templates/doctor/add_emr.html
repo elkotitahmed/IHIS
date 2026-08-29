@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Medical Record</h3>
+    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">New Medical Record for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('doctor.add_emr', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="diagnosis" class="form-label">Diagnosis</label>
+                        <input type="text" class="form-control" id="diagnosis" name="diagnosis" required placeholder="Enter diagnosis">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="icd10" class="form-label">ICD-10 Code</label>
+                        <input type="text" class="form-control" id="icd10" name="icd10" placeholder="e.g. J06.9">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="treatment_plan" class="form-label">Treatment Plan</label>
+                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" rows="4" placeholder="Describe the treatment plan..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="clinical_notes" class="form-label">Clinical Notes</label>
+                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" rows="4" placeholder="Additional clinical notes..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Record</button>
+                        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

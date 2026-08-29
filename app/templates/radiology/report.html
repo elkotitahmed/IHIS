@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-file-medical me-2"></i>Enter Radiology Report</h3>
+    <a href="{{ url_for('radiology.orders') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Orders</a>
+</div>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Order Context</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6 class="text-muted mb-1">Patient</h6>
+                <p class="mb-0 fw-semibold">{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-1">Imaging Type</h6>
+                <p class="mb-0 fw-semibold">{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-1">Order Date</h6>
+                <p class="mb-0 fw-semibold">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '-' }}</p>
+            </div>
+        </div>
+        {% if order.notes %}
+        <hr>
+        <div>
+            <h6 class="text-muted">Notes</h6>
+            <p class="mb-0">{{ order.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="col-lg-8 px-0">
+    <div class="card card-shadow">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Report</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('radiology.enter_report', order_id=order.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label for="findings" class="form-label">Findings</label>
+                    <textarea class="form-control" id="findings" name="findings" rows="6" placeholder="Describe the imaging findings...">{{ order.report.findings if order.report else '' }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="impression" class="form-label">Impression</label>
+                    <textarea class="form-control" id="impression" name="impression" rows="4" placeholder="Overall impression / diagnosis...">{{ order.report.impression if order.report else '' }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="recommendation" class="form-label">Recommendation</label>
+                    <textarea class="form-control" id="recommendation" name="recommendation" rows="4" placeholder="Suggested follow-up or next steps...">{{ order.report.recommendation if order.report else '' }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>Save Report</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

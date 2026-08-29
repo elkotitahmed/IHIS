@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-key text-warning"></i> Manage Permissions</h4>
+    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-plus-circle"></i> Add Permission to Role</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('super_admin.permissions') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="role_id" class="form-label">Role</label>
+                        <select class="form-select" id="role_id" name="role_id" required>
+                            <option value="">-- Select Role --</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="permission_name" class="form-label">Permission Name</label>
+                        <input type="text" class="form-control" id="permission_name" name="permission_name"
+                               placeholder="e.g. manage_patients" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="resource" class="form-label">Resource</label>
+                            <input type="text" class="form-control" id="resource" name="resource"
+                                   placeholder="e.g. Patient">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="action" class="form-label">Action</label>
+                            <input type="text" class="form-control" id="action" name="action"
+                                   placeholder="e.g. read">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-plus"></i> Add Permission
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        {% for role in roles %}
+        <div class="card card-shadow mb-3">
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0"><span class="badge bg-primary">{{ role.name }}</span></h6>
+            </div>
+            <div class="card-body">
+                {% for perm in role.permissions %}
+                    <span class="badge bg-light text-dark border me-1">{{ perm.name }}</span>
+                {% else %}
+                    <p class="text-muted mb-0">No permissions assigned.</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted">No roles defined. Create a role first.</p>
+        {% endfor %}
+
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0"><i class="fas fa-key"></i> All Defined Permissions</h6>
+            </div>
+            <div class="card-body">
+                {% for perm in permissions %}
+                    <span class="badge bg-light text-dark border me-1 mb-1">{{ perm.name }}</span>
+                {% else %}
+                    <p class="text-muted mb-0">No permissions defined yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

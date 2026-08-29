@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-users text-primary"></i> Manage Users</h4>
+    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5>All System Users</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>User Type</th>
+                    <th>Roles</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.full_name }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td><span class="badge bg-secondary">{{ user.user_type }}</span></td>
+                    <td>
+                        {% for role in user.roles %}
+                            <span class="badge bg-primary">{{ role.name }}</span>
+                        {% else %}
+                            <span class="text-muted">No role</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
+                    <td class="text-nowrap">
+                        <a href="{{ url_for('super_admin.user_roles', user_id=user.id) }}"
+                           class="btn btn-sm btn-outline-primary" title="Manage roles">
+                            <i class="fas fa-user-tag"></i>
+                        </a>
+                        {% if user.id != current_user.id %}
+                        <form method="post" action="{{ url_for('super_admin.toggle_user', user_id=user.id) }}"
+                              class="d-inline" onsubmit="return confirm('Toggle active status for {{ user.username }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if user.is_active %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activate">
+                                    <i class="fas fa-user-check"></i>
+                                </button>
+                            {% endif %}
+                        </form>
+                        {% else %}
+                            <span class="badge bg-info text-dark" title="This is you">You</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

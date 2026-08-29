@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-tooth text-primary"></i> Dentistry Dashboard</h4>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-calendar-check icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Appointments</h5>
+                    <p class="display-6 mb-0">{{ today_appointments }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-list-check icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Pending Treatment Plans</h5>
+                    <p class="display-6 mb-0">{{ pending_treatment_plans }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-braces icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Active Ortho Cases</h5>
+                    <p class="display-6 mb-0">{{ active_ortho_cases }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-screwdriver icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Implant Cases</h5>
+                    <p class="display-6 mb-0">{{ implant_cases }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-star"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('dentistry.patients') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users text-primary me-2"></i> View Patients
+                    </a>
+                    <a href="{{ url_for('dentistry.ortho') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-braces text-info me-2"></i> Orthodontic Cases
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-info-circle"></i> About</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">Use the Patients page to open a dental chart, manage records,
+                record procedures, or upload imaging for each patient.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

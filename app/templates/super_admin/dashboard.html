@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-user-shield text-primary"></i> Super Admin Dashboard</h4>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-check icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Active Users</h6>
+                    <p class="display-6 mb-0">{{ active_users }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-users icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Total Users</h6>
+                    <p class="display-6 mb-0">{{ total_users }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-procedures icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Patients</h6>
+                    <p class="display-6 mb-0">{{ total_patients }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-md icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Doctors</h6>
+                    <p class="display-6 mb-0">{{ total_doctors }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-2">
+        <div class="card card-shadow h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-user-tag text-primary"></i>
+                <p class="mb-0 mt-1">Roles</p>
+                <h4 class="mb-0">{{ total_roles }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-key text-warning"></i>
+                <p class="mb-0 mt-1">Permissions</p>
+                <h4 class="mb-0">{{ total_permissions }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-history text-info"></i>
+                <p class="mb-0 mt-1">Audit Logs</p>
+                <h4 class="mb-0">{{ total_audit_logs }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-cogs text-secondary"></i>
+                <p class="mb-0 mt-1">Settings</p>
+                <h4 class="mb-0">{{ total_settings }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <i class="fas fa-heartbeat text-danger"></i>
+                    <strong class="ms-2">System Health</strong>
+                    <span class="badge bg-success ms-2">Operational</span>
+                </div>
+                <div class="ms-3 text-end">
+                    <small class="text-muted d-block">Security Alerts</small>
+                    <span class="badge bg-danger">{{ security_alerts }} alert(s)</span>
+                    <small class="text-muted d-block mt-1">Error Log Entries</small>
+                    <span class="badge bg-warning text-dark">{{ error_log_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('super_admin.users') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users text-primary"></i> Manage Users
+                    </a>
+                    <a href="{{ url_for('super_admin.roles') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-tag text-success"></i> Manage Roles
+                    </a>
+                    <a href="{{ url_for('super_admin.permissions') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-key text-warning"></i> Manage Permissions
+                    </a>
+                    <a href="{{ url_for('super_admin.audit_logs') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-history text-info"></i> Audit Logs
+                    </a>
+                    <a href="{{ url_for('super_admin.settings') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-cogs text-secondary"></i> System Settings
+                    </a>
+                    <a href="{{ url_for('super_admin.backup') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-database text-danger"></i> Database Backup
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-shield-alt"></i> System Overview</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>{{ active_users }}</strong> user(s) currently active out of <strong>{{ total_users }}</strong>.</p>
+                <p class="mb-1"><strong>{{ total_patients }}</strong> patient record(s) registered.</p>
+                <p class="mb-1"><strong>{{ total_doctors }}</strong> doctor profile(s) on file.</p>
+                <p class="mb-1"><strong>{{ security_alerts }}</strong> security alert(s) detected from audit logs.</p>
+                <p class="mb-0"><strong>System health:</strong> {{ system_health }}.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

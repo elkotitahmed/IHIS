@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>AI Hospital Analytics</h4>
+    <a class="btn btn-outline-primary btn-sm"
+       href="{{ url_for('reports.statistics') }}">
+        <i class="fas fa-file-pdf me-1"></i>Statistics Report</a>
+</div>
+
+<div class="row g-4">
+    {% set cards = [
+        ('fa-users', 'Patients', result.counts.patients, 'primary'),
+        ('fa-calendar-check', 'Appointments', result.counts.appointments, 'info'),
+        ('fa-flask', 'Lab Orders', result.counts.lab_orders, 'success'),
+        ('fa-x-ray', 'Radiology Orders', result.counts.radiology_orders, 'warning'),
+        ('fa-pills', 'Active Prescriptions', result.counts.active_prescriptions, 'danger'),
+        ('fa-clipboard-list', 'Open Care Plans', result.counts.open_care_plans, 'secondary'),
+    ] %}
+    {% for icon, label, value, color in cards %}
+    <div class="col-md-4">
+        <div class="card card-shadow text-center">
+            <div class="card-body">
+                <i class="fas {{ icon }} fa-2x text-{{ color }}"></i>
+                <h3 class="mt-2 mb-0">{{ value }}</h3>
+                <span class="text-muted">{{ label }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card card-shadow mt-4">
+    <div class="card-body text-muted small">
+        <i class="fas fa-info-circle me-1"></i>{{ result.status }}.
+        Operational analytics provide a real-time snapshot of hospital activity.
+    </div>
+</div>
+{% endblock %}

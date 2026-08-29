@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-file-medical text-primary"></i> Multidisciplinary Cases</h4>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white fw-bold">Open New Case</div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('care.new_case') }}" class="row g-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-4">
+                <select name="patient_id" class="form-select" required>
+                    <option value="">Select patient...</option>
+                    {% for p in patients %}
+                    <option value="{{ p.id }}">{{ p.user.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8">
+                <input name="title" class="form-control" required placeholder="Case title (e.g. Complex cardiac + diabetes)">
+            </div>
+            <div class="col-12">
+                <textarea name="description" class="form-control" rows="2" placeholder="Case description / clinical question"></textarea>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary"><i class="fas fa-plus me-1"></i>Open Case</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-white fw-bold">All Cases</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead><tr><th>Title</th><th>Patient</th><th>Description</th><th>Created</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                {% for c in cases %}
+                    <tr>
+                        <td><strong>{{ c.title }}</strong></td>
+                        <td>{{ c.patient.user.full_name if c.patient else '-' }}</td>
+                        <td>{{ (c.description or '')[:60] }}</td>
+                        <td>{{ c.created_at.strftime('%Y-%m-%d') if c.created_at else '-' }}</td>
+                        <td><span class="badge
+                            {% if c.status=='Open' %}bg-success
+                            {% elif c.status=='In Progress' %}bg-warning text-dark
+                            {% elif c.status=='Resolved' %}bg-info
+                            {% else %}bg-secondary{% endif %}">{{ c.status }}</span></td>
+                        <td>
+                            <form method="post" class="d-flex gap-1"
+                                  action="{{ url_for('care.update_case_status', case_id=c.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="Open">Open</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-primary">Update</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="text-center text-muted">No cases yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-concierge-bell text-primary"></i> Reception Dashboard</h4>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-calendar-check icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Today's Appointments</h5>
+                    <p class="display-6 mb-0">{{ todays_appointments }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-warning card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-clock icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Waiting Patients</h5>
+                    <p class="display-6 mb-0">{{ waiting_patients }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-check icon me-3"></i>
+                <div>
+                    <h5 class="card-title mb-0">Checked In</h5>
+                    <p class="display-6 mb-0">{{ checked_in }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('reception.book_appointment') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-plus text-primary"></i> Book Appointment
+                    </a>
+                    <a href="{{ url_for('reception.appointments') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-list-alt text-success"></i> All Appointments
+                    </a>
+                    <a href="{{ url_for('reception.queue') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-people-arrows text-warning"></i> Waiting Queue
+                    </a>
+                    <a href="{{ url_for('reception.register') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-plus text-secondary"></i> Register Patient
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-info-circle"></i> Overview for {{ today }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>{{ todays_appointments }}</strong> appointment(s) scheduled for today.</p>
+                <p class="mb-1"><strong>{{ waiting_patients }}</strong> patient(s) still waiting to be called.</p>
+                <p class="mb-0"><strong>{{ checked_in }}</strong> patient(s) already checked in.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

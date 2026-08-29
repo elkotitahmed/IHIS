@@ -1,0 +1,164 @@
+import os
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_login import LoginManager
+from flask_bcrypt import Bcrypt
+from flask_wtf.csrf import CSRFProtect
+from flask_cors import CORS
+from config import config_map
+
+db = SQLAlchemy()
+migrate = Migrate()
+login_manager = LoginManager()
+bcrypt = Bcrypt()
+csrf = CSRFProtect()
+cors = CORS()
+
+
+def create_app(config_name=None):
+    if config_name is None:
+        config_name = os.environ.get('FLASK_CONFIG', 'development')
+
+    app = Flask(__name__)
+    app.config.from_object(config_map[config_name])
+
+    if config_name == 'production':
+        if not app.config.get('SECRET_KEY') or app.config['SECRET_KEY'] == 'ihis-dev-secret-key-change-me':
+            raise RuntimeError(
+                'Production requires a strong SECRET_KEY. '
+                'Set the SECRET_KEY environment variable before starting the app.')
+
+    # Ensure upload folder exists
+    os.makedirs(app.config.get('UPLOAD_FOLDER', 'app/static/uploads'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(__file__), '..', 'database'), exist_ok=True)
+
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
+    bcrypt.init_app(app)
+    csrf.init_app(app)
+    cors.init_app(app)
+
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message_category = 'warning'
+    login_manager.login_message = 'Please log in to access this page.'
+
+    # Register blueprints
+    from app.routes.main import main_bp
+    from app.routes.auth import auth_bp
+    from app.routes.patient import patient_bp
+    from app.routes.doctor import doctor_bp
+    from app.routes.lab import lab_bp
+    from app.routes.radiology import radiology_bp
+    from app.routes.pharmacy import pharmacy_bp
+    from app.routes.nursing import nursing_bp
+    from app.routes.reception import reception_bp
+    from app.routes.dentistry import dentistry_bp
+    from app.routes.physiotherapy import physiotherapy_bp
+    from app.routes.admin import admin_bp
+    from app.routes.super_admin import super_admin_bp
+    from app.routes.api import api_bp
+    from app.routes.reports import reports_bp
+    from app.routes.ai import ai_bp
+    from app.routes.care import care_bp
+
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(patient_bp, url_prefix='/patient')
+    app.register_blueprint(doctor_bp, url_prefix='/doctor')
+    app.register_blueprint(lab_bp, url_prefix='/lab')
+    app.register_blueprint(radiology_bp, url_prefix='/radiology')
+    app.register_blueprint(pharmacy_bp, url_prefix='/pharmacy')
+    app.register_blueprint(nursing_bp, url_prefix='/nursing')
+    app.register_blueprint(reception_bp, url_prefix='/reception')
+    app.register_blueprint(dentistry_bp, url_prefix='/dentistry')
+    app.register_blueprint(physiotherapy_bp, url_prefix='/physiotherapy')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(super_admin_bp, url_prefix='/super-admin')
+    app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(reports_bp, url_prefix='/reports')
+    app.register_blueprint(ai_bp, url_prefix='/ai')
+    app.register_blueprint(care_bp, url_prefix='/care')
+
+    # Create database tables if they don't exist
+    with app.app_context():
+        db.create_all()
+
+    register_context_processors(app)
+
+    return app
+
+
+def register_context_processors(app):
+    """Provide role-based sidebar menus to all templates."""
+
+    def menus():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return []
+        ut = current_user.user_type
+        if ut == 'admin':
+            return [
+                {'label': 'Patients', 'url': '/admin/patients', 'icon': 'fa-users'},
+                {'label': 'Dashboard', 'url': '/admin/dashboard', 'icon': 'fa-chart-line'},
+            ]
+        items = []
+        if current_user.has_any_role('Patient') or ut == 'patient':
+            items = [
+                {'label': 'Medical History', 'url': '/patient/medical-history', 'icon': 'fa-history'},
+                {'label': 'Appointments', 'url': '/patient/appointments', 'icon': 'fa-calendar-check'},
+                {'label': 'Prescriptions', 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
+                {'label': 'Lab Results', 'url': '/patient/lab-results', 'icon': 'fa-flask'},
+                {'label': 'Radiology Reports', 'url': '/patient/radiology-reports', 'icon': 'fa-x-ray'},
+                {'label': 'Documents', 'url': '/patient/documents', 'icon': 'fa-folder-open'},
+                {'label': 'Messages', 'url': '/patient/messages', 'icon': 'fa-envelope'},
+            ]
+        if current_user.has_any_role('Doctor') or ut == 'doctor':
+            items = [
+                {'label': 'Patients', 'url': '/doctor/patients', 'icon': 'fa-user-md'},
+                {'label': 'Appointments', 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
+                {'label': 'Lab Results', 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
+            ]
+        if current_user.has_any_role('LabTechnician'):
+            items = [
+                {'label': 'Lab Orders', 'url': '/lab/orders', 'icon': 'fa-flask'},
+                {'label': 'Test Catalog', 'url': '/lab/catalog', 'icon': 'fa-book'},
+            ]
+        if current_user.has_any_role('Radiologist'):
+            items = [
+                {'label': 'Radiology Orders', 'url': '/radiology/orders', 'icon': 'fa-x-ray'},
+            ]
+        if current_user.has_any_role('Pharmacist'):
+            items = [
+                {'label': 'Dashboard', 'url': '/pharmacy/dashboard', 'icon': 'fa-pills'},
+            ]
+        if current_user.has_any_role('Nurse'):
+            items = [
+                {'label': 'Dashboard', 'url': '/nursing/dashboard', 'icon': 'fa-stethoscope'},
+            ]
+        if current_user.has_any_role('Receptionist'):
+            items = [
+                {'label': 'Dashboard', 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'},
+            ]
+        if current_user.has_any_role('Dentist'):
+            items = [
+                {'label': 'Dashboard', 'url': '/dentistry/dashboard', 'icon': 'fa-tooth'},
+            ]
+        if current_user.has_any_role('Physiotherapist'):
+            items = [
+                {'label': 'Dashboard', 'url': '/physiotherapy/dashboard', 'icon': 'fa-person-walking'},
+            ]
+        return items
+
+    app.context_processor(lambda: {'current_user_menus': menus})
+
+    def unread_count():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return 0
+        from app.models import Notification
+        return Notification.query.filter_by(
+            user_id=current_user.id, is_read=False).count()
+
+    app.context_processor(lambda: {'unread_notifications': unread_count()})

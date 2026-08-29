@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-braces text-primary"></i> Orthodontic Cases</h4>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-plus-circle"></i> New Orthodontic Case</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('dentistry.ortho') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Patient <span class="text-danger">*</span></label>
+                    <select class="form-select" name="patient_id" required>
+                        <option value="">Select patient...</option>
+                        {% for patient in patients %}
+                        <option value="{{ patient.id }}">{{ patient.user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Case Type</label>
+                    <input type="text" class="form-control" name="case_type"
+                           placeholder="E.g. Class II malocclusion">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Appliance</label>
+                    <input type="text" class="form-control" name="appliance"
+                           placeholder="E.g. Fixed braces, Invisalign, Retainer">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="start_date">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estimated End Date</label>
+                    <input type="date" class="form-control" name="estimated_end_date">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="Active">Active</option>
+                        <option value="Planning">Planning</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Discontinued">Discontinued</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Progress (%)</label>
+                    <input type="number" class="form-control" name="progress" min="0" max="100" value="0">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" name="notes" rows="3"
+                              placeholder="Optional clinical notes"></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-plus me-1"></i>Create Case</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5><i class="fas fa-list"></i> Case List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Patient</th>
+                        <th>Case Type</th>
+                        <th>Appliance</th>
+                        <th>Start</th>
+                        <th>Est. End</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in cases %}
+                    <tr>
+                        <td>{{ case.id }}</td>
+                        <td>{{ case.patient.user.full_name }}</td>
+                        <td>{{ case.case_type or 'N/A' }}</td>
+                        <td>{{ case.appliance or 'N/A' }}</td>
+                        <td>{{ case.start_date.strftime('%Y-%m-%d') if case.start_date else 'N/A' }}</td>
+                        <td>{{ case.estimated_end_date.strftime('%Y-%m-%d') if case.estimated_end_date else 'N/A' }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if case.status == 'Active' else 'bg-secondary' }}">
+                                {{ case.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress" style="min-width: 120px;">
+                                <div class="progress-bar" role="progressbar"
+                                     style="width: {{ case.progress or 0 }}%">{{ case.progress or 0 }}%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">No orthodontic cases yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

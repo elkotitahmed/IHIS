@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h5 class="mb-0"><i class="fas fa-user-circle me-2 text-primary"></i>Account Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Full Name</span>
+                        <strong>{{ current_user.full_name }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Email</span>
+                        <strong>{{ current_user.email }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Username</span>
+                        <strong>{{ current_user.username }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">User Type</span>
+                        <span class="badge bg-primary">{{ current_user.user_type }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Roles</span>
+                        <span>
+                            {% for role in current_user.roles %}
+                            <span class="badge bg-secondary me-1">{{ role.name }}</span>
+                            {% endfor %}
+                        </span>
+                    </li>
+                    {% if current_user.last_login %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Last Login</span>
+                        <strong>{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') }}</strong>
+                    </li>
+                    {% endif %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Member Since</span>
+                        <strong>{{ current_user.created_at.strftime('%Y-%m-%d') }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="mb-0"><i class="fas fa-key me-2 text-warning"></i>Change Password</h5>
+            </div>
+            <div class="card-body">
+                {% if password_changed %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>Your password has been updated. For security, you will be
+                    logged out on your next session.
+                </div>
+                {% endif %}
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-control" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password <span class="text-muted small">(min 8 characters)</span></label>
+                        <input type="password" class="form-control" name="new_password" minlength="8" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" name="confirm_password" minlength="8" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-sync-alt me-1"></i>Update Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

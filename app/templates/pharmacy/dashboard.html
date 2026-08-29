@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-pills me-2"></i>Pharmacy Dashboard</h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card card-shadow stat-card">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon bg-success bg-opacity-10 text-success rounded-circle p-3 me-3">
+                    <i class="fas fa-capsules fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Total Medications</h6>
+                    <h3 class="mb-0">{{ total_medications }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow stat-card">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Low Stock Items</h6>
+                    <h3 class="mb-0">{{ low_stock_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow stat-card">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon bg-info bg-opacity-10 text-info rounded-circle p-3 me-3">
+                    <i class="fas fa-check-double fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Total Dispensed</h6>
+                    <h3 class="mb-0">{{ recent_dispensed_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Low Stock Items</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Medication</th>
+                                <th>Batch</th>
+                                <th>Qty</th>
+                                <th>Reorder Level</th>
+                                <th>Expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock %}
+                            <tr>
+                                <td>{{ item.medication.generic_name }}</td>
+                                <td>{{ item.batch_number or '-' }}</td>
+                                <td><span class="badge bg-danger">{{ item.quantity }}</span></td>
+                                <td>{{ item.reorder_level }}</td>
+                                <td>{{ item.expiry_date.strftime('%d %b %Y') if item.expiry_date else '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No low stock items</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-history text-info me-2"></i>Recent Dispensing</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rx #</th>
+                                <th>Pharmacist</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in recent_dispensed %}
+                            <tr>
+                                <td>{{ rec.prescription_id }}</td>
+                                <td>{{ rec.pharmacist_id }}</td>
+                                <td>{{ rec.dispensed_at.strftime('%d %b %Y %H:%M') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">No records yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

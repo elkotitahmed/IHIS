@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-user-shield text-primary"></i> Admin Dashboard
+    <span class="badge bg-primary ms-2">{{ role_label }}</span>
+</h4>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-injured icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Patients</h6>
+                    <p class="display-6 mb-0">{{ total_patients }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-md icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Doctors</h6>
+                    <p class="display-6 mb-0">{{ total_doctors }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-calendar-check icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Appointments Today</h6>
+                    <p class="display-6 mb-0">{{ appointments_today }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-building icon me-3"></i>
+                <div>
+                    <h6 class="card-title mb-0">Departments</h6>
+                    <p class="display-6 mb-0">{{ total_departments }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Revenue / Revenue Overview -->
+    <div class="col-md-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-dollar-sign text-success"></i> Revenue Overview</h5>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div class="text-center">
+                    <h1 class="text-success">${{ "{:,.2f}".format(revenue) }}</h1>
+                    <p class="text-muted mb-0">Total consultation fees across all doctors</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart: Appointments by Status (Doughnut) -->
+    <div class="col-md-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-chart-pie text-info"></i> Appointments by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-bolt"></i> Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('admin.staff') }}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-users"></i> Staff Management
+                </a>
+                <a href="{{ url_for('admin.departments') }}" class="btn btn-outline-success me-2">
+                    <i class="fas fa-building"></i> Departments
+                </a>
+                <a href="{{ url_for('admin.doctors') }}" class="btn btn-outline-info me-2">
+                    <i class="fas fa-user-md"></i> Doctors
+                </a>
+                <a href="{{ url_for('admin.statistics') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-chart-bar"></i> Statistics
+                </a>
+                <a href="{{ url_for('ai.analytics') }}" class="btn btn-outline-dark">
+                    <i class="fas fa-brain"></i> AI Analytics
+                </a>
+                <a href="{{ url_for('care.referrals') }}" class="btn btn-outline-warning me-2">
+                    <i class="fas fa-share-alt"></i> Referrals
+                </a>
+                <a href="{{ url_for('care.cases') }}" class="btn btn-outline-danger">
+                    <i class="fas fa-users"></i> MD Cases
+                </a>
+                <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-danger me-2">
+                    <i class="fas fa-file-alt"></i> Reports Center
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ctx = document.getElementById('statusChart');
+if (ctx) {
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ status_labels | tojson }},
+            datasets: [{
+                data: {{ status_counts | tojson }},
+                backgroundColor: [
+                    '#0d6efd', '#198754', '#ffc107', '#dc3545',
+                    '#0dcaf0', '#6f42c1', '#fd7e14'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

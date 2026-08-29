@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Inventory Item</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('pharmacy.add_inventory') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Medication <span class="text-danger">*</span></label>
+                            <select class="form-select" name="medication_id" required>
+                                <option value="">Select medication...</option>
+                                {% for med in medications %}
+                                <option value="{{ med.id }}">{{ med.generic_name }} ({{ med.brand_name or 'N/A' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Batch Number</label>
+                            <input type="text" class="form-control" name="batch_number">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="quantity" min="0" value="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Reorder Level</label>
+                            <input type="number" class="form-control" name="reorder_level" min="0" value="10">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" class="form-control" name="expiry_date">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Unit Cost</label>
+                            <input type="number" step="0.01" class="form-control" name="unit_cost" min="0" value="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Selling Price</label>
+                            <input type="number" step="0.01" class="form-control" name="selling_price" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('pharmacy.inventory') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-flask me-2 text-primary"></i>AI Lab Interpretation</h4>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('lab.orders') }}">
+        <i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-shadow">
+            <div class="card-header bg-white fw-bold">Test Details</div>
+            <div class="card-body">
+                <p><strong>Test:</strong> {{ result.test }}</p>
+                <p><strong>Category:</strong> {{ result.category }}</p>
+                <p><strong>Patient:</strong>
+                    {{ order.patient.user.full_name if order.patient else '-' }}</p>
+                <p><strong>Status:</strong> <span class="badge bg-secondary">{{ order.status }}</span></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card card-shadow">
+            <div class="card-header bg-white fw-bold">Interpretation</div>
+            <div class="card-body text-center">
+                <h2 class="{{ 'text-danger' if result.abnormal else 'text-success' }}">
+                    {{ result.result }}
+                    <small class="fs-6 text-muted">{{ result.unit }}</small>
+                </h2>
+                {% if result.abnormal %}
+                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Abnormal</span>
+                {% else %}
+                <span class="badge bg-success">Within normal range</span>
+                {% endif %}
+                <hr>
+                <p class="mb-1"><strong>Reference:</strong> {{ result.normal_range }}</p>
+                <p class="text-muted small mb-0">{{ result.interpretation }}</p>
+                {% if result.comment %}
+                <hr><p class="small mb-0"><strong>Technician note:</strong> {{ result.comment }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

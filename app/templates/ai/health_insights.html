@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-brain me-2 text-primary"></i>AI Health Insights</h4>
+    <button class="btn btn-outline-primary btn-sm" onclick="window.print()">
+        <i class="fas fa-print me-1"></i>Print</button>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold text-primary">Risk Assessment</div>
+            <div class="card-body">
+                <div class="display-4 fw-bold
+                    {% if risk.level == 'High' %}text-danger
+                    {% elif risk.level == 'Moderate' %}text-warning
+                    {% else %}text-success{% endif %}">
+                    {{ risk.score }}
+                </div>
+                <span class="badge
+                    {% if risk.level == 'High' %}bg-danger
+                    {% elif risk.level == 'Moderate' %}bg-warning text-dark
+                    {% else %}bg-success{% endif %}">
+                    {{ risk.level }} Risk
+                </span>
+                <hr>
+                <h6 class="fw-bold">Contributing factors</h6>
+                <ul class="mb-0">
+                    {% for r in risk.reasons %}
+                    <li><small>{{ r }}</small></li>
+                    {% else %}
+                    <li><small>No significant risk factors detected.</small></li>
+                    {% endfor %}
+                </ul>
+                <hr>
+                <p class="text-muted small mb-0">{{ risk.disclaimer }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold text-primary">Health Summary</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Blood Type:</strong>
+                            <span class="badge bg-danger">{{ summary.blood_type }}</span></p>
+                        <p><strong>Allergies:</strong><br>{{ summary.allergies }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Chronic Conditions:</strong><br>{{ summary.chronic_diseases }}</p>
+                        <p><strong>Last Visit:</strong> {{ summary.last_visit }}</p>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold">Diagnoses on Record</h6>
+                <ul>
+                    {% for d in summary.diagnoses %}
+                    <li>{{ d.description }}
+                        {% if d.primary %}<span class="badge bg-info text-dark">Primary</span>{% endif %}
+                        <small class="text-muted">({{ d.icd10 }})</small></li>
+                    {% else %}
+                    <li class="text-muted">No diagnoses recorded.</li>
+                    {% endfor %}
+                </ul>
+                <h6 class="fw-bold">Active Medications</h6>
+                <ul>
+                    {% for p in summary.active_prescriptions %}
+                    <li>{{ p.medication }} &mdash; {{ p.dosage }} {{ p.frequency }}</li>
+                    {% else %}
+                    <li class="text-muted">No active medications.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if analysis.flags %}
+<div class="card card-shadow mt-4">
+    <div class="card-header bg-white fw-bold text-primary">AI Observations</div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for f in analysis.flags %}
+            <div class="col-md-6">
+                <div class="alert
+                    {% if f.level == 'warning' %}alert-warning
+                    {% elif f.level == 'info' %}alert-info
+                    {% else %}alert-secondary{% endif %} mb-0">
+                    <strong>{{ f.title }}</strong><br>{{ f.detail }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-file-medical text-primary"></i> My Documents</h4>
+
+<div class="row">
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-upload text-primary"></i> Upload a Document</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('patient.documents') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Latest blood test result">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Document Type</label>
+                        <select name="document_type" class="form-select">
+                            <option value="other">Other</option>
+                            <option value="report">Lab / Radiology Report</option>
+                            <option value="imaging">Imaging / Scan</option>
+                            <option value="consent">Consent Form</option>
+                            <option value="insurance">Insurance</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Choose Document</label>
+                        <input type="file" name="document" class="form-control" required>
+                        <small class="text-muted">Allowed: PDF, PNG, JPG, JPEG</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-folder-open text-primary"></i> My Documents ({{ files|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for file in files %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-file text-primary me-2"></i>
+                            <strong>{{ file.title }}</strong>
+                            <span class="badge bg-secondary ms-2">{{ file.document_type }}</span>
+                            <div class="small text-muted">{{ file.uploaded_at.strftime('%Y-%m-%d') }}</div>
+                        </div>
+                        <a href="{{ file.file_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i>Open
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-center text-muted py-4">No documents uploaded yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

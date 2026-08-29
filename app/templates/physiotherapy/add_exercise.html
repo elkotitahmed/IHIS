@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-plus me-2"></i>Add Exercise to Library</h4>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-dumbbell text-primary me-2"></i>Exercise Details</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('physiotherapy.add_exercise') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <input class="form-control" name="category" placeholder="e.g. Strength, Balance, Mobility">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Instructions</label>
+                        <textarea class="form-control" name="instructions" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Repetitions</label>
+                            <input class="form-control" type="number" name="repetitions" min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Duration (seconds)</label>
+                            <input class="form-control" type="number" name="duration_seconds" min="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Image URL</label>
+                        <input class="form-control" name="image_url" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Video URL</label>
+                        <input class="form-control" name="video_url" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Progression Plan</label>
+                        <textarea class="form-control" name="progression_plan" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>Add Exercise</button>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('physiotherapy.exercise_library') }}">Back to Library</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

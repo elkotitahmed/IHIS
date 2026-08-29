@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-file-medical me-2"></i>Patient Record</h3>
+    <a href="{{ url_for('doctor.patients') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patients</a>
+</div>
+
+<div class="row g-4">
+    <!-- Demographics -->
+    <div class="col-lg-4">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Demographics</h5>
+            </div>
+            <div class="card-body">
+                <h5>{{ patient.user.full_name if patient and patient.user else 'N/A' }}</h5>
+                <p class="text-muted mb-2"><i class="fas fa-envelope me-2"></i>{{ patient.user.email if patient and patient.user else 'N/A' }}</p>
+                <p class="text-muted mb-2"><i class="fas fa-birthday-cake me-2"></i>{{ patient.date_of_birth.strftime('%B %d, %Y') if patient and patient.date_of_birth else 'N/A' }}</p>
+                <p class="text-muted mb-3"><i class="fas fa-venus-mars me-2"></i>{{ patient.gender or 'N/A' }}</p>
+
+                {% if patient and patient.allergies %}
+                <h6 class="text-danger mt-3"><i class="fas fa-exclamation-triangle me-1"></i>Allergies</h6>
+                <p>{{ patient.allergies }}</p>
+                {% endif %}
+
+                {% if patient and patient.chronic_diseases %}
+                <h6 class="text-warning mt-3"><i class="fas fa-notes-medical me-1"></i>Chronic Diseases</h6>
+                <p>{{ patient.chronic_diseases }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card card-shadow mt-4">
+            <div class="card-body">
+                <h6 class="mb-3">Actions</h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('doctor.add_emr', patient_id=patient.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-1"></i>Add Medical Record
+                    </a>
+                    <a href="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}" class="btn btn-success">
+                        <i class="fas fa-pills me-1"></i>Prescriptions
+                    </a>
+                    <a href="{{ url_for('doctor.lab_order', patient_id=patient.id) }}" class="btn btn-info text-white">
+                        <i class="fas fa-flask me-1"></i>Lab Order
+                    </a>
+                    <a href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}" class="btn btn-warning">
+                        <i class="fas fa-x-ray me-1"></i>Radiology Order
+                    </a>
+                    <a href="{{ url_for('ai.summary', patient_id=patient.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-brain me-1"></i>AI Summary
+                    </a>
+                    <a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-users me-1"></i>Care Team
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Medical Records -->
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-notes-medical me-2"></i>Medical Records</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Diagnosis</th>
+                                <th>ICD-10</th>
+                                <th>Treatment Plan</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if records %}
+                                {% for rec in records %}
+                                <tr>
+                                    <td>{{ rec.created_at.strftime('%Y-%m-%d') if rec.created_at else 'N/A' }}</td>
+                                    <td>{{ rec.diagnosis or '-' }}</td>
+                                    <td><span class="badge bg-secondary">{{ rec.icd10 or '-' }}</span></td>
+                                    <td>{{ rec.treatment_plan or '-' }}</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=rec.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-4">No medical records found.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diagnoses -->
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Diagnoses</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Diagnosis</th>
+                                <th>ICD-10</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if diagnoses %}
+                                {% for d in diagnoses %}
+                                <tr>
+                                    <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else 'N/A' }}</td>
+                                    <td>{{ d.diagnosis_name or d.diagnosis or '-' }}</td>
+                                    <td><span class="badge bg-secondary">{{ d.icd10 or d.icd_10_code or '-' }}</span></td>
+                                    <td>{{ d.notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="4" class="text-center text-muted py-4">No diagnoses recorded.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Vitals -->
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Recent Vitals</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Blood Pressure</th>
+                                <th>Heart Rate</th>
+                                <th>Temperature</th>
+                                <th>SpO2</th>
+                                <th>Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if vitals %}
+                                {% for v in vitals %}
+                                <tr>
+                                    <td>{{ v.recorded_at.strftime('%Y-%m-%d %H:%M') if v.recorded_at else 'N/A' }}</td>
+                                    <td>{{ v.blood_pressure or '-' }}</td>
+                                    <td>{{ v.heart_rate or '-' }} bpm</td>
+                                    <td>{{ v.temperature or '-' }} &deg;C</td>
+                                    <td>{{ v.oxygen_saturation or '-' }}%</td>
+                                    <td>{{ v.weight or '-' }} kg</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="6" class="text-center text-muted py-4">No vitals recorded.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

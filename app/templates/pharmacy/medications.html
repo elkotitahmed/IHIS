@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-capsules me-2"></i>Medications</h4>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Medication List</h6>
+                <form class="d-flex" method="GET" action="{{ url_for('pharmacy.medications') }}">
+                    <input type="text" name="q" class="form-control form-control-sm me-2"
+                           placeholder="Search medications..." value="{{ search or '' }}">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Generic Name</th>
+                                <th>Brand Name</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for med in medications %}
+                            <tr>
+                                <td>{{ med.id }}</td>
+                                <td><strong>{{ med.generic_name }}</strong></td>
+                                <td>{{ med.brand_name or '-' }}</td>
+                                <td>{{ med.category or '-' }}</td>
+                                <td>
+                                    {% if med.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No medications found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add New Medication</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('pharmacy.medications') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Generic Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="generic_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Brand Name</label>
+                        <input type="text" class="form-control" name="brand_name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <input type="text" class="form-control" name="category">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraindications</label>
+                        <textarea class="form-control" name="contraindications" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Side Effects</label>
+                        <textarea class="form-control" name="side_effects" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save me-1"></i>Save Medication
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

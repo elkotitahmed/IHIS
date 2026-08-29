@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">
+    <i class="fas fa-dumbbell me-2"></i>Exercise Library
+    <a class="btn btn-primary btn-sm ms-2" href="{{ url_for('physiotherapy.add_exercise') }}">
+        <i class="fas fa-plus me-1"></i>Add Exercise
+    </a>
+</h4>
+
+<form class="row g-2 mb-3" method="get" action="{{ url_for('physiotherapy.exercise_library') }}">
+    <div class="col-md-4">
+        <select class="form-select" name="category">
+            <option value="">All Categories</option>
+            {% for c in categories %}
+            <option value="{{ c }}" {{ 'selected' if current_category == c }}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary" type="submit"><i class="fas fa-filter me-1"></i>Filter</button>
+    </div>
+</form>
+
+<div class="row g-3">
+    {% for item in items %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card card-shadow h-100">
+            {% if item.image_url %}
+            <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}" style="height:160px; object-fit:cover;">
+            {% endif %}
+            <div class="card-body">
+                <h6 class="card-title">
+                    {{ item.name }}
+                    <span class="badge bg-info float-end">{{ item.category or 'General' }}</span>
+                </h6>
+                <p class="card-text small text-muted">{{ item.description or '' }}</p>
+                <p class="small mb-1">
+                    <i class="fas fa-redo me-1"></i>{{ item.repetitions or 0 }} reps
+                    <i class="fas fa-clock ms-3 me-1"></i>{{ item.duration_seconds or 0 }} sec
+                </p>
+                {% if item.video_url %}
+                <a class="btn btn-sm btn-outline-primary" href="{{ item.video_url }}" target="_blank">
+                    <i class="fas fa-play me-1"></i>Video
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card card-shadow">
+            <div class="card-body text-center text-muted py-4">No exercises found</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

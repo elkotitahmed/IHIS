@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Appointments Schedule</h3>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Scheduled At</th>
+                        <th>Patient</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if items %}
+                        {% for appt in items %}
+                        <tr>
+                            <td>{{ appt.scheduled_at.strftime('%Y-%m-%d %H:%M') if appt.scheduled_at else 'N/A' }}</td>
+                            <td>{{ appt.patient.user.full_name if appt.patient and appt.patient.user else 'N/A' }}</td>
+                            <td>{{ appt.reason or '-' }}</td>
+                            <td>
+                                <span class="badge bg-{% if appt.status == 'confirmed' %}success{% elif appt.status == 'cancelled' %}danger{% elif appt.status == 'completed' %}secondary{% elif appt.status == 'pending' %}warning{% else %}info{% endif %}">
+                                    {{ appt.status|capitalize }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">No appointments found.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

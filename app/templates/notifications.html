@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-bell me-2"></i>Notifications
+        <span class="badge bg-primary ms-1">{{ notifications|length }} shown</span>
+        {% if unread_notifications %}<span class="badge bg-danger rounded-pill ms-1">{{ unread_notifications }} unread</span>{% endif %}
+    </h4>
+    <form method="post" action="{{ url_for('main.notifications_mark_all_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-primary" {% if not unread_notifications %}disabled{% endif %}>
+            <i class="fas fa-check-double me-1"></i>Mark all read
+        </button>
+    </form>
+</div>
+
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item"><a class="nav-link {{ 'active' if not category else '' }}" href="{{ url_for('main.notifications') }}">All</a></li>
+    {% for c in ['in-app', 'critical', 'email', 'sms'] %}
+    <li class="nav-item"><a class="nav-link {{ 'active' if category == c else '' }}" href="{{ url_for('main.notifications', category=c) }}">{{ c|title }}</a></li>
+    {% endfor %}
+</ul>
+
+<div class="card card-shadow">
+    <div class="card-body">
+        {% if notifications %}
+        <ul class="list-group list-group-flush">
+            {% for n in notifications %}
+            <li class="list-group-item d-flex justify-content-between align-items-start {{ '' if n.is_read else 'list-group-item-light' }}">
+                <div class="w-100">
+                    <div>
+                        <span class="badge bg-{{ 'danger' if n.notification_type == 'critical' else 'info' }} me-2">
+                            {{ n.notification_type or 'in-app' }}
+                        </span>
+                        {% if not n.is_read %}<span class="badge bg-danger">new</span>{% endif %}
+                        <strong>{{ n.title }}</strong>
+                    </div>
+                    <div class="text-muted small">{{ n.message }}</div>
+                </div>
+                <small class="text-muted text-nowrap ms-3">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center py-4">No notifications{% if category %} in the '{{ category }}' category{% endif %}.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

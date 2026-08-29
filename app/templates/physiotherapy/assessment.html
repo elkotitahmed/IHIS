@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">
+    <i class="fas fa-stethoscope me-2"></i>Physical Therapy Assessment
+    <small class="text-muted">- {{ patient.user.full_name }}</small>
+</h4>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-edit text-primary me-2"></i>New Assessment</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('physiotherapy.assessment', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Functional Assessment</label>
+                        <textarea class="form-control" name="functional_assessment" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mobility Assessment</label>
+                        <textarea class="form-control" name="mobility_assessment" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Pain Assessment (0-10)</label>
+                        <input class="form-control" type="number" name="pain_assessment" min="0" max="10" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Muscle Strength</label>
+                        <textarea class="form-control" name="muscle_strength" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Balance Assessment</label>
+                        <textarea class="form-control" name="balance_assessment" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Range of Motion</label>
+                        <textarea class="form-control" name="range_of_motion" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Posture Evaluation</label>
+                        <textarea class="form-control" name="posture_evaluation" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Gait Analysis</label>
+                        <textarea class="form-control" name="gait_analysis" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>Save Assessment</button>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('physiotherapy.patients') }}">Back to Patients</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-history text-info me-2"></i>Past Assessments</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Pain</th>
+                                <th>Mobility</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in assessments %}
+                            <tr>
+                                <td>{{ a.assessed_at.strftime('%d %b %Y') }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if a.pain_assessment >= 7 else ('warning' if a.pain_assessment >= 4 else 'success') }}">
+                                        {{ a.pain_assessment }}
+                                    </span>
+                                </td>
+                                <td>{{ a.mobility_assessment or '-' }}</td>
+                                <td>{{ a.notes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No assessments yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

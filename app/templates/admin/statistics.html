@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-chart-bar text-primary"></i> Statistics Overview
+    <a class="btn btn-outline-primary btn-sm me-1" target="_blank" href="{{ url_for('reports.statistics') }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+</h4>
+
+<!-- KPI Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card card-shadow text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-user-injured fa-2x text-primary mb-2"></i>
+                <h4>{{ total_patients }}</h4>
+                <small class="text-muted">Patients</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-user-md fa-2x text-success mb-2"></i>
+                <h4>{{ total_doctors }}</h4>
+                <small class="text-muted">Doctors</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-info mb-2"></i>
+                <h4>{{ total_users }}</h4>
+                <small class="text-muted">Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-calendar-check fa-2x text-warning mb-2"></i>
+                <h4>{{ total_appointments }}</h4>
+                <small class="text-muted">Appointments</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-flask fa-2x text-danger mb-2"></i>
+                <h4>{{ total_lab_orders }}</h4>
+                <small class="text-muted">Lab Orders</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card card-shadow text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-x-ray fa-2x text-secondary mb-2"></i>
+                <h4>{{ total_radiology_orders }}</h4>
+                <small class="text-muted">Radiology Orders</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-chart-pie text-primary"></i> Appointments by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="apptChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-chart-bar text-success"></i> Lab Orders by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="labChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-chart-bar text-danger"></i> Radiology Orders by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="radChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Entity Summary Bar Chart -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-chart-line text-info"></i> Entity Summary</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="summaryChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const colors = ['#0d6efd','#198754','#ffc107','#dc3545','#0dcaf0','#6f42c1','#fd7e14','#20c997'];
+
+function doughnut(id, labels, data) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: colors.slice(0, data.length), borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+}
+
+doughnut('apptChart',
+    {{ appointments_by_status | map(attribute=0) | list | tojson }},
+    {{ appointments_by_status | map(attribute=1) | list | tojson }}
+);
+doughnut('labChart',
+    {{ lab_by_status | map(attribute=0) | list | tojson }},
+    {{ lab_by_status | map(attribute=1) | list | tojson }}
+);
+doughnut('radChart',
+    {{ radiology_by_status | map(attribute=0) | list | tojson }},
+    {{ radiology_by_status | map(attribute=1) | list | tojson }}
+);
+
+// Summary bar chart
+const summaryEl = document.getElementById('summaryChart');
+if (summaryEl) {
+    new Chart(summaryEl, {
+        type: 'bar',
+        data: {
+            labels: ['Patients', 'Doctors', 'Users', 'Appointments', 'Lab Orders', 'Radiology Orders'],
+            datasets: [{
+                label: 'Count',
+                data: [{{ total_patients }}, {{ total_doctors }}, {{ total_users }}, {{ total_appointments }}, {{ total_lab_orders }}, {{ total_radiology_orders }}],
+                backgroundColor: ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6f42c1'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+</script>
+{% endblock %}

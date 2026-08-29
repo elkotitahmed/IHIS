@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Enter Lab Result</h4>
+    <div>
+        {% if order.status == 'Completed' and order.result %}
+        <a class="btn btn-outline-primary me-2" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI Interpret</a>
+        <a class="btn btn-outline-primary me-2" target="_blank" href="{{ url_for('reports.lab_result', order_id=order.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+        {% endif %}
+        <a href="{{ url_for('lab.orders') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Orders</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-file-medical text-primary me-2"></i>Order Context</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted">Order #</dt>
+                    <dd class="col-sm-8">{{ order.id }}</dd>
+                    <dt class="col-sm-4 text-muted">Patient</dt>
+                    <dd class="col-sm-8">{{ order.patient.user.full_name if order.patient and order.patient.user else 'Unknown' }}</dd>
+                    <dt class="col-sm-4 text-muted">Test</dt>
+                    <dd class="col-sm-8">{{ order.test.test_name if order.test else 'Unknown' }}</dd>
+                    <dt class="col-sm-4 text-muted">Category</dt>
+                    <dd class="col-sm-8">{{ order.test.category if order.test and order.test.category else '-' }}</dd>
+                    <dt class="col-sm-4 text-muted">Normal Range</dt>
+                    <dd class="col-sm-8">{{ order.test.normal_range if order.test and order.test.normal_range else '-' }}</dd>
+                    <dt class="col-sm-4 text-muted">Unit</dt>
+                    <dd class="col-sm-8">{{ order.test.unit if order.test and order.test.unit else '-' }}</dd>
+                    <dt class="col-sm-4 text-muted">Priority</dt>
+                    <dd class="col-sm-8"><span class="badge bg-secondary">{{ order.priority or 'Normal' }}</span></dd>
+                    <dt class="col-sm-4 text-muted">Order Date</dt>
+                    <dd class="col-sm-8">{{ order.order_date.strftime('%d %b %Y %H:%M') if order.order_date else '-' }}</dd>
+                    {% if order.notes %}
+                    <dt class="col-sm-4 text-muted">Notes</dt>
+                    <dd class="col-sm-8">{{ order.notes }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-clipboard-check text-success me-2"></i>Result Details</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('lab.enter_result', order_id=order.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="result_value" class="form-label">Result Value</label>
+                        <input type="text" class="form-control" id="result_value" name="result_value"
+                               value="{{ order.result.result_value if order.result and order.result.result_value else '' }}"
+                               placeholder="e.g. 12.5" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="result_notes" class="form-label">Result Notes</label>
+                        <textarea class="form-control" id="result_notes" name="result_notes" rows="4"
+                                  placeholder="Interpretation or additional comments...">{{ order.result.result_notes if order.result and order.result.result_notes else '' }}</textarea>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="is_abnormal" name="is_abnormal"
+                               {% if order.result and order.result.is_abnormal %}checked{% endif %}>
+                        <label class="form-check-label" for="is_abnormal">
+                            Mark as Abnormal / Critical
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>Save Result</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

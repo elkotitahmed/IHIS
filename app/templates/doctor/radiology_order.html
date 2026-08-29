@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-x-ray me-2"></i>Request Imaging</h3>
+    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">New Radiology Order for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="imaging_type_id" class="form-label">Imaging Type</label>
+                        <select class="form-select" id="imaging_type_id" name="imaging_type_id" required>
+                            <option value="" selected disabled>Select imaging type...</option>
+                            {% if imaging %}
+                                {% for img in imaging %}
+                                <option value="{{ img.id }}">{{ img.name }}{% if img.description %} - {{ img.description }}{% endif %}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="Normal" selected>Normal</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Clinical indication or special instructions..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100"><i class="fas fa-paper-plane me-1"></i>Submit Radiology Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

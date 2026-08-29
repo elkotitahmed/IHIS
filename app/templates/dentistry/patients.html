@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-users text-primary"></i> Dental Patients</h4>
+    <a href="{{ url_for('dentistry.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Dashboard
+    </a>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Date of Birth</th>
+                        <th>Gender</th>
+                        <th>Blood Type</th>
+                        <th>Allergies</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>{{ patient.id }}</td>
+                        <td>
+                            {{ patient.user.full_name }}
+                            <small class="d-block text-muted">{{ patient.user.email }}</small>
+                        </td>
+                        <td>{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else 'N/A' }}</td>
+                        <td>{{ patient.gender or 'N/A' }}</td>
+                        <td><span class="badge bg-danger">{{ patient.blood_type or 'N/A' }}</span></td>
+                        <td>{{ (patient.allergies or 'None')[:40] }}</td>
+                        <td>
+                            <a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="Dental Chart">
+                                <i class="fas fa-tooth"></i>
+                            </a>
+                            <a href="{{ url_for('dentistry.record', patient_id=patient.id) }}"
+                               class="btn btn-sm btn-outline-secondary" title="Dental Record">
+                                <i class="fas fa-file-medical"></i>
+                            </a>
+                            <a href="{{ url_for('dentistry.procedures', patient_id=patient.id) }}"
+                               class="btn btn-sm btn-outline-info" title="Dental Procedures">
+                                <i class="fas fa-hand-holding-medical"></i>
+                            </a>
+                            <a href="{{ url_for('dentistry.imaging', patient_id=patient.id) }}"
+                               class="btn btn-sm btn-outline-success" title="Dental Imaging">
+                                <i class="fas fa-x-ray"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No patients found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

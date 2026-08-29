@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-pills me-2 text-primary"></i>AI Prescription Check</h4>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pharmacy.prescriptions') }}">
+        <i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold">{{ rx.medication.generic_name if rx.medication else 'Medication' }}</div>
+            <div class="card-body">
+                <p><strong>Patient:</strong> {{ rx.patient.user.full_name if rx.patient else '-' }}</p>
+                <p><strong>Dosage:</strong> {{ rx.dosage }}</p>
+                <p><strong>Frequency:</strong> {{ rx.frequency }}</p>
+                <p><strong>Duration:</strong> {{ rx.duration }}</p>
+                <p><strong>Status:</strong>
+                    {% if rx.status == 'Active' %}
+                    <span class="badge bg-success">{{ rx.status }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ rx.status }}</span>
+                    {% endif %}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-white">
+                <span class="fw-bold">Compliance Check</span>
+                {% if check.ok %}
+                <span class="badge bg-success float-end">No warnings</span>
+                {% else %}
+                <span class="badge bg-warning text-dark float-end">Review required</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% for issue in check.issues %}
+                <div class="alert
+                    {% if issue.level == 'warning' %}alert-warning
+                    {% elif issue.level == 'info' %}alert-info
+                    {% else %}alert-secondary{% endif %} py-2 mb-2">
+                    {{ issue.item }}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No completeness issues detected.</p>
+                {% endfor %}
+                <hr>
+                <p class="text-muted small mb-0">{{ check.disclaimer }}</p>
+            </div>
+        </div>
+        <div class="card card-shadow mt-3">
+            <div class="card-header bg-white fw-bold">
+                Drug Interaction Engine
+                <span class="badge bg-secondary float-end">{{ interactions.count }} found</span>
+            </div>
+            <div class="card-body">
+                {% for i in interactions.interactions %}
+                <div class="alert alert-danger py-2 mb-2">
+                    <strong>{{ i.a }}</strong> + <strong>{{ i.b }}</strong>
+                    <span class="badge bg-danger">{{ i.severity }}</span><br>
+                    <small>{{ i.description }}</small>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No interactions detected for this medication.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

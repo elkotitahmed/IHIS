@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-person-walking me-2 text-primary"></i>AI Rehabilitation Insights</h4>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('physiotherapy.patients') }}">
+        <i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+{% if progress.error %}
+<div class="alert alert-info">No rehabilitation progress data recorded yet for
+    {{ patient.user.full_name }}.</div>
+{% else %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card card-shadow h-100 text-center">
+            <div class="card-header bg-white fw-bold">Progress Trend</div>
+            <div class="card-body">
+                <h2 class="
+                    {% if progress.trend == 'improving' %}text-success
+                    {% elif progress.trend == 'declining' %}text-danger
+                    {% else %}text-secondary{% endif %}">
+                    {{ progress.trend }}
+                </h2>
+                <span class="text-muted">{{ progress.records }} session(s) recorded</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold">Latest Session
+                <span class="text-muted fs-6">({{ progress.latest.recorded_at }})</span></div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-3"><h4>{{ progress.latest.pain_score or '-' }}/10</h4><small>Pain</small></div>
+                    <div class="col-3"><h4>{{ progress.latest.mobility_score or '-' }}/10</h4><small>Mobility</small></div>
+                    <div class="col-3"><h4>{{ progress.latest.strength_score or '-' }}/10</h4><small>Strength</small></div>
+                    <div class="col-3"><h4>{{ progress.latest.functional_outcome or '-' }}/10</h4><small>Function</small></div>
+                </div>
+                <hr>
+                <div class="alert alert-info mb-0">
+                    <strong>AI Recommendation:</strong> {{ progress.recommendation }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold">Recommended Exercises</div>
+            <div class="card-body">
+                <p class="small text-muted"><strong>Plan:</strong> {{ exercises.plan }}</p>
+                {% for ex in exercises.recommended %}
+                <div class="border rounded p-2 mb-2">
+                    <strong>{{ ex.name }}</strong>
+                    <span class="badge bg-info text-dark">{{ ex.category }}</span><br>
+                    <small>{{ ex.reps or '-' }} reps &middot; {{ ex.duration_s or '-' }}s</small>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No exercises in the library yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white fw-bold">Recovery Trajectory</div>
+            <div class="card-body">
+                <div class="alert alert-success mb-3"><strong>{{ recovery.estimated_trajectory }}</strong></div>
+                <p><strong>Plan Suggestion:</strong><br>{{ optimize.suggestion }}</p>
+                <div class="text-muted small">
+                    <span class="badge bg-light text-dark me-1">Baseline pain: {{ recovery.baseline_pain or '-' }}</span>
+                    <span class="badge bg-light text-dark me-1">Compliance: {{ recovery.compliance or '-' }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

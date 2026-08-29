@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
+        <li class="breadcrumb-item active">Dental Procedures</li>
+    </ol>
+</nav>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-hand-holding-medical"></i> Record Procedure - {{ patient.user.full_name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('dentistry.procedures', patient_id=patient.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Procedure Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="procedure_name" required
+                           placeholder="E.g. Scaling and polishing">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tooth Number</label>
+                    <input type="text" class="form-control" name="tooth_number" placeholder="E.g. 16">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cost</label>
+                    <input type="number" step="0.01" class="form-control" name="cost" min="0" value="0">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Optional notes">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-plus me-1"></i>Add Procedure</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5><i class="fas fa-list"></i> Procedure History</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Procedure</th>
+                        <th>Tooth</th>
+                        <th>Cost</th>
+                        <th>Notes</th>
+                        <th>Performed At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for procedure in procedures %}
+                    <tr>
+                        <td>{{ procedure.id }}</td>
+                        <td>{{ procedure.procedure_name }}</td>
+                        <td>{{ procedure.tooth_number or 'N/A' }}</td>
+                        <td>${{ '%.2f'|format(procedure.cost or 0) }}</td>
+                        <td>{{ procedure.notes or 'N/A' }}</td>
+                        <td>{{ procedure.performed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No procedures recorded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('dentistry.imaging', patient_id=patient.id) }}" class="btn btn-outline-secondary mt-3">
+    <i class="fas fa-arrow-right me-1"></i>Continue to Imaging
+</a>
+{% endblock %}

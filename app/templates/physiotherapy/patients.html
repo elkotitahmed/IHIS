@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-users me-2"></i>Patients</h4>
+
+<form class="row g-2 mb-3" method="get" action="{{ url_for('physiotherapy.patients') }}">
+    <div class="col-md-6">
+        <input class="form-control" type="search" name="q" value="{{ search }}" placeholder="Search patients by name or email...">
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" type="submit"><i class="fas fa-search me-1"></i>Search</button>
+    </div>
+</form>
+
+<div class="card card-shadow">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Gender</th>
+                        <th>Date of Birth</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in patients %}
+                    <tr>
+                        <td>{{ p.user.full_name }}</td>
+                        <td>{{ p.user.email }}</td>
+                        <td>{{ p.gender or '-' }}</td>
+                        <td>{{ p.date_of_birth.strftime('%d %b %Y') if p.date_of_birth else '-' }}</td>
+                        <td>{{ p.phone or '-' }}</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('physiotherapy.assessment', patient_id=p.id) }}">
+                                <i class="fas fa-stethoscope me-1"></i>Assessment
+                            </a>
+                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('physiotherapy.plan', patient_id=p.id) }}">
+                                <i class="fas fa-clipboard-list me-1"></i>Plan
+                            </a>
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('physiotherapy.progress', patient_id=p.id) }}">
+                                <i class="fas fa-chart-line me-1"></i>Progress
+                            </a>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('ai.rehab', patient_id=p.id) }}">
+                                <i class="fas fa-brain me-1"></i>AI Rehab
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">No patients found</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

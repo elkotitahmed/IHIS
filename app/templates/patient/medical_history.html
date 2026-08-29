@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-notes-medical text-primary"></i> Medical History</h4>
+
+<ul class="nav nav-tabs mb-3" id="medicalTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="records-tab" data-bs-toggle="tab" data-bs-target="#records" type="button" role="tab">Medical Records</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="diagnoses-tab" data-bs-toggle="tab" data-bs-target="#diagnoses" type="button" role="tab">Diagnoses</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitals" type="button" role="tab">Vitals</button>
+    </li>
+</ul>
+
+<div class="tab-content" id="medicalTabsContent">
+    <div class="tab-pane fade show active" id="records" role="tabpanel" aria-labelledby="records-tab">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-folder-open text-primary"></i> Medical Records</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Visit Date</th>
+                                <th>Diagnosis</th>
+                                <th>Treatment Plan</th>
+                                <th>Clinical Notes</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in records %}
+                            <tr>
+                                <td>{{ rec.visit_date.strftime('%Y-%m-%d') if rec.visit_date else 'N/A' }}</td>
+                                <td>{{ rec.diagnosis or 'N/A' }}</td>
+                                <td>{{ rec.treatment_plan or 'N/A' }}</td>
+                                <td>{{ rec.clinical_notes or 'N/A' }}</td>
+                                <td class="text-end">
+                                    <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=rec.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No medical records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="diagnoses" role="tabpanel" aria-labelledby="diagnoses-tab">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-stethoscope text-primary"></i> Diagnoses</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>ICD-10 Code</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in diagnoses %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ d.icd10_code or 'N/A' }}</span></td>
+                                <td>{{ d.description or 'N/A' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">No diagnoses found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="vitals" role="tabpanel" aria-labelledby="vitals-tab">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-heartbeat text-primary"></i> Vital Signs</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Temperature</th>
+                                <th>Blood Pressure</th>
+                                <th>Heart Rate</th>
+                                <th>Respiratory Rate</th>
+                                <th>Oxygen Saturation</th>
+                                <th>Recorded At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in vitals %}
+                            <tr>
+                                <td>{{ v.temperature or 'N/A' }}</td>
+                                <td>{{ v.blood_pressure or v.bp or 'N/A' }}</td>
+                                <td>{{ v.heart_rate or 'N/A' }}</td>
+                                <td>{{ v.respiratory_rate or 'N/A' }}</td>
+                                <td>{{ v.oxygen_saturation or v.spo2 or 'N/A' }}</td>
+                                <td>{{ v.recorded_at.strftime('%Y-%m-%d %H:%M') if v.recorded_at else 'N/A' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No vital signs found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

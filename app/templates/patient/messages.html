@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-envelope text-primary"></i> Messages</h4>
+    {% if doctors %}
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="fas fa-paper-plane"></i> Compose to Doctor
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {% for d in doctors %}
+            <li><a class="dropdown-item" href="{{ url_for('patient.compose_message', doctor_id=d.id) }}">
+                {{ d.user.full_name if d.user else 'Doctor' }}
+                {% if d.specialty %}<span class="text-muted small"> - {{ d.specialty.name }}</span>{% endif %}
+            </a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#inbox">Inbox</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#sent">Sent</a></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="inbox">
+        <div class="card card-shadow">
+            <div class="card-body">
+                <div class="list-group">
+                    {% for item in items %}
+                    <div class="list-group-item {{ '' if item.is_read else 'list-group-item-primary' }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>
+                                <i class="fas fa-user-circle text-muted me-1"></i>
+                                {{ item.sender.full_name if item.sender else 'Unknown' }}
+                            </strong>
+                            <small class="text-muted">{{ item.sent_at.strftime('%Y-%m-%d %H:%M') if item.sent_at else '' }}</small>
+                        </div>
+                        <div class="mt-1">
+                            <strong>{{ item.subject or '(No Subject)' }}</strong>
+                            {% if not item.is_read %}<span class="badge bg-primary ms-1">New</span>{% endif %}
+                        </div>
+                        <p class="mb-0 text-muted">{{ item.body or '' }}</p>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-center text-muted">No messages found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="sent">
+        <div class="card card-shadow">
+            <div class="card-body">
+                <div class="list-group">
+                    {% for item in sent %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong><i class="fas fa-paper-plane text-muted me-1"></i>To: {{ item.receiver.full_name if item.receiver else 'Unknown' }}</strong>
+                            <small class="text-muted">{{ item.sent_at.strftime('%Y-%m-%d %H:%M') if item.sent_at else '' }}</small>
+                        </div>
+                        <strong>{{ item.subject or '(No Subject)' }}</strong>
+                        <p class="mb-0 text-muted">{{ item.body or '' }}</p>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-center text-muted">No sent messages.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

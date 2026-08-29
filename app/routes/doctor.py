@@ -1,0 +1,184 @@
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+from datetime import datetime
+from app import db
+from app.models import (
+    Doctor, Patient, Appointment, MedicalRecord, Diagnosis, Prescription,
+    Medication, LabOrder, LabTestCatalog, RadiologyOrder, ImagingType,
+    Specialty, Referral, VitalSign, Notification, User,
+)
+from app.routes.decorators import roles_required, log_activity
+
+doctor_bp = Blueprint('doctor', __name__)
+
+
+def _current_doctor():
+    return Doctor.query.filter_by(user_id=current_user.id).first()
+
+
+@doctor_bp.route('/dashboard')
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def dashboard():
+    doctor = _current_doctor()
+    if not doctor:
+        flash('Doctor profile not found.', 'danger')
+        return redirect(url_for('main.home'))
+    today = datetime.utcnow().date()
+    todays_appts = [a for a in doctor.appointments
+                    if a.scheduled_at and a.scheduled_at.date() == today]
+    pending_labs = LabOrder.query.filter_by(status='Pending').count()
+    pending_radio = RadiologyOrder.query.filter_by(status='Pending').count()
+    return render_template('doctor/dashboard.html', title='Doctor Dashboard',
+                           doctor=doctor, todays_appts=todays_appts,
+                           pending_labs=pending_labs, pending_radio=pending_radio)
+
+
+@doctor_bp.route('/patients')
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def patients():
+    search = request.args.get('q', '')
+    query = Patient.query
+    if search:
+        query = query.join(Patient.user).filter(
+            db.or_(User.full_name.ilike(f'%{search}%'),
+                   User.email.ilike(f'%{search}%')))
+    results = query.limit(100).all()
+    return render_template('doctor/patients.html', title='Patient Search',
+                           patients=results, search=search)
+
+
+@doctor_bp.route('/patients/<int:patient_id>')
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def patient_detail(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    records = MedicalRecord.query.filter_by(patient_id=patient.id).order_by(
+        MedicalRecord.visit_date.desc()).all()
+    diagnoses = Diagnosis.query.filter_by(patient_id=patient.id).all()
+    vitals = VitalSign.query.filter_by(patient_id=patient.id).order_by(
+        VitalSign.recorded_at.desc()).limit(10).all()
+    return render_template('doctor/patient_detail.html', title='Patient Record',
+                           patient=patient, records=records, diagnoses=diagnoses, vitals=vitals)
+
+
+@doctor_bp.route('/patients/<int:patient_id>/emr/add', methods=['GET', 'POST'])
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def add_emr(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    doctor = _current_doctor()
+    if request.method == 'POST':
+        record = MedicalRecord(
+            patient_id=patient.id,
+            doctor_id=doctor.id if doctor else None,
+            diagnosis=request.form.get('diagnosis'),
+            treatment_plan=request.form.get('treatment_plan'),
+            clinical_notes=request.form.get('clinical_notes'),
+        )
+        db.session.add(record)
+        if request.form.get('icd10') or request.form.get('diagnosis'):
+            db.session.add(Diagnosis(
+                patient_id=patient.id,
+                doctor_id=doctor.id if doctor else None,
+                icd10_code=request.form.get('icd10'),
+                description=request.form.get('diagnosis') or 'Clinical note',
+            ))
+        log_activity('ADD_EMR', 'patient', patient.id)
+        db.session.commit()
+        flash('Medical record added.', 'success')
+        return redirect(url_for('doctor.patient_detail', patient_id=patient.id))
+    return render_template('doctor/add_emr.html', title='Add Medical Record', patient=patient)
+
+
+@doctor_bp.route('/patients/<int:patient_id>/prescriptions', methods=['GET', 'POST'])
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def prescriptions(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    doctor = _current_doctor()
+    if request.method == 'POST':
+        db.session.add(Prescription(
+            patient_id=patient.id,
+            doctor_id=doctor.id if doctor else None,
+            medication_id=request.form.get('medication_id'),
+            dosage=request.form.get('dosage'),
+            frequency=request.form.get('frequency'),
+            duration=request.form.get('duration'),
+            instructions=request.form.get('instructions'),
+            refills=int(request.form.get('refills') or 0),
+        ))
+        log_activity('CREATE_PRESCRIPTION', 'patient', patient.id)
+        db.session.commit()
+        flash('Prescription created.', 'success')
+        return redirect(url_for('doctor.prescriptions', patient_id=patient.id))
+    meds = Medication.query.all()
+    prescriptions = Prescription.query.filter_by(patient_id=patient.id).all()
+    return render_template('doctor/prescriptions.html', title='Prescriptions',
+                           patient=patient, meds=meds, items=prescriptions)
+
+
+@doctor_bp.route('/patients/<int:patient_id>/lab-order', methods=['GET', 'POST'])
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def lab_order(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    doctor = _current_doctor()
+    if request.method == 'POST':
+        db.session.add(LabOrder(
+            patient_id=patient.id,
+            doctor_id=doctor.id if doctor else None,
+            test_id=request.form.get('test_id'),
+            priority=request.form.get('priority', 'Normal'),
+            notes=request.form.get('notes'),
+        ))
+        log_activity('REQUEST_LAB', 'patient', patient.id)
+        db.session.commit()
+        flash('Lab order requested.', 'success')
+        return redirect(url_for('doctor.patient_detail', patient_id=patient.id))
+    tests = LabTestCatalog.query.filter_by(is_active=True).all()
+    return render_template('doctor/lab_order.html', title='Lab Order', patient=patient, tests=tests)
+
+
+@doctor_bp.route('/patients/<int:patient_id>/radiology-order', methods=['GET', 'POST'])
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def radiology_order(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    doctor = _current_doctor()
+    if request.method == 'POST':
+        db.session.add(RadiologyOrder(
+            patient_id=patient.id,
+            doctor_id=doctor.id if doctor else None,
+            imaging_type_id=request.form.get('imaging_type_id'),
+            priority=request.form.get('priority', 'Normal'),
+            notes=request.form.get('notes'),
+        ))
+        log_activity('REQUEST_RADIOLOGY', 'patient', patient.id)
+        db.session.commit()
+        flash('Radiology order requested.', 'success')
+        return redirect(url_for('doctor.patient_detail', patient_id=patient.id))
+    imaging = ImagingType.query.all()
+    return render_template('doctor/radiology_order.html', title='Radiology Order',
+                           patient=patient, imaging=imaging)
+
+
+@doctor_bp.route('/appointments')
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def appointments():
+    doctor = _current_doctor()
+    items = Appointment.query.filter_by(doctor_id=doctor.id).order_by(
+        Appointment.scheduled_at.desc()).all() if doctor else []
+    return render_template('doctor/appointments.html', title='My Appointments', items=items)
+
+
+@doctor_bp.route('/lab-results')
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def lab_results():
+    doctor = _current_doctor()
+    orders = LabOrder.query.filter_by(doctor_id=doctor.id).order_by(
+        LabOrder.order_date.desc()).all() if doctor else []
+    return render_template('doctor/lab_results.html', title='Lab Results', orders=orders)

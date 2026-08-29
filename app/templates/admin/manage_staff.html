@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-user-cog text-primary"></i> Manage Staff: {{ user.full_name }}</h4>
+    <a href="{{ url_for('admin.staff') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Staff
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- User Details -->
+    <div class="col-md-5">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-id-card"></i> User Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table mb-0">
+                    <tr><th>ID</th><td>{{ user.id }}</td></tr>
+                    <tr><th>Full Name</th><td>{{ user.full_name }}</td></tr>
+                    <tr><th>Username</th><td>{{ user.username }}</td></tr>
+                    <tr><th>Email</th><td>{{ user.email }}</td></tr>
+                    <tr><th>Type</th><td><span class="badge bg-secondary">{{ user.user_type }}</span></td></tr>
+                    <tr><th>Phone</th><td>{{ user.phone or 'N/A' }}</td></tr>
+                    <tr><th>Active</th>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th>Department</th><td>{{ user.department.name if user.department else 'N/A' }}</td></tr>
+                    <tr><th>Created</th><td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td></tr>
+                    <tr><th>Last Login</th><td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roles -->
+    <div class="col-md-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent">
+                <h5><i class="fas fa-user-tag"></i> Assigned Roles</h5>
+            </div>
+            <div class="card-body">
+                {% if user.roles %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>Description</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role in user.roles %}
+                            <tr>
+                                <td><span class="badge bg-primary">{{ role.name }}</span></td>
+                                <td>{{ role.description or '-' }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('admin.update_roles', user_id=user.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="role_id" value="{{ role.id }}">
+                                        <input type="hidden" name="action" value="remove">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Remove role {{ role.name }}?')">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-3">No roles assigned.</p>
+                {% endif %}
+
+                <hr>
+                <h6>Add Role</h6>
+                <form method="POST" action="{{ url_for('admin.update_roles', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group">
+                        <select name="role_id" class="form-select" required>
+                            <option value="">-- Select Role --</option>
+                            {% for role in all_roles %}
+                                {% if role not in user.roles %}
+                                <option value="{{ role.id }}">{{ role.name }}{% if role.description %} - {{ role.description }}{% endif %}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="action" value="add">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

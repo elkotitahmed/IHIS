@@ -1,0 +1,83 @@
+/* iHIS custom styles */
+
+body {
+    background-color: #f4f7fc;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card-shadow {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, .08);
+    border: none;
+    border-radius: 1rem;
+}
+
+.stat-card {
+    border-radius: 1rem;
+    border: none;
+    color: #fff;
+}
+
+.stat-card .stat-icon {
+    font-size: 2rem;
+    opacity: .85;
+}
+
+.table thead th {
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom-width: 1px;
+}
+
+.sidebar {
+    background: #0d2b4e;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.ai-placeholder {
+    border: 2px dashed #adb5bd;
+    border-radius: 1rem;
+    background: #f8f9fa;
+    padding: 1.25rem;
+    text-align: center;
+    color: #6c757d;
+}
+
+[data-bs-theme="dark"] body {
+    background-color: #1a1d24;
+    color: #e5e7eb;
+}
+
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .list-group-item {
+    background-color: #242833;
+    color: #e5e7eb;
+}
+
+.tooth-grid .tooth {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin: 3px;
+    border: 1px solid #ccc;
+    border-radius: .5rem;
+    cursor: pointer;
+    font-weight: 600;
+    background: #fff;
+    transition: all .15s;
+}
+
+.tooth-grid .tooth:hover {
+    background: #1f6feb;
+    color: #fff;
+}
+
+.tooth-grid .tooth.selected {
+    background: #d61f26;
+    color: #fff;
+    border-color: #d61f26;
+}
