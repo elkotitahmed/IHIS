@@ -13,3 +13,6 @@ reportlab==4.2.0
 # Production WSGI servers (gunicorn for Linux/macOS, waitress also works on Windows)
 gunicorn==23.0.0
 waitress==3.0.2
+
+# PostgreSQL driver (needed when DATABASE_URL points to a PostgreSQL database)
+psycopg2-binary==2.9.10

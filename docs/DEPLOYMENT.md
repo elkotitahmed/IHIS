@@ -230,14 +230,63 @@ put Cloudflare in front of it.
 5. **Your origin must be reachable privately or publicly** for Tunnel/proxy
    modes; keep `DJANGO`/`FLASK_CONFIG` production and CSRF on everywhere.
 
-## 12. The Next Step (deploy)
+## 12. Deploy on Render (auto-deploy from GitHub) + Cloudflare
 
-1. Push this repository to GitHub (`IHIS`).
-2. Pick a host (Fly.io, Railway, Render, Azure App Service, or a VPS) and set
-   `SECRET_KEY`, `FLASK_CONFIG=production`, and `DATABASE_URL` (PostgreSQL)
-   as platform secrets.
-3. Run `flask db upgrade` once, then start `wsgi:app` via Waitress/Gunicorn.
-4. Add your domain to Cloudflare and proxy it at the Python host (DNS or
-   Cloudflare Tunnel).
-5. Run `python seed.py` only if you want demo data; otherwise create the first
-   SuperAdmin through your normal onboarding.
+The repository is already "host-ready": it ships a `Procfile`
+(`web: gunicorn --bind 0.0.0.0:$PORT wsgi:app`), a `runtime.txt`, the
+`psycopg2-binary` driver, and `create_app()` creates the schema automatically
+on boot via `db.create_all()` — no CLI commands needed to get running.
+
+### 12.1 Create the service on Render
+
+1. Go to https://render.com and sign up using **Connect with GitHub**.
+2. Dashboard → **New** → **Web Service** → choose the `IHIS` repository
+   (authorize the Render GitHub app on first use).
+3. Render auto-detects Python. Configure:
+   - **Name:** `ihis`
+   - **Build Command:** `pip install -r requirements.txt` (default)
+   - **Start Command:** `gunicorn --bind 0.0.0.0:$PORT wsgi:app`
+   - **Instance Type:** Free (spins down when idle; sufficient for a demo)
+4. Add these **Environment Variables**:
+   - `SECRET_KEY` → a long random 64-char hex string
+   - `FLASK_CONFIG` → `production`
+   - (recommended) `DATABASE_URL` → the **Internal Database URL** of a free
+     Render PostgreSQL instance (Dashboard → **New** → **PostgreSQL**).
+     Without it the app falls back to SQLite, whose file lives on Render's
+     ephemeral disk and resets on redeploy.
+5. (optional, once) **Advanced → Pre-deploy Command:** `python seed.py` to load
+   the demo accounts (password `123456`). Safe to run repeatedly.
+6. **Create Web Service** → wait for the deploy → open `https://ihis.onrender.com`.
+7. From now on, **every `git push` to GitHub auto-redeploys** the app.
+
+### 12.2 Put Cloudflare in front
+
+1. Add your domain to Cloudflare (a free plan is fine); update your registrar
+   Nameservers to the ones Cloudflare shows you.
+2. **DNS → Add record:**
+   - Type: `CNAME`, Name: `ihis`, Target: `ihis.onrender.com`
+   - Proxy status: **Proxied** (orange cloud)
+3. **SSL/TLS → Overview → Mode:** `Full (Strict)`.
+4. Open https://ihis.yourdomain.com — iHIS is now served through Cloudflare
+   (HTTPS, CDN, WAF) with the Flask app running on Render.
+5. Optional: in **Caching → Cache Rules**, add a rule to cache
+   `ihis.yourdomain.com/static/*` at the edge.
+
+### 12.3 Updating the app later
+
+```bash
+git add -A
+git commit -m "describe the change"
+git push origin main        # Render redeploys automatically
+```
+
+### 12.4 Alternatives to Render
+
+- **Railway** — same idea; Start Command:
+  `gunicorn --bind 0.0.0.0:$PORT wsgi:app`, plus `DATABASE_URL` for a Railway
+  PostgreSQL.
+- **Fly.io** — `fly launch` → set `cmd = "gunicorn -b :8080 wsgi:app"`,
+  internal port 8080, attach a Fly Postgres.
+- **VPS (Ubuntu)** — `git clone`, venv, `pip install -r requirements.txt`,
+  run `wsgi:app` under Gunicorn + systemd, keep Cloudflare as the front and/or
+  add a Cloudflare Tunnel (section 10B).
