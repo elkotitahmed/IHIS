@@ -30,8 +30,8 @@ SYSTEM_PROMPT = (
     "pharmacist/physician has final authority on all clinical decisions."
 )
 
-BASE_URL = "https://generativelanguage.googleapis.com/v1/models"
-DEFAULT_MODEL = "gemini-2.0-flash"  # overridable via AI_MODEL env var
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+DEFAULT_MODEL = "gemini-3.6-flash"  # overridable via AI_MODEL env var
 
 _SECTION_HEADERS = [
     'Drug-Drug Interactions', 'Drug-Disease Contraindications', 'Duplicate Therapy',
