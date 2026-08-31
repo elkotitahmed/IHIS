@@ -29,6 +29,7 @@ from app.models import (
     MedicalRecord,
     NursingNote,
     OrthodonticCase,
+    Patient,
     Prescription,
     RadiologyOrder,
     RadiologyReport,
@@ -140,6 +141,66 @@ def has_need_to_know(patient, user=None):
         return True
 
     return False
+
+
+def accessible_patient_ids(user=None):
+    """Return the set of patient ids the current staff member has a documented
+    need-to-know relationship with. For a Doctor this mirrors the doctor branch
+    of :func:`has_need_to_know` so a filtered patient list always yields
+    overview/detail pages the user is actually allowed to open."""
+    user = user or current_user
+    if not user.is_authenticated:
+        return set()
+    if user.user_type == 'admin' and user.has_any_role('Admin', 'SuperAdmin'):
+        return {pid for (pid,) in db.session.query(Patient.id).all()}
+    if user.user_type == 'patient':
+        pat = getattr(user, 'patient_profile', None)
+        return {pat.id} if pat else set()
+
+    pid_rows = set()
+    uid = user.id
+
+    if db.session.query(CareTeamMember.id).join(
+            CareTeam, CareTeamMember.team_id == CareTeam.id).filter(
+            CareTeamMember.user_id == uid).all():
+        for (pid,) in db.session.query(CareTeam.patient_id).join(
+                CareTeamMember, CareTeamMember.team_id == CareTeam.id).filter(
+                CareTeamMember.user_id == uid).all():
+            pid_rows.add(pid)
+
+    did = _doctor_id(user)
+    if did:
+        pid_rows.update(pid for (pid,) in db.session.query(Appointment.patient_id).filter_by(doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(MedicalRecord.patient_id).filter_by(doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(Diagnosis.patient_id).filter_by(doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(Prescription.patient_id).filter_by(doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(LabOrder.patient_id).filter_by(doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(RadiologyOrder.patient_id).filter_by(doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(Admission.patient_id).filter_by(admitting_doctor_id=did).all())
+        pid_rows.update(pid for (pid,) in db.session.query(Referral.patient_id).filter(
+            (Referral.from_doctor_id == did) | (Referral.to_doctor_id == did)).all())
+    else:
+        # Non-doctor staff roles still need their documented encounters.
+        for Model in (VitalSign, NursingNote, CarePlan):
+            pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(nurse_id=uid).all())
+        denid = _dentist_id(user)
+        if denid:
+            for Model in (DentalProcedure, OrthodonticCase):
+                pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(dentist_id=denid).all())
+        thid = _therapist_id(user)
+        if thid:
+            for Model in (TherapyAssessment, TherapyPlan, TherapySession):
+                pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(therapist_id=thid).all())
+        pid_rows.update(pid for (pid,) in db.session.query(RadiologyReport.patient_id).join(
+            RadiologyOrder, RadiologyReport.order_id == RadiologyOrder.id).filter(
+            db.or_(RadiologyReport.reported_by == uid, RadiologyReport.signed_by == uid)).all())
+        pid_rows.update(pid for (pid,) in db.session.query(LabResult.patient_id).join(
+            LabOrder, LabResult.order_id == LabOrder.id).filter(
+            db.or_(LabResult.created_by == uid, LabResult.validated_by == uid)).all())
+        if user.has_role('Pharmacist'):
+            pid_rows.update(pid for (pid,) in db.session.query(Prescription.patient_id).distinct().all())
+
+    return pid_rows
 
 
 def require_patient_access(patient):

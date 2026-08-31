@@ -7,7 +7,7 @@ from app.models import (
     ImagingType, Specialty, Referral, VitalSign, Notification, User, Bill,
 )
 from app.routes.decorators import roles_required, permissions_required, log_activity, log_change
-from app.access import patient_access_required, require_patient_access
+from app.access import patient_access_required, require_patient_access, accessible_patient_ids
 from app.utils import utcnow, is_clinical_locked
 from app.services.ai import AIPatientRiskPrediction
 
@@ -51,6 +51,14 @@ def dashboard():
 def patients():
     search = request.args.get('q', '')
     query = Patient.query
+    # A Doctor only sees patients they have a documented need-to-know
+    # relationship with, so opening a patient's overview/detail never 403s.
+    # Admin/SuperAdmin retain full supervisory search.
+    if not (current_user.user_type == 'admin'
+            and current_user.has_any_role('Admin', 'SuperAdmin')):
+        allowed = accessible_patient_ids(current_user)
+        query = query.filter(Patient.id.in_(allowed)) if allowed \
+            else query.filter(Patient.id.is_(None))
     if search:
         query = query.join(Patient.user).filter(
             db.or_(User.full_name.ilike(f'%{search}%'),
