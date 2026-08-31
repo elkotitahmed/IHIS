@@ -42,6 +42,11 @@ app/static/ai_models/*.h5
 app/static/ai_models/uploads/
 app/static/ai_models/results/
 
+# ---------- Standalone reference source projects (not part of iHIS repo) ----------
+# The original AI apps live in "AI apps/" and contain their own git history,
+# large model files, and secrets. They are integrated into iHIS, not versioned here.
+AI apps/
+
 # ---------- Test & coverage artifacts ----------
 .pytest_cache/
 .mypy_cache/
