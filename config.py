@@ -21,12 +21,17 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
 
     # File uploads
-    UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads')
+    UPLOAD_FOLDER = os.path.join(basedir, 'var', 'uploads')  # private, NOT under static/
     MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32 MB
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'dcm', 'mp4', 'webm'}
 
     # Pagination
     ITEMS_PER_PAGE = 20
+
+    # CORS: comma-separated allowed origins. Empty by default for the
+    # same-origin server-rendered app. Set explicitly (e.g. to a trusted SPA
+    # origin) only if a separate frontend needs to call the JSON API cross-origin.
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '')
 
     # Security: login lockout
     MAX_LOGIN_ATTEMPTS = 5

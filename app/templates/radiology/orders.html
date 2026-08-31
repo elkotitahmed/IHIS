@@ -5,6 +5,20 @@
     <a href="{{ url_for('radiology.new_order') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Order</a>
 </div>
 
+<div class="card card-shadow mb-3">
+    <div class="card-body py-2">
+        <div class="small">Workflow:
+            <span class="badge bg-warning">Pending</span> &rarr;
+            <span class="badge bg-primary">Scheduled</span> &rarr;
+            <span class="badge bg-info">Arrived</span> &rarr;
+            <span class="badge bg-secondary">InProgress</span> &rarr;
+            <span class="badge bg-secondary">Performed</span> &rarr;
+            <span class="badge bg-success">Reported</span> &rarr;
+            <span class="badge bg-success">Signed</span>
+        </div>
+    </div>
+</div>
+
 <div class="card card-shadow">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -26,13 +40,9 @@
                         <tr>
                             <td>{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</td>
                             <td>{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</td>
+                            <td><span class="badge bg-{{ status_badge(order.status or 'Pending') }}">{{ order.status or 'Pending' }}</span></td>
                             <td>
-                                <span class="badge bg-{% if order.status == 'Completed' %}success{% elif order.status == 'In Progress' or order.status == 'InProgress' %}info{% elif order.status == 'Scheduled' %}warning{% else %}secondary{% endif %}">
-                                    {{ order.status or 'Pending' }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if order.priority == 'Urgent' or order.priority == 'High' %}
+                                {% if order.priority in ('Urgent','High','HIGH','CRITICAL','URGENT') %}
                                     <span class="badge bg-danger">{{ order.priority }}</span>
                                 {% else %}
                                     <span class="badge bg-secondary">{{ order.priority or 'Normal' }}</span>
@@ -41,47 +51,60 @@
                             <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '-' }}</td>
                             <td>
                                 {% if order.image_urls %}
-                                    {% set image_count = order.image_urls.split(',')|length %}
-                                    <span class="text-muted">{{ image_count }} file(s)</span>
-                                    <span class="d-inline-block text-truncate text-muted" style="max-width:120px; vertical-align:bottom;">
-                                        {{ order.image_urls }}
-                                    </span>
+                                    {% set images = order.image_urls.split(',') %}
+                                    <span class="text-muted">{{ images|length }} file(s)</span>
+                                    {% for url in images %}
+                                            <a href="{{ url_for('radiology.download_image', order_id=order.id, index=loop.index0) }}" target="_blank"
+                                               class="d-inline-block me-1 badge bg-light border text-dark text-decoration-none">
+                                                <i class="fas fa-image"></i> {{ loop.index }}
+                                            </a>
+                                    {% endfor %}
                                 {% else %}
                                     <span class="text-muted">None</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if order.status == 'Pending' %}
-                                    <form method="POST" action="{{ url_for('radiology.schedule', order_id=order.id) }}" class="d-inline">
+                                    <details class="d-inline">
+                                        <summary class="btn btn-sm btn-warning"><i class="fas fa-calendar-plus me-1"></i>Schedule</summary>
+                                        <form method="POST" action="{{ url_for('radiology.schedule', order_id=order.id) }}" class="d-inline-flex align-items-center mt-1 ms-1">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="datetime-local" name="scheduled_at" class="form-control form-control-sm me-1" style="width:170px;">
+                                            <button type="submit" class="btn btn-sm btn-primary">Go</button>
+                                        </form>
+                                    </details>
+                                {% elif order.status == 'Scheduled' %}
+                                    <form method="POST" action="{{ url_for('radiology.arrive', order_id=order.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-calendar-plus me-1"></i>Schedule
-                                        </button>
+                                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-user-check me-1"></i>Arrived</button>
                                     </form>
-                                {% elif order.status == 'Scheduled' or order.status == 'In Progress' or order.status == 'InProgress' %}
+                                {% elif order.status == 'Arrived' %}
+                                    <form method="POST" action="{{ url_for('radiology.perform', order_id=order.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-dark"><i class="fas fa-camera me-1"></i>Perform Study</button>
+                                    </form>
+                                {% elif order.status in ('InProgress', 'Performed', 'Reported', 'Signed', 'Finalized') %}
                                     <a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-file-medical me-1"></i>Enter Report
+                                        <i class="fas fa-file-medical me-1"></i>{% if order.report %}View/Edit Report{% else %}Enter Report{% endif %}
                                     </a>
                                     <form method="POST" enctype="multipart/form-data"
                                           action="{{ url_for('radiology.upload_images', order_id=order.id) }}"
                                           class="d-inline-flex align-items-center mt-1">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="file" name="images" multiple class="form-control form-control-sm me-1" style="width:160px;">
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-upload me-1"></i>Upload
-                                        </button>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-upload me-1"></i></button>
                                     </form>
-                                {% elif order.status == 'Completed' %}
-                                    <a class="btn btn-outline-primary btn-sm mb-1" href="{{ url_for('ai.radiology', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI</a>
-                                    {% if order.report and order.report.impression %}
-                                        <span class="text-muted" title="{{ order.report.impression }}">
-                                            <i class="fas fa-file-medical-alt me-1"></i>{{ order.report.impression[:80] }}{% if order.report.impression|length > 80 %}...{% endif %}
-                                        </span>
-                                    {% else %}
-                                        <a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-file-medical me-1"></i>Report
-                                        </a>
+                                    {% if order.report and order.report.status != 'Signed' %}
+                                    <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-success"><i class="fas fa-signature me-1"></i>Sign</button>
+                                    </form>
                                     {% endif %}
+                                    {% if order.report %}
+                                    <a class="btn btn-outline-primary btn-sm mb-1" href="{{ url_for('ai.radiology', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI</a>
+                                    {% endif %}
+                                {% elif order.status == 'Cancelled' %}
+                                    <span class="text-muted">Cancelled</span>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}

@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, current_app, abort
 from flask_login import login_required, current_user
 from datetime import datetime, date
+import os
 from app import db
 from app.models import (
     Appointment, DentalRecord, DentalChart, DentalProcedure,
-    DentalImage, OrthodonticCase, Patient, Dentist,
+    DentalImage, OrthodonticCase, Patient, Dentist, DentalTreatmentPlan,
 )
 from app.routes.decorators import roles_required, log_activity, save_upload
+from app.access import patient_access_required, require_patient_access
 
 dentistry_bp = Blueprint('dentistry', __name__)
 
@@ -28,7 +30,9 @@ def _parse_date(value):
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
 def dashboard():
-    today_appointments = Appointment.query.count()
+    today = date.today()
+    today_appointments = Appointment.query.filter(
+        db.func.date(Appointment.scheduled_at) == today).count()
     pending_treatment_plans = DentalChart.query.filter(
         DentalChart.status.notin_(['Healthy', 'Missing'])).count()
     active_ortho_cases = OrthodonticCase.query.filter_by(status='Active').count()
@@ -53,6 +57,7 @@ def patients():
 @dentistry_bp.route('/patients/<int:patient_id>/chart')
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def chart(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     charts = DentalChart.query.filter_by(patient_id=patient.id).order_by(
@@ -64,6 +69,7 @@ def chart(patient_id):
 @dentistry_bp.route('/patients/<int:patient_id>/chart/add', methods=['POST'])
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def add_chart(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     tooth = request.form.get('tooth_number')
@@ -78,6 +84,7 @@ def add_chart(patient_id):
         notes=request.form.get('notes'),
     )
     db.session.add(entry)
+    db.session.flush()
     log_activity('ADD_DENTAL_CHART', 'dental_chart', entry.id,
                  f"patient={patient.id} tooth={tooth}")
     db.session.commit()
@@ -88,6 +95,7 @@ def add_chart(patient_id):
 @dentistry_bp.route('/patients/<int:patient_id>/record', methods=['GET', 'POST'])
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def record(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     dental_record = DentalRecord.query.filter_by(patient_id=patient.id).first()
@@ -105,6 +113,7 @@ def record(patient_id):
                 previous_procedures=request.form.get('previous_procedures'),
             )
             db.session.add(dental_record)
+        db.session.flush()
         log_activity('UPDATE_DENTAL_RECORD', 'dental_record', dental_record.id,
                      f"patient={patient.id}")
         db.session.commit()
@@ -118,6 +127,7 @@ def record(patient_id):
 @dentistry_bp.route('/patients/<int:patient_id>/procedure', methods=['GET', 'POST'])
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def procedures(patient_id):
     patient = Patient.query.get_or_404(patient_id)
 
@@ -137,6 +147,7 @@ def procedures(patient_id):
             notes=request.form.get('notes'),
         )
         db.session.add(procedure)
+        db.session.flush()
         log_activity('ADD_DENTAL_PROCEDURE', 'dental_procedure', procedure.id,
                      f"patient={patient.id} procedure={procedure.procedure_name}")
         db.session.commit()
@@ -152,6 +163,7 @@ def procedures(patient_id):
 @dentistry_bp.route('/patients/<int:patient_id>/imaging', methods=['GET', 'POST'])
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def imaging(patient_id):
     patient = Patient.query.get_or_404(patient_id)
 
@@ -168,6 +180,7 @@ def imaging(patient_id):
                     url=url,
                 )
                 db.session.add(image)
+                db.session.flush()
                 log_activity('UPLOAD_DENTAL_IMAGE', 'dental_image', image.id,
                              f"patient={patient.id} url={url}")
                 uploaded += 1
@@ -184,11 +197,40 @@ def imaging(patient_id):
                            patient=patient, images=images)
 
 
+@dentistry_bp.route('/images/<int:image_id>/download')
+@login_required
+@roles_required('Dentist', 'Admin', 'SuperAdmin')
+def download_image(image_id):
+    """Stream a stored dental image only to users with need-to-know access."""
+    image = DentalImage.query.get_or_404(image_id)
+    require_patient_access(image.patient)
+    rel = (image.url or '').lstrip('/')
+    if rel.startswith('static/uploads/'):
+        rel = rel[len('static/uploads/'):]
+        path = os.path.normpath(os.path.join(current_app.static_folder, 'uploads', rel))
+    else:
+        path = os.path.normpath(os.path.join(
+            current_app.config.get('UPLOAD_FOLDER') or 'var/uploads', rel))
+    if not os.path.isfile(path):
+        abort(404)
+    log_activity('DOWNLOAD_DENTAL_IMAGE', 'dental_image', image.id,
+                 f'patient={image.patient_id}')
+    db.session.commit()
+    return send_file(path, as_attachment=True,
+                     download_name=os.path.basename(path))
+
+
 @dentistry_bp.route('/ortho', methods=['GET', 'POST'])
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
 def ortho():
     if request.method == 'POST':
+        pid = request.form.get('patient_id', type=int)
+        p = Patient.query.get(pid) if pid else None
+        if p is None:
+            flash('Please select a valid patient.', 'warning')
+            return redirect(url_for('dentistry.ortho'))
+        require_patient_access(p)
         dentist = _current_dentist()
         progress = request.form.get('progress') or 0
         try:
@@ -196,7 +238,7 @@ def ortho():
         except ValueError:
             progress = 0
         case = OrthodonticCase(
-            patient_id=request.form.get('patient_id'),
+            patient_id=p.id,
             dentist_id=dentist.id if dentist else None,
             case_type=request.form.get('case_type'),
             appliance=request.form.get('appliance'),
@@ -207,6 +249,7 @@ def ortho():
             notes=request.form.get('notes'),
         )
         db.session.add(case)
+        db.session.flush()
         log_activity('CREATE_ORTHO_CASE', 'orthodontic_case', case.id,
                      f"patient={case.patient_id}")
         db.session.commit()
@@ -218,3 +261,125 @@ def ortho():
     patients = Patient.query.all()
     return render_template('dentistry/ortho.html', title='Orthodontic Cases',
                            cases=cases, patients=patients)
+
+
+@dentistry_bp.route('/patients/<int:patient_id>/treatment-plan', methods=['GET', 'POST'])
+@login_required
+@roles_required('Dentist', 'Admin', 'SuperAdmin')
+@patient_access_required
+def treatment_plans(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+
+    if request.method == 'POST':
+        dentist = _current_dentist()
+        plan = DentalTreatmentPlan(
+            patient_id=patient.id,
+            dentist_id=dentist.id if dentist else None,
+            title=request.form.get('title'),
+            diagnosis=request.form.get('diagnosis'),
+            status=request.form.get('status', 'Planned'),
+            start_date=_parse_date(request.form.get('start_date')) or date.today(),
+            end_date=_parse_date(request.form.get('end_date')),
+            notes=request.form.get('notes'),
+        )
+        db.session.add(plan)
+        db.session.flush()
+        log_activity('CREATE_TREATMENT_PLAN', 'dental_treatment_plan', plan.id,
+                     f'patient={patient.id}')
+        db.session.commit()
+        flash('Treatment plan created.', 'success')
+        return redirect(url_for('dentistry.treatment_plans', patient_id=patient.id))
+
+    plans = DentalTreatmentPlan.query.filter_by(patient_id=patient.id).order_by(
+        DentalTreatmentPlan.start_date.desc()).all()
+    return render_template('dentistry/treatment_plan.html', title='Treatment Plan',
+                           patient=patient, plans=plans)
+
+
+@dentistry_bp.route('/plans/<int:plan_id>/procedures', methods=['GET', 'POST'])
+@login_required
+@roles_required('Dentist', 'Admin', 'SuperAdmin')
+def plan_procedures(plan_id):
+    plan = DentalTreatmentPlan.query.get_or_404(plan_id)
+    require_patient_access(plan.patient)
+
+    if request.method == 'POST':
+        dentist = _current_dentist()
+        cost = request.form.get('cost') or 0
+        try:
+            cost = float(cost)
+        except ValueError:
+            cost = 0.0
+        procedure = DentalProcedure(
+            patient_id=plan.patient_id,
+            dentist_id=dentist.id if dentist else None,
+            treatment_plan_id=plan.id,
+            procedure_name=request.form.get('procedure_name'),
+            tooth_number=request.form.get('tooth_number'),
+            status=request.form.get('status', 'Planned'),
+            scheduled_at=_parse_datetime(request.form.get('scheduled_at')) or None,
+            cost=cost,
+            materials=request.form.get('materials'),
+            notes=request.form.get('notes'),
+        )
+        db.session.add(procedure)
+        db.session.flush()
+        log_activity('ADD_PLAN_PROCEDURE', 'dental_procedure', procedure.id,
+                     f'patient={plan.patient_id} plan={plan.id}')
+        db.session.commit()
+        flash('Procedure added to plan.', 'success')
+        return redirect(url_for('dentistry.plan_procedures', plan_id=plan.id))
+
+    procedures = plan.procedures
+    return render_template('dentistry/plan_procedures.html', title='Plan Procedures',
+                           plan=plan, procedures=procedures)
+
+
+@dentistry_bp.route('/procedures/<int:procedure_id>/status', methods=['POST'])
+@login_required
+@roles_required('Dentist', 'Admin', 'SuperAdmin')
+def procedure_status(procedure_id):
+    procedure = DentalProcedure.query.get_or_404(procedure_id)
+    require_patient_access(procedure.patient)
+    new_status = request.form.get('status')
+    valid = {'Planned', 'Scheduled', 'InProgress', 'Completed', 'Cancelled'}
+    if new_status not in valid:
+        flash('Invalid status.', 'warning')
+    else:
+        procedure.status = new_status
+        if new_status == 'Scheduled':
+            procedure.scheduled_at = _parse_datetime(request.form.get('scheduled_at')) or \
+                procedure.scheduled_at or datetime.now()
+        elif new_status == 'Completed':
+            procedure.completed_at = datetime.now()
+            log_activity('COMPLETE_DENTAL_PROCEDURE', 'dental_procedure', procedure.id,
+                         f'patient={procedure.patient_id}')
+            from app.services.billing import ensure_bill_for_dental
+            ensure_bill_for_dental(procedure.id)
+            from app.services.notifications import notify_patient
+            notify_patient(procedure.patient, 'Dental procedure completed',
+                           f'{procedure.procedure_name or "Procedure"} completed.',
+                           entity_type='dental_procedure', entity_id=procedure.id)
+        log_activity('TRANSITION_DENTAL_PROCEDURE', 'dental_procedure', procedure.id,
+                     f'to={new_status}')
+        db.session.commit()
+        flash(f'Procedure set to {new_status}.', 'success')
+    if procedure.treatment_plan_id:
+        return redirect(url_for('dentistry.plan_procedures', plan_id=procedure.treatment_plan_id))
+    return redirect(url_for('dentistry.procedures', patient_id=procedure.patient_id))
+
+
+def _parse_datetime(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return _parse_date_value(value)
+
+
+def _parse_date_value(value):
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None

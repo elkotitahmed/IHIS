@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from datetime import datetime, timedelta
+from datetime import timedelta
 from app import db
 from app.models import User, Role, Patient, Doctor, Specialty, LoginAttempt
 from app.forms import LoginForm, RegistrationForm
 from app.routes.decorators import log_activity
+from app.utils import utcnow
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -36,8 +37,8 @@ def login():
         lock_minutes = current_app.config.get('LOCKOUT_MINUTES', 15)
 
         # Account lockout check
-        if user and user.locked_until and user.locked_until > datetime.utcnow():
-            remaining = int((user.locked_until - datetime.utcnow()).total_seconds() // 60)
+        if user and user.locked_until and user.locked_until > utcnow():
+            remaining = int((user.locked_until - utcnow()).total_seconds() // 60)
             db.session.add(LoginAttempt(email=email, user_id=user.id, successful=False,
                                         ip_address=request.remote_addr))
             db.session.commit()
@@ -55,7 +56,7 @@ def login():
             user.failed_login_attempts = 0
             user.locked_until = None
             login_user(user, remember=form.remember.data)
-            user.last_login = datetime.utcnow()
+            user.last_login = utcnow()
             db.session.add(LoginAttempt(email=email, user_id=user.id, successful=True,
                                         ip_address=request.remote_addr))
             log_activity('LOGIN', 'user', user.id)
@@ -73,7 +74,7 @@ def login():
             if user:
                 user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
                 if user.failed_login_attempts >= max_attempts:
-                    user.locked_until = datetime.utcnow() + timedelta(minutes=lock_minutes)
+                    user.locked_until = utcnow() + timedelta(minutes=lock_minutes)
                     user.failed_login_attempts = 0
                     db.session.commit()
                     flash(f'Too many failed attempts. Account locked for {lock_minutes} minutes.', 'danger')
@@ -95,15 +96,19 @@ def register():
 
     form = RegistrationForm()
     if form.validate_on_submit():
+        # Public self-registration is PATIENT-only. Staff roles (Doctor, Nurse,
+        # Admin, etc.) must be provisioned by an administrator, never self-served,
+        # otherwise anyone could grant themselves an Admin account.
+        user_type = 'patient'
         user = User(
             username=form.username.data,
             email=form.email.data.lower(),
             full_name=form.full_name.data,
-            user_type=form.user_type.data,
+            user_type=user_type,
         )
         user.set_password(form.password.data)
 
-        role_name = ROLE_BY_USER_TYPE.get(form.user_type.data, 'Patient')
+        role_name = ROLE_BY_USER_TYPE.get(user_type, 'Patient')
         role = Role.query.filter_by(name=role_name).first()
         if not role:
             role = Role(name=role_name, description=f'Role for {role_name}')
@@ -114,7 +119,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        if form.user_type.data == 'patient':
+        if user_type == 'patient':
             db.session.add(Patient(
                 user_id=user.id,
                 phone=form.phone.data or None,

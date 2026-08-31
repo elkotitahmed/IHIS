@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-fill-drip me-2 text-primary"></i>Intake / Output Chart</h4>
+    <a href="{{ url_for('nursing.patients') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Patients</a>
+</div>
+
+<div class="card card-shadow mb-3">
+    <div class="card-header bg-white">
+        <span class="fw-bold">{{ patient.user.full_name }}</span>
+        <span class="text-muted ms-2">#{{ patient.id }}</span>
+    </div>
+    <div class="card-body">
+        <form method="POST" class="row g-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3">
+                <select name="intake_type" class="form-select">
+                    <option value="">-- Intake type --</option>
+                    <option>Oral</option><option>IV</option><option>NG</option>
+                    <option>Blood products</option><option>Other</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="intake_ml" min="0" class="form-control" placeholder="Intake ml">
+            </div>
+            <div class="col-md-3">
+                <select name="output_type" class="form-select">
+                    <option value="">-- Output type --</option>
+                    <option>Urine</option><option>Stool</option><option>Drain</option>
+                    <option>Vomit</option><option>Other</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="output_ml" min="0" class="form-control" placeholder="Output ml">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card card-shadow"><div class="card-body text-center">
+            <div class="text-muted small">Total Intake</div>
+            <div class="fs-4 fw-bold text-primary">{{ total_in }} ml</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow"><div class="card-body text-center">
+            <div class="text-muted small">Total Output</div>
+            <div class="fs-4 fw-bold text-info">{{ total_out }} ml</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow"><div class="card-body text-center">
+            <div class="text-muted small">Net Balance</div>
+            <div class="fs-4 fw-bold text-{{ 'danger' if net < 0 else 'success' }}">{{ net }} ml</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-history me-2 text-muted"></i>Records</div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>At</th><th>Intake</th><th>Output</th><th>Net</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+            {% for r in records %}
+                <tr>
+                    <td>{{ r.recorded_at.strftime('%Y-%m-%d %H:%M') if r.recorded_at else '-' }}</td>
+                    <td>{% if r.intake_ml %}{{ r.intake_ml }} ml ({{ r.intake_type or '-' }}){% else %}-{% endif %}</td>
+                    <td>{% if r.output_ml %}{{ r.output_ml }} ml ({{ r.output_type or '-' }}){% else %}-{% endif %}</td>
+                    <td>{{ (r.intake_ml or 0) - (r.output_ml or 0) }}</td>
+                    <td>{{ r.notes or '-' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-3">No records yet</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, abort, current_app
 from flask_login import login_required, current_user
 from datetime import datetime
+import os
 from app import db
 from app.models import (
     Patient, Doctor, Specialty, Appointment, MedicalRecord, Prescription,
     LabOrder, RadiologyOrder, Notification, Message, Diagnosis, VitalSign,
-    PatientDocument,
+    PatientDocument, Bill,
 )
 from app.routes.decorators import roles_required, log_activity, save_upload
+from app.utils import has_appointment_conflict
 
 patient_bp = Blueprint('patient', __name__)
 ALLOWED = ['Patient', 'Doctor', 'Admin', 'SuperAdmin']
@@ -43,6 +45,9 @@ def dashboard():
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def profile():
     patient = _current_patient()
+    if not patient:
+        flash('No patient profile is associated with this account.', 'warning')
+        return redirect(url_for('main.dashboard'))
     if request.method == 'POST':
         user = current_user
         user.phone = request.form.get('phone') or user.phone
@@ -52,10 +57,10 @@ def profile():
         patient.gender = request.form.get('gender') or patient.gender
         patient.address = request.form.get('address') or patient.address
         patient.blood_type = request.form.get('blood_type') or patient.blood_type
-        patient.allergies = request.form.get('allergies')
-        patient.chronic_diseases = request.form.get('chronic_diseases')
-        patient.emergency_contact = request.form.get('emergency_contact')
-        patient.vaccination_records = request.form.get('vaccination_records')
+        patient.allergies = request.form.get('allergies') or patient.allergies
+        patient.chronic_diseases = request.form.get('chronic_diseases') or patient.chronic_diseases
+        patient.emergency_contact = request.form.get('emergency_contact') or patient.emergency_contact
+        patient.vaccination_records = request.form.get('vaccination_records') or patient.vaccination_records
         db.session.commit()
         flash('Profile updated successfully.', 'success')
         return redirect(url_for('patient.profile'))
@@ -96,10 +101,24 @@ def book_appointment():
         if not doctor:
             flash('Please select a valid doctor.', 'danger')
             return redirect(url_for('patient.book_appointment'))
-        scheduled_at = datetime.strptime(
-            f"{request.form.get('date')} {request.form.get('time')}", '%Y-%m-%d %H:%M')
+        patient = _current_patient()
+        if not patient:
+            patient = Patient.query.get(request.form.get('patient_id'))
+        if not patient:
+            flash('A valid patient is required to book an appointment.', 'danger')
+            return redirect(url_for('patient.book_appointment'))
+        try:
+            scheduled_at = datetime.strptime(
+                f"{request.form.get('date')} {request.form.get('time')}", '%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            flash('Please provide a valid appointment date and time.', 'danger')
+            return redirect(url_for('patient.book_appointment'))
+        duration = int(request.form.get('duration_minutes') or 30)
+        if has_appointment_conflict(doctor.id, scheduled_at, duration):
+            flash('This doctor already has an appointment at that time. Please choose another slot.', 'warning')
+            return redirect(url_for('patient.book_appointment'))
         appt = Appointment(
-            patient_id=_current_patient().id,
+            patient_id=patient.id,
             doctor_id=doctor.id,
             scheduled_at=scheduled_at,
             reason=request.form.get('reason'),
@@ -145,6 +164,21 @@ def radiology_reports():
     return render_template('patient/radiology_reports.html', title='Radiology Reports', items=items)
 
 
+@patient_bp.route('/bills')
+@login_required
+@roles_required('Patient', 'Admin', 'SuperAdmin')
+def bills():
+    patient = _current_patient()
+    items = Bill.query.filter_by(patient_id=patient.id).order_by(
+        Bill.issued_at.desc()).all()
+    total_billed = sum(b.total() for b in items)
+    total_balance = sum(b.balance() for b in items)
+    total_paid = sum(b.paid_amount() for b in items)
+    return render_template('patient/bills.html', title='My Bills & Receipts',
+                           items=items, total_billed=total_billed,
+                           total_balance=total_balance, total_paid=total_paid)
+
+
 @patient_bp.route('/documents', methods=['GET', 'POST'])
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
@@ -169,6 +203,40 @@ def documents():
     files = PatientDocument.query.filter_by(patient_id=patient.id).order_by(
         PatientDocument.uploaded_at.desc()).all()
     return render_template('patient/documents.html', title='Medical Documents', files=files)
+
+
+def _document_path(doc):
+    """Resolve the on-disk path for a stored document from its file_url.
+
+    Supports both the legacy public path (``/static/uploads/...``) and the
+    current private layout (a path relative to UPLOAD_FOLDER)."""
+    rel = (doc.file_url or '').lstrip('/')
+    if rel.startswith('static/uploads/'):
+        rel = rel[len('static/uploads/'):]
+        return os.path.join(current_app.static_folder, 'uploads', rel)
+    base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
+    return os.path.normpath(os.path.join(base, rel))
+
+
+@patient_bp.route('/documents/<int:doc_id>/download')
+@login_required
+def download_document(doc_id):
+    """Stream a medical document only to authorized users (owner or staff with
+    documented need-to-know access). Direct static URLs are never exposed."""
+    doc = PatientDocument.query.get_or_404(doc_id)
+    patient = doc.patient
+    is_owner = bool(current_user.patient_profile and patient and
+                     current_user.patient_profile.id == patient.id)
+    from app.access import has_need_to_know
+    if not (is_owner or has_need_to_know(patient)):
+        abort(403)
+    path = _document_path(doc)
+    if not os.path.isfile(path):
+        abort(404)
+    log_activity('DOWNLOAD_DOCUMENT', 'patient_document', doc.id, doc.title)
+    db.session.commit()
+    return send_file(path, as_attachment=True,
+                     download_name=os.path.basename(path))
 
 
 @patient_bp.route('/messages')

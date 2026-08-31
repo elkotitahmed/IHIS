@@ -27,16 +27,8 @@ class RegistrationForm(FlaskForm):
         ('Other', 'Other')], validators=[Optional()])
     user_type = SelectField('User Type', choices=[
         ('patient', 'Patient'),
-        ('doctor', 'Doctor'),
-        ('nurse', 'Nurse'),
-        ('admin', 'Administrator'),
-        ('lab_technician', 'Lab Technician'),
-        ('radiologist', 'Radiologist'),
-        ('pharmacist', 'Pharmacist'),
-        ('receptionist', 'Receptionist'),
-        ('dentist', 'Dentist'),
-        ('physiotherapist', 'Physical Therapist'),
-    ], validators=[DataRequired()])
+    ], validators=[DataRequired()],
+        description='Staff accounts are created by an administrator.')
     specialty_id = SelectField('Specialty (doctors only)', choices=[], validators=[Optional()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm Password', validators=[

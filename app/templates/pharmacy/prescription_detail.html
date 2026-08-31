@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-prescription me-2"></i>Prescription #{{ rx.id }}</h4>
+    <a href="{{ url_for('pharmacy.prescriptions') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="card card-shadow mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-muted small">Patient</div>
+                <div class="fw-semibold">{{ rx.patient.user.full_name if rx.patient and rx.patient.user else '-' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small">Prescribed By</div>
+                <div>{{ rx.doctor.user.full_name if rx.doctor and rx.doctor.user else '-' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small">Date</div>
+                <div>{{ rx.prescribed_date.strftime('%d %b %Y %H:%M') if rx.prescribed_date else '-' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small">Status</div>
+                <span class="badge bg-{{ 'success' if rx.status=='Dispensed' else ('secondary' if rx.status=='Cancelled' else ('warning' if rx.status=='PartiallyDispensed' else 'info')) }}">{{ rx.status }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-pills me-2"></i>Items</div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+            {% for li in rx.items %}
+                <tr>
+                    <td>{{ li.medication.generic_name if li.medication else '-' }}<br>
+                        <small class="text-muted">{{ li.medication.brand_name if li.medication and li.medication.brand_name else '' }}</small></td>
+                    <td>{{ li.dosage or '-' }}</td>
+                    <td>{{ li.frequency or '-' }}</td>
+                    <td>{{ li.duration or '-' }}</td>
+                    <td>{{ li.quantity or 1 }}</td>
+                    <td>
+                        {% if li.status == 'Dispensed' %}<span class="badge bg-success">Dispensed</span>
+                        {% elif li.status == 'Cancelled' %}<span class="badge bg-secondary">Cancelled</span>
+                        {% elif li.dispensed_qty() > 0 %}<span class="badge bg-warning">Partial {{ li.dispensed_qty() }}/{{ li.quantity }}</span>
+                        {% else %}<span class="badge bg-warning-subtle text-warning">Pending</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if li.status != 'Cancelled' and li.status != 'Dispensed' %}
+                        <form method="POST" action="{{ url_for('pharmacy.dispense', id=rx.id) }}" class="d-inline-flex align-items-center gap-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="item_id" value="{{ li.id }}">
+                            <input type="number" name="quantity" min="1" value="{{ li.remaining_qty() }}" style="width:70px" class="form-control form-control-sm">
+                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Dispense?')"><i class="fas fa-check me-1"></i>Dispense</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-3">No items</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card card-shadow mt-3">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-history me-2"></i>Dispensing Records</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Medication</th><th>Qty</th><th>Pharmacist</th><th>At</th><th>Notes</th></tr></thead>
+            <tbody>
+            {% for rec in rx.dispensing_records %}
+                <tr>
+                    <td>{{ rec.item.medication.generic_name if rec.item and rec.item.medication else '-' }}</td>
+                    <td>{{ rec.quantity }}</td>
+                    <td>{{ rec.pharmacist.full_name if rec.pharmacist else '-' }}</td>
+                    <td>{{ rec.dispensed_at.strftime('%d %b %Y %H:%M') if rec.dispensed_at else '-' }}</td>
+                    <td>{{ rec.notes or '-' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-3">No dispensing records yet</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

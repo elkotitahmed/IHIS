@@ -45,8 +45,23 @@
                             {% if item.status in ['Scheduled', 'Confirmed'] %}
                             <form action="{{ url_for('reception.checkin', id=item.id) }}" method="post" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Patient arrived">
                                     <i class="fas fa-user-check"></i> Check In
+                                </button>
+                            </form>
+                            <form action="{{ url_for('reception.set_status', id=item.id) }}" method="post" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="mode" value="NoShow">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Patient did not arrive">
+                                    <i class="fas fa-user-slash"></i> No-Show
+                                </button>
+                            </form>
+                            {% elif item.status == 'CheckedIn' %}
+                            <form action="{{ url_for('reception.set_status', id=item.id) }}" method="post" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="mode" value="Complete">
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Mark visit complete & bill consultation">
+                                    <i class="fas fa-check"></i> Complete
                                 </button>
                             </form>
                             {% else %}

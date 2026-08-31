@@ -45,6 +45,12 @@
                             <a href="{{ url_for('nursing.care_plan', patient_id=patient.id) }}" class="btn btn-sm btn-outline-success" title="Care Plan">
                                 <i class="fas fa-clipboard-list"></i>
                             </a>
+                            <a href="{{ url_for('nursing.mar', patient_id=patient.id) }}" class="btn btn-sm btn-outline-info" title="MAR">
+                                <i class="fas fa-pills"></i>
+                            </a>
+                            <a href="{{ url_for('nursing.intake_output', patient_id=patient.id) }}" class="btn btn-sm btn-outline-warning" title="Intake/Output">
+                                <i class="fas fa-fill-drip"></i>
+                            </a>
                         </td>
                     </tr>
                     {% else %}

@@ -3,7 +3,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Enter Lab Result</h4>
     <div>
-        {% if order.status == 'Completed' and order.result %}
+        {% if order.status in ('Resulted','Verified','Finalized') and order.result %}
         <a class="btn btn-outline-primary me-2" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI Interpret</a>
         <a class="btn btn-outline-primary me-2" target="_blank" href="{{ url_for('reports.lab_result', order_id=order.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
         {% endif %}
@@ -46,36 +46,138 @@
 
     <div class="col-lg-7">
         <div class="card card-shadow">
-            <div class="card-header bg-white">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="fas fa-clipboard-check text-success me-2"></i>Result Details</h6>
+                {% if result %}
+                <span class="badge {% if result.status == 'Verified' %}bg-success{% elif result.status == 'Draft' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                    {{ result.status }}{% if result.status == 'Verified' %} 🔒{% endif %}
+                </span>
+                {% endif %}
             </div>
             <div class="card-body">
+                {% if result and result.status == 'Verified' %}
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="fas fa-lock me-2"></i>
+                    <div>This result is <strong>verified and locked</strong>. Direct edits are disabled — use the correction form below with a reason.</div>
+                </div>
+                {% endif %}
                 <form method="POST" action="{{ url_for('lab.enter_result', order_id=order.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if result and result.status == 'Verified' %}
+                    <input type="hidden" name="amend" value="1">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Correction Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reason" name="reason" rows="2" required
+                                  placeholder="Why is this correction being made?"></textarea>
+                    </div>
+                    {% endif %}
 
                     <div class="mb-3">
                         <label for="result_value" class="form-label">Result Value</label>
                         <input type="text" class="form-control" id="result_value" name="result_value"
-                               value="{{ order.result.result_value if order.result and order.result.result_value else '' }}"
-                               placeholder="e.g. 12.5" required>
+                                value="{{ result.result_value if result and result.result_value else '' }}"
+                                oninput="evaluateAbnormality()"
+                                placeholder="e.g. 12.5" required>
+                        <div class="form-text" id="range_hint">
+                            Reference range
+                            {% if order.test and order.test.normal_range %}<strong>{{ order.test.normal_range }}{% if order.test.unit %} {{ order.test.unit }}{% endif %}</strong>{% else %}not defined for this test{% endif %}.
+                            Abnormality is flagged automatically when a numeric range is available.
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="result_notes" class="form-label">Result Notes</label>
                         <textarea class="form-control" id="result_notes" name="result_notes" rows="4"
-                                  placeholder="Interpretation or additional comments...">{{ order.result.result_notes if order.result and order.result.result_notes else '' }}</textarea>
+                                  placeholder="Interpretation or additional comments...">{{ result.result_notes if result and result.result_notes else '' }}</textarea>
                     </div>
 
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="is_abnormal" name="is_abnormal"
-                               {% if order.result and order.result.is_abnormal %}checked{% endif %}>
-                        <label class="form-check-label" for="is_abnormal">
-                            Mark as Abnormal / Critical
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="result_unit" class="form-label">Unit</label>
+                            <input type="text" class="form-control" id="result_unit" name="result_unit"
+                                   value="{{ result.result_unit if result and result.result_unit else (order.test.unit if order.test and order.test.unit else '') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="qualitative" class="form-label">Qualitative Result</label>
+                            <select class="form-select" id="qualitative" name="qualitative">
+                                <option value="">-- Not applicable --</option>
+                                {% for q in ['Positive','Negative','Reactive','Non-reactive','Detected','Not detected','Indeterminate'] %}
+                                <option value="{{ q }}" {{ 'selected' if result and result.qualitative == q }}>{{ q }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" id="is_critical" name="is_critical"
+                                {% if result and result.is_critical %}checked{% endif %}>
+                        <label class="form-check-label" for="is_critical">
+                            Mark as <strong>Critical (panic value)</strong> — escalates immediately to doctors
                         </label>
                     </div>
 
-                    <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>Save Result</button>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" id="is_abnormal" name="is_abnormal"
+                                {% if result and result.is_abnormal %}checked{% endif %}>
+                        <label class="form-check-label" for="is_abnormal">
+                            Mark as Abnormal
+                        </label>
+                    </div>
+                    <div class="form-text mb-4" id="abn_hint"></div>
+
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>{% if result and result.status == 'Verified' %}Save Correction{% else %}Save Result{% endif %}</button>
                 </form>
+
+                <script>
+                (function () {
+                    const rangeText = {{ (order.test.normal_range if order.test and order.test.normal_range else '')|tojson }};
+                    const unit = {{ (order.test.unit if order.test and order.test.unit else '')|tojson }};
+                    function parseRange(t) {
+                        const pair = /^\s*([\d.]+)\s*[-–]\s*([\d.]+)\s*$/.exec(t);
+                        if (pair) return {lo: parseFloat(pair[1]), hi: parseFloat(pair[2])};
+                        const one = /^\s*(<|<=|>|>=)\s*([\d.]+)\s*$/.exec(t);
+                        if (one) return {op: one[1], val: parseFloat(one[2])};
+                        return null;
+                    }
+                    function isAbnormal(val, r) {
+                        if (r === null || val === '' || isNaN(parseFloat(val))) return null;
+                        const v = parseFloat(val);
+                        if (r.lo !== undefined) return v < r.lo || v > r.hi;
+                        if (r.op === '>=') return v < r.val;
+                        if (r.op === '>') return v <= r.val;
+                        if (r.op === '<=') return v > r.val;
+                        if (r.op === '<') return v >= r.val;
+                        return null;
+                    }
+                    window.evaluateAbnormality = function () {
+                        const val = document.getElementById('result_value').value;
+                        const r = parseRange(rangeText);
+                        const res = isAbnormal(val, r);
+                        const chk = document.getElementById('is_abnormal');
+                        const hint = document.getElementById('abn_hint');
+                        if (res === null) {
+                            hint.textContent = 'Auto-evaluation not possible — leave unchecked or review manually.';
+                            hint.className = 'form-text text-muted mb-4';
+                        } else if (res) {
+                            chk.checked = true;
+                            hint.textContent = 'Auto-flagged abnormal against reference range.';
+                            hint.className = 'form-text text-danger mb-4';
+                        } else {
+                            hint.textContent = 'Within reference range.';
+                            hint.className = 'form-text text-success mb-4';
+                        }
+                    };
+                    // Run once with the initially saved value if present.
+                    if (document.getElementById('result_value').value) evaluateAbnormality();
+                })();
+                </script>
+
+                {% if result and result.status != 'Verified' %}
+                <form method="POST" action="{{ url_for('lab.verify_result', order_id=order.id) }}" class="mt-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-lock me-1"></i>Verify &amp; Lock Result</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>

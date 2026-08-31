@@ -8,6 +8,7 @@ from app.models import (
     FunctionalOutcome, Patient, User,
 )
 from app.routes.decorators import roles_required, log_activity
+from app.access import patient_access_required, require_patient_access
 
 physiotherapy_bp = Blueprint('physiotherapy', __name__)
 
@@ -70,6 +71,7 @@ def patients():
                         methods=['GET', 'POST'])
 @login_required
 @roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def assessment(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     therapist = get_current_therapist()
@@ -88,8 +90,9 @@ def assessment(patient_id):
             notes=request.form.get('notes', ''),
         )
         db.session.add(assessment)
+        db.session.flush()
         log_activity('CREATE_THERAPY_ASSESSMENT', 'therapy_assessment',
-                      None, f'patient_id={patient_id}')
+                      assessment.id, f'patient_id={patient_id}')
         db.session.commit()
         flash('Assessment saved successfully.', 'success')
         return redirect(url_for('physiotherapy.assessment', patient_id=patient_id))
@@ -108,10 +111,22 @@ def assessment(patient_id):
                         methods=['GET', 'POST'])
 @login_required
 @roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def plan(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     therapist = get_current_therapist()
     if request.method == 'POST':
+        start_date = end_date = None
+        try:
+            if request.form.get('start_date'):
+                start_date = datetime.strptime(
+                    request.form['start_date'], '%Y-%m-%d').date()
+            if request.form.get('end_date'):
+                end_date = datetime.strptime(
+                    request.form['end_date'], '%Y-%m-%d').date()
+        except ValueError:
+            flash('Please provide valid dates (YYYY-MM-DD).', 'danger')
+            return redirect(url_for('physiotherapy.plan', patient_id=patient_id))
         plan = TherapyPlan(
             patient_id=patient_id,
             therapist_id=therapist.id if therapist else None,
@@ -119,16 +134,13 @@ def plan(patient_id):
             goals=request.form.get('goals', ''),
             objectives=request.form.get('objectives', ''),
             interventions=request.form.get('interventions', ''),
-            start_date=datetime.strptime(
-                request.form['start_date'], '%Y-%m-%d'
-            ).date() if request.form.get('start_date') else date.today(),
-            end_date=datetime.strptime(
-                request.form['end_date'], '%Y-%m-%d'
-            ).date() if request.form.get('end_date') else None,
+            start_date=start_date or date.today(),
+            end_date=end_date,
             status=request.form.get('status', 'Active'),
         )
         db.session.add(plan)
-        log_activity('CREATE_THERAPY_PLAN', 'therapy_plan', None,
+        db.session.flush()
+        log_activity('CREATE_THERAPY_PLAN', 'therapy_plan', plan.id,
                       f'patient_id={patient_id} title={plan.title}')
         db.session.commit()
         flash('Treatment plan created successfully.', 'success')
@@ -151,11 +163,17 @@ def plan(patient_id):
 @roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
 def session(plan_id):
     plan = TherapyPlan.query.get_or_404(plan_id)
+    require_patient_access(plan.patient)
     therapist = get_current_therapist()
     if request.method == 'POST':
-        scheduled_at = datetime.strptime(
-            request.form['scheduled_at'], '%Y-%m-%dT%H:%M'
-        ) if request.form.get('scheduled_at') else None
+        scheduled_at = None
+        if request.form.get('scheduled_at'):
+            try:
+                scheduled_at = datetime.strptime(
+                    request.form['scheduled_at'], '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash('Please provide a valid date and time.', 'danger')
+                return redirect(url_for('physiotherapy.session', plan_id=plan_id))
         session = TherapySession(
             patient_id=plan.patient_id,
             therapist_id=therapist.id if therapist else None,
@@ -167,7 +185,8 @@ def session(plan_id):
             notes=request.form.get('notes', ''),
         )
         db.session.add(session)
-        log_activity('CREATE_THERAPY_SESSION', 'therapy_session', None,
+        db.session.flush()
+        log_activity('CREATE_THERAPY_SESSION', 'therapy_session', session.id,
                       f'plan_id={plan_id} patient_id={plan.patient_id}')
         db.session.commit()
         flash('Session scheduled successfully.', 'success')
@@ -187,6 +206,7 @@ def session(plan_id):
                         methods=['GET', 'POST'])
 @login_required
 @roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+@patient_access_required
 def progress(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     if request.method == 'POST':
@@ -204,7 +224,8 @@ def progress(patient_id):
             notes=request.form.get('notes', ''),
         )
         db.session.add(progress)
-        log_activity('CREATE_REHAB_PROGRESS', 'rehabilitation_progress', None,
+        db.session.flush()
+        log_activity('CREATE_REHAB_PROGRESS', 'rehabilitation_progress', progress.id,
                       f'patient_id={patient_id}')
         db.session.commit()
         flash('Progress recorded successfully.', 'success')
@@ -264,10 +285,91 @@ def add_exercise():
             category=request.form.get('category', ''),
         )
         db.session.add(item)
-        log_activity('ADD_EXERCISE_LIBRARY_ITEM', 'exercise_library', None,
+        db.session.flush()
+        log_activity('ADD_EXERCISE_LIBRARY_ITEM', 'exercise_library', item.id,
                       f'name={item.name}')
         db.session.commit()
         flash('Exercise added to library successfully.', 'success')
         return redirect(url_for('physiotherapy.exercise_library'))
 
     return render_template('physiotherapy/add_exercise.html')
+
+
+@physiotherapy_bp.route('/sessions/<int:session_id>/start', methods=['POST'])
+@login_required
+@roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+def session_start(session_id):
+    session = TherapySession.query.get_or_404(session_id)
+    require_patient_access(session.patient)
+    if session.status not in ('Scheduled',):
+        flash('Only a scheduled session can be started.', 'warning')
+        return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+    session.status = 'In Progress'
+    session.started_at = datetime.now()
+    session.pain_before = request.form.get('pain_before', type=int)
+    log_activity('START_THERAPY_SESSION', 'therapy_session', session.id,
+                 f'patient_id={session.patient_id}')
+    db.session.commit()
+    flash('Session started.', 'success')
+    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+
+
+@physiotherapy_bp.route('/sessions/<int:session_id>/complete', methods=['POST'])
+@login_required
+@roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+def session_complete(session_id):
+    session = TherapySession.query.get_or_404(session_id)
+    require_patient_access(session.patient)
+    if session.status not in ('In Progress', 'Scheduled'):
+        flash('Only an in-progress session can be completed.', 'warning')
+        return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+    session.status = 'Completed'
+    session.settled_at = datetime.now()
+    session.pain_after = request.form.get('pain_after', type=int)
+    session.exercises_performed = request.form.get('exercises_performed')
+    session.modalities = request.form.get('modalities')
+    session.patient_response = request.form.get('patient_response')
+    session.followup_required = bool(request.form.get('followup_required'))
+    session.adherence = request.form.get('adherence')
+    session.notes = request.form.get('notes') or session.notes
+    if not session.started_at:
+        session.started_at = datetime.now()
+    log_activity('COMPLETE_THERAPY_SESSION', 'therapy_session', session.id,
+                 f'patient_id={session.patient_id}')
+    from app.services.billing import ensure_bill_for_physio
+    ensure_bill_for_physio(session.id)
+    from app.services.notifications import notify_patient
+    notify_patient(session.patient, 'Physiotherapy session completed',
+                   f'Session #{session.id} completed for your treatment plan.',
+                   entity_type='therapy_session', entity_id=session.id)
+    db.session.commit()
+    flash('Session completed and billed.', 'success')
+    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+
+
+@physiotherapy_bp.route('/sessions/<int:session_id>/cancel', methods=['POST'])
+@login_required
+@roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+def session_cancel(session_id):
+    session = TherapySession.query.get_or_404(session_id)
+    require_patient_access(session.patient)
+    session.status = 'Cancelled'
+    log_activity('CANCEL_THERAPY_SESSION', 'therapy_session', session.id,
+                 f'patient_id={session.patient_id}')
+    db.session.commit()
+    flash('Session cancelled.', 'success')
+    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+
+
+@physiotherapy_bp.route('/sessions/<int:session_id>/no-show', methods=['POST'])
+@login_required
+@roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
+def session_no_show(session_id):
+    session = TherapySession.query.get_or_404(session_id)
+    require_patient_access(session.patient)
+    session.status = 'No Show'
+    log_activity('NO_SHOW_THERAPY_SESSION', 'therapy_session', session.id,
+                 f'patient_id={session.patient_id}')
+    db.session.commit()
+    flash('Session marked as no show.', 'info')
+    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))

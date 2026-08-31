@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-3">
+  <!-- Patient header -->
+  <div class="card card-shadow border-0 mb-3">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+      <div>
+        <h4 class="mb-1">
+          <i class="fas fa-user-injured text-primary me-2"></i>{{ user.full_name if user else 'Patient' }}
+        </h4>
+        <div class="text-muted small">
+          {% if patient.gender %}{{ patient.gender }}{% endif %}
+          {% if patient.date_of_birth %} • {{ patient.date_of_birth.strftime('%Y-%m-%d') }}{% endif %}
+          {% if patient.blood_type %} • <span class="badge bg-info text-dark">{{ patient.blood_type }}</span>{% endif %}
+          {% if patient.user %} • {{ patient.user.email }}{% endif %}
+        </div>
+      </div>
+      <div>
+        <a href="{{ url_for('doctor.patient_overview', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-sm me-1">
+          <i class="fas fa-notes-medical"></i> EMR
+        </a>
+        <a href="{{ url_for('ai.summary', patient_id=patient.id) }}" class="btn btn-outline-primary btn-sm me-1">
+          <i class="fas fa-robot"></i> AI Summary
+        </a>
+        <a href="{{ url_for('ai.diagnosis_support', patient_id=patient.id) }}" class="btn btn-outline-primary btn-sm me-1">
+          <i class="fas fa-stethoscope"></i> Dx Support
+        </a>
+        <div class="dropdown d-inline-block">
+          <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-plus"></i> Actions
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% if current_user.has_permission('MEDICAL_RECORD_CREATE') %}
+            <li><a class="dropdown-item" href="{{ url_for('doctor.add_emr', patient_id=patient.id) }}"><i class="fas fa-file-medical me-2"></i>Add Record</a></li>
+            {% endif %}
+            {% if current_user.has_permission('PRESCRIPTION_CREATE') %}
+            <li><a class="dropdown-item" href="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}"><i class="fas fa-pills me-2"></i>Prescribe</a></li>
+            {% endif %}
+            <li><a class="dropdown-item" href="{{ url_for('doctor.lab_order', patient_id=patient.id) }}"><i class="fas fa-flask me-2"></i>Order Lab</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}"><i class="fas fa-x-ray me-2"></i>Order Imaging</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clinical alerts -->
+  {% if alerts %}
+  <div class="mb-3">
+    {% for a in alerts %}
+    <div class="alert alert-{{ a.level }} d-inline-block me-2 mb-1 py-1 px-3" role="alert">
+      <i class="fas fa-triangle-exclamation me-1"></i><strong>{{ a.label }}:</strong> {{ a.detail }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Financial summary (visible to bill-enabled staff) -->
+  {% if current_user.has_permission('BILL_VIEW') %}
+  <div class="card card-shadow border-0 mb-3">
+    <div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <i class="fas fa-file-invoice-dollar text-success me-2"></i>
+        <strong>Billed:</strong> <span class="me-3">{{ "%.2f"|format(bills_total) }}</span>
+        <strong class="{% if bills_balance>0 %}text-danger{% else %}text-success{% endif %}">Outstanding:</strong>
+        <span {% if bills_balance>0 %}class="text-danger fw-bold"{% else %}class="text-success"{% endif %}>{{ "%.2f"|format(bills_balance) }}</span>
+      </div>
+      <a class="btn btn-sm btn-outline-success" href="{{ url_for('billing.new_bill', patient_id=patient.id) }}"><i class="fas fa-file-invoice"></i> New Bill</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- Left column: problems, meds, vitals -->
+    <div class="col-lg-4">
+      <div class="card card-shadow mb-3">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-stethoscope text-primary"></i> Active Problems</h6></div>
+        <ul class="list-group list-group-flush">
+          {% for d in diagnoses %}
+          <li class="list-group-item">{{ d.description }}
+            <span class="badge bg-secondary float-end">{{ d.icd10_code or '' }}</span></li>
+          {% else %}<li class="list-group-item text-muted">None recorded</li>{% endfor %}
+        </ul>
+      </div>
+
+      <div class="card card-shadow mb-3">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-pills text-primary"></i> Current Medications</h6></div>
+        <ul class="list-group list-group-flush">
+          {% for rx in active_rxs %}
+            {% for i in rx.items %}
+            <li class="list-group-item">{{ i.medication.generic_name if i.medication else 'Medication' }}
+              <div class="small text-muted">{{ i.dosage }} • {{ i.frequency }}</div></li>
+            {% else %}
+            <li class="list-group-item">{{ rx.status }}</li>
+            {% endfor %}
+          {% else %}<li class="list-group-item text-muted">No active prescriptions</li>{% endfor %}
+        </ul>
+      </div>
+
+      {% if latest_vitals %}
+      <div class="card card-shadow">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-heartbeat text-primary"></i> Latest Vitals</h6></div>
+        <div class="card-body row text-center g-1">
+          <div class="col-6"><div class="small text-muted">BP</div><strong>{{ latest_vitals.blood_pressure_systolic }}/{{ latest_vitals.blood_pressure_diastolic }}</strong></div>
+          <div class="col-6"><div class="small text-muted">HR</div><strong>{{ latest_vitals.heart_rate or '-' }}</strong></div>
+          <div class="col-6"><div class="small text-muted">Temp</div><strong>{{ latest_vitals.temperature or '-' }}</strong></div>
+          <div class="col-6"><div class="small text-muted">SpO₂</div><strong>{{ latest_vitals.oxygen_saturation or '-' }}%</strong></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Middle column: labs, imaging, appointments -->
+    <div class="col-lg-4">
+      <div class="card card-shadow mb-3">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-flask text-primary"></i> Recent Labs</h6></div>
+        <ul class="list-group list-group-flush">
+          {% for o in recent_labs %}
+          <li class="list-group-item">
+            {{ o.test.test_name if o.test else 'Lab' }}
+            {% if o.result %}
+              <span class="float-end badge {% if o.result.is_abnormal %}bg-danger{% else %}bg-success{% endif %}">{{ o.result.result_value }}</span>
+            {% else %}<span class="float-end badge bg-secondary">{{ o.status }}</span>{% endif %}
+          </li>
+          {% else %}<li class="list-group-item text-muted">No labs</li>{% endfor %}
+        </ul>
+      </div>
+
+      <div class="card card-shadow mb-3">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-x-ray text-primary"></i> Recent Imaging</h6></div>
+        <ul class="list-group list-group-flush">
+          {% for o in recent_imaging %}
+          <li class="list-group-item">{{ o.imaging_type.name if o.imaging_type else 'Imaging' }}
+            <span class="float-end badge bg-secondary">{{ o.status }}</span></li>
+          {% else %}<li class="list-group-item text-muted">No imaging</li>{% endfor %}
+        </ul>
+      </div>
+
+      <div class="card card-shadow">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-calendar-check text-primary"></i> Upcoming</h6></div>
+        <ul class="list-group list-group-flush">
+          {% for a in upcoming %}
+          <li class="list-group-item">{{ a.scheduled_at.strftime('%Y-%m-%d %H:%M') }}
+            <div class="small text-muted">{{ a.reason or '' }}</div></li>
+          {% else %}<li class="list-group-item text-muted">No appointments</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right column: timeline -->
+    <div class="col-lg-4">
+      <div class="card card-shadow">
+        <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-stream text-primary"></i> Clinical Timeline</h6></div>
+        <div class="card-body p-2">
+          <div class="timeline">
+            {% for ts, icon, label, detail, color, specialty in timeline %}
+            <div class="timeline-item">
+              <i class="fas fa-{{ icon }} timeline-icon"></i>
+              <div class="small">
+                <span class="text-muted">{{ ts.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="badge bg-{{ color }} ms-1">{{ specialty }}</span>
+                <strong>{{ label }}</strong>
+                {% if detail %}<div class="text-muted">{{ detail }}</div>{% endif %}
+              </div>
+            </div>
+            {% else %}
+            <div class="text-muted">No activity yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.timeline { border-left: 2px solid #e3e9f2; margin-left: 10px; padding-left: 12px; }
+.timeline-item { position: relative; padding: 6px 0; }
+.timeline-icon { position: absolute; left: -22px; top: 8px; color: #1f6feb; background: #fff; }
+</style>
+{% endblock %}

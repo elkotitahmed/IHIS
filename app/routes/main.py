@@ -37,7 +37,7 @@ def _role_home():
         return 'dentistry.dashboard'
     if current_user.has_any_role('Physiotherapist'):
         return 'physiotherapy.dashboard'
-    return 'main.dashboard'
+    return 'main.home'
 
 
 @main_bp.route('/dashboard')

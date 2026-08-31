@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-inbox text-primary"></i> Department Queue</h4>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="department" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+            <option value="{{ d }}" {{ 'selected' if d == current_department }}>{{ d }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">All Open</option>
+            {% for s in ['NEW','ASSIGNED','IN_PROGRESS','ON_HOLD','REJECTED','COMPLETED','CANCELLED'] %}
+            <option value="{{ s }}" {{ 'selected' if s == current_status }}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-sm btn-success" href="{{ url_for('tasks.new_task') }}"><i class="fas fa-plus"></i> New Task</a>
+    </div>
+</form>
+
+{% if not tasks %}
+<div class="alert alert-info">No tasks match the selected filters.</div>
+{% endif %}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>#</th><th>Priority</th><th>Title</th><th>Type</th>
+                <th>Patient</th><th>Assigned To</th><th>Due</th><th>Status</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in tasks %}
+            <tr>
+                <td>{{ t.id }}</td>
+                <td>
+                    <span class="badge bg-{{ 'danger' if t.priority in ('URGENT','CRITICAL') else ('warning text-dark' if t.priority=='HIGH' else 'info') }}">
+                        {{ t.priority }}
+                    </span>
+                </td>
+                <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
+                <td>{{ t.task_type }}</td>
+                <td>{{ t.patient.user.full_name if t.patient and t.patient.user else '-' }}</td>
+                <td>
+                    {{ t.assignee.full_name if t.assignee else (t.assigned_role or 'Unassigned') }}
+                </td>
+                <td>{{ t.due_at.strftime('%Y-%m-%d %H:%M') if t.due_at else '-' }}</td>
+                <td><span class="badge bg-{{ 'success' if t.status=='COMPLETED' else ('danger' if t.status in ('CANCELLED','REJECTED') else ('primary' if t.status=='IN_PROGRESS' else 'secondary')) }}">{{ t.status }}</span></td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('tasks.detail', task_id=t.id) }}">View</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

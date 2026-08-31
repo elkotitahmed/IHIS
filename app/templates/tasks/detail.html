@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-tasks text-primary"></i> {{ task.title }}</h4>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tasks.my_tasks') }}"><i class="fas fa-arrow-left"></i> My Tasks</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card card-shadow mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Status</div>
+                        <span class="badge bg-{{ 'success' if task.status=='COMPLETED' else ('danger' if task.status in ('CANCELLED','REJECTED') else ('primary' if task.status=='IN_PROGRESS' else 'secondary')) }}">{{ task.status }}</span>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Priority</div>
+                        <span class="badge bg-{{ 'danger' if task.priority in ('URGENT','CRITICAL') else ('warning text-dark' if task.priority=='HIGH' else 'info') }}">{{ task.priority }}</span>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Type</div><div>{{ task.task_type }}</div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Department</div><div>{{ task.department or '-' }}</div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Patient</div>
+                        <div>{{ task.patient.user.full_name if task.patient and task.patient.user else '-' }}{% if task.patient %} ({{ task.patient.mrn or task.patient.id }}){% endif %}</div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Assigned To</div>
+                        <div>{{ task.assignee.full_name if task.assignee else (task.assigned_role or 'Unassigned') }}</div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Created By</div><div>{{ task.creator.full_name if task.creator else '-' }}</div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="text-muted small">Due</div>
+                        <div>{{ task.due_at.strftime('%Y-%m-%d %H:%M') if task.due_at else '-' }}</div>
+                    </div>
+                </div>
+                {% if task.related_resource_type %}
+                <hr>
+                <div class="small">Related: <span class="badge bg-light text-dark border">{{ task.related_resource_type }}</span> #{{ task.related_resource_id }}</div>
+                {% endif %}
+                {% if task.description %}
+                <hr><h6>Description</h6><p class="mb-0">{{ task.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card card-shadow">
+            <div class="card-header fw-bold">Activity</div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                {% for a in activities %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <div>
+                            <strong>{{ a.action }}</strong>
+                            {% if a.from_status and a.to_status %}
+                            <span class="text-muted">({{ a.from_status }} &rarr; {{ a.to_status }})</span>
+                            {% endif %}
+                            {% if a.note %}<div class="text-muted small">{{ a.note }}</div>{% endif %}
+                        </div>
+                        <div class="text-muted small text-end">
+                            {{ a.user.full_name if a.user else 'System' }}<br>
+                            {{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '' }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="list-group-item text-muted">No activity recorded.</div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card card-shadow mb-3">
+            <div class="card-header fw-bold">Update Status</div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('tasks.transition', task_id=task.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-2">
+                        <select name="status" class="form-select">
+                            {% for s in ['ASSIGNED','IN_PROGRESS','ON_HOLD','COMPLETED','REJECTED','CANCELLED','NEW'] %}
+                            {% if s != task.status and (task.status=='NEW' or s != 'NEW') %}
+                            <option value="{{ s }}">{{ s }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <textarea name="note" class="form-control" rows="2" placeholder="Note (optional)"></textarea>
+                    </div>
+                    <button class="btn btn-primary w-100">Update Task</button>
+                </form>
+            </div>
+        </div>
+
+        {% if current_user.has_any_role('Admin','SuperAdmin') %}
+        <div class="card card-shadow">
+            <div class="card-header fw-bold">Reassign</div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('tasks.assign', task_id=task.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-2">
+                        <input type="text" name="assignee_id" class="form-control" placeholder="User ID" inputmode="numeric">
+                    </div>
+                    <div class="mb-2"><input type="text" name="note" class="form-control" placeholder="Note (optional)"></div>
+                    <button class="btn btn-outline-primary w-100">Reassign</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

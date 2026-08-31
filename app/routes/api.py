@@ -8,8 +8,12 @@ from datetime import datetime, date
 
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
 
-from app import db, csrf
+from app import db
+from app.access import has_need_to_know
+from app.utils import has_appointment_conflict
 from app.models import (
     Patient, Doctor, Specialty, LabTestCatalog, ImagingType, Medication,
     Appointment, LabOrder, LabResult, RadiologyOrder, RadiologyReport,
@@ -18,6 +22,23 @@ from app.models import (
 
 
 api_bp = Blueprint('api', __name__)
+
+
+def _csrf_valid():
+    """Validate the CSRF token from the X-CSRFToken header or form for the
+    JSON write endpoints. These cannot rely solely on @csrf.exempt because the
+    API is authenticated with session cookies; without a token check an
+    attacker could forge cross-site state-changing requests."""
+    token = request.headers.get('X-CSRFToken')
+    if not token:
+        token = (request.get_json(silent=True) or {}).get('csrf_token')
+    if not token:
+        return False
+    try:
+        validate_csrf(token)
+        return True
+    except ValidationError:
+        return False
 
 
 def _iso(value):
@@ -36,12 +57,14 @@ def _is_clinical_staff():
 
 
 def _require_patient_access(patient):
-    """Allow self-access (patient) or any clinical/admin staff."""
+    """Allow self-access (patient) or documented need-to-know access for
+    clinical staff. Front-desk (Receptionist) and Admin/SuperAdmin retain
+    registry/oversight access."""
     if current_user.user_type == 'patient' and patient:
         return current_user.id == patient.user_id
-    if _is_clinical_staff():
+    if current_user.has_any_role('Receptionist', 'Admin', 'SuperAdmin'):
         return True
-    return False
+    return has_need_to_know(patient)
 
 
 def _doctor_of(user):
@@ -138,10 +161,8 @@ def doctors():
     for d in query.all():
         result.append({
             'id': d.id,
-            'user_id': d.user_id,
             'name': d.user.full_name if d.user else None,
             'specialty': d.specialty.name if d.specialty else None,
-            'license_number': d.license_number,
             'consultation_fee': d.consultation_fee,
         })
     return jsonify({'doctors': result})
@@ -176,11 +197,28 @@ def medications():
 @api_bp.route('/appointments')
 @login_required
 def appointments():
-    """List appointments (paginated, optional status filter)."""
+    """List appointments (paginated, optional status filter).
+
+    Scoped to keep PHI need-to-know:
+      - Patient: only their own appointments.
+      - Doctor: only their own appointments.
+      - Receptionist/Admin/SuperAdmin/Nurse: may list across the clinic where
+        their role legitimately needs it.
+    """
     status = request.args.get('status', '').strip()
     query = Appointment.query
     if current_user.user_type == 'patient':
-        query = query.filter_by(patient_id=current_user.patient_profile.id)
+        profile = current_user.patient_profile
+        if not profile:
+            return jsonify({'appointments': []}), 200
+        query = query.filter_by(patient_id=profile.id)
+    elif current_user.has_role('Doctor'):
+        doc = current_user.doctor_profile
+        if not doc:
+            return jsonify({'appointments': []}), 200
+        query = query.filter_by(doctor_id=doc.id)
+    elif not current_user.has_any_role('Receptionist', 'Admin', 'SuperAdmin', 'Nurse'):
+        abort(403)
     if status:
         query = query.filter_by(status=status)
     items = query.order_by(Appointment.scheduled_at.desc()).limit(100).all()
@@ -199,25 +237,50 @@ def appointments():
 
 
 @api_bp.route('/appointments', methods=['POST'])
-@csrf.exempt
 @login_required
 def create_appointment():
-    """Create an appointment. JSON body: patient_id, doctor_id, scheduled_at, priority, reason."""
+    """Create an appointment.
+
+    Authorization:
+      - Patient: may only book for their own patient profile.
+      - Clinical/Admin staff (Doctor, Nurse, Receptionist, Admin, SuperAdmin):
+        may book on behalf of any patient (patient_id required).
+    The initial status is always server-controlled ('Scheduled'); clients cannot
+    inject an arbitrary workflow state.
+    """
+    if not _csrf_valid():
+        return jsonify({'error': 'Invalid or missing CSRF token'}), 400
     data = request.get_json(silent=True) or {}
-    patient_id = data.get('patient_id')
     doctor_id = data.get('doctor_id')
     scheduled_at = data.get('scheduled_at')
-    if not (patient_id and doctor_id and scheduled_at):
-        return jsonify({'error': 'patient_id, doctor_id and scheduled_at are required'}), 400
+    if not (doctor_id and scheduled_at):
+        return jsonify({'error': 'doctor_id and scheduled_at are required'}), 400
+
+    if current_user.user_type == 'patient':
+        profile = current_user.patient_profile
+        if not profile:
+            return jsonify({'error': 'No patient profile is associated with this account'}), 403
+        patient_id = profile.id
+    elif current_user.has_any_role(
+            'Receptionist', 'Admin', 'SuperAdmin', 'Doctor', 'Nurse'):
+        patient_id = data.get('patient_id')
+        if not patient_id:
+            return jsonify({'error': 'patient_id is required'}), 400
+    else:
+        return jsonify({'error': 'Not authorized to create appointments'}), 403
+
     try:
         scheduled = datetime.fromisoformat(scheduled_at)
     except ValueError:
         return jsonify({'error': 'scheduled_at must be ISO 8601'}), 400
+    if has_appointment_conflict(int(doctor_id), scheduled,
+                                int(data.get('duration_minutes', 30))):
+        return jsonify({'error': 'Doctor already has an appointment at that time'}), 409
     a = Appointment(
         patient_id=int(patient_id),
         doctor_id=int(doctor_id),
         scheduled_at=scheduled,
-        status=data.get('status', 'Scheduled'),
+        status='Scheduled',
         priority=data.get('priority', 'Normal'),
         reason=data.get('reason', ''),
         created_by=current_user.id,
@@ -228,9 +291,15 @@ def create_appointment():
 
 
 @api_bp.route('/patients')
+@login_required
 def patients():
+    if not _is_clinical_staff() and current_user.user_type != 'patient':
+        abort(403)
+    query = Patient.query
+    if current_user.user_type == 'patient':
+        query = query.filter_by(user_id=current_user.id)
     result = []
-    for p in Patient.query.limit(200).all():
+    for p in query.limit(200).all():
         result.append(_patient_json(p))
     return jsonify({'patients': result})
 
@@ -291,14 +360,33 @@ def patient_radiology_orders(patient_id):
 @api_bp.route('/prescriptions')
 @login_required
 def prescriptions():
-    """List prescriptions (optional patient_id, status filters)."""
+    """List prescriptions (optional patient_id, status filters).
+
+    Authorization: patients see only their own; staff may query a specific
+    patient's prescriptions only when they have access to that patient.
+    """
     query = Prescription.query
     patient_id = request.args.get('patient_id', type=int)
     status = request.args.get('status', '').strip()
     if current_user.user_type == 'patient':
-        query = query.filter_by(patient_id=current_user.patient_profile.id)
-    elif patient_id:
-        query = query.filter_by(patient_id=patient_id)
+        profile = current_user.patient_profile
+        if patient_id and (not profile or profile.id != patient_id):
+            abort(403)
+        query = query.filter_by(
+            patient_id=profile.id if profile else -1)
+    elif _is_clinical_staff():
+        if patient_id:
+            p = Patient.query.get(patient_id)
+            if not _require_patient_access(p):
+                abort(403)
+            query = query.filter_by(patient_id=patient_id)
+        else:
+            # No patient scope provided to staff: return only their own
+            # authored prescriptions when they are a clinician, else nothing.
+            doc = current_user.doctor_profile
+            query = query.filter_by(doctor_id=doc.id) if doc else query.filter_by(id=-1)
+    else:
+        abort(403)
     if status:
         query = query.filter_by(status=status)
     items = query.order_by(Prescription.prescribed_date.desc()).limit(100).all()
@@ -306,21 +394,29 @@ def prescriptions():
 
 
 @api_bp.route('/prescriptions', methods=['POST'])
-@csrf.exempt
 @login_required
 def create_prescription():
     """Create a prescription. JSON body: patient_id, refills, and items:
     [{"medication_id":1,"dosage":"500mg","frequency":"Twice daily",
       "duration":"7 days","instructions":"...","quantity":1}].
     For backward compatibility a single medication_id/dosage/... is also accepted."""
+    if not _csrf_valid():
+        return jsonify({'error': 'Invalid or missing CSRF token'}), 400
     data = request.get_json(silent=True) or {}
     doctor = _doctor_of(current_user)
     patient_id = data.get('patient_id')
     items_data = data.get('items')
     if not doctor:
         return jsonify({'error': 'Only doctors can create prescriptions'}), 403
+    if not current_user.has_permission('PRESCRIPTION_CREATE'):
+        return jsonify({'error': 'You do not have permission to create prescriptions'}), 403
     if not patient_id:
         return jsonify({'error': 'patient_id is required'}), 400
+    patient = db.session.get(Patient, int(patient_id))
+    if patient is None:
+        return jsonify({'error': 'patient not found'}), 404
+    if not _require_patient_access(patient):
+        return jsonify({'error': 'No documented access to this patient so far'}), 403
     if not items_data:
         if data.get('medication_id'):
             items_data = [{
@@ -388,7 +484,19 @@ def radiology_order(order_id):
 def referrals():
     if current_user.user_type == 'patient':
         abort(403)
-    items = Referral.query.order_by(Referral.created_at.desc()).limit(100).all()
+    if current_user.has_role('Doctor'):
+        doc = current_user.doctor_profile
+        if doc:
+            items = Referral.query.filter(
+                (Referral.from_doctor_id == doc.id) |
+                (Referral.to_doctor_id == doc.id)
+            ).order_by(Referral.created_at.desc()).limit(100).all()
+        else:
+            items = []
+    elif current_user.has_any_role('Admin', 'SuperAdmin'):
+        items = Referral.query.order_by(Referral.created_at.desc()).limit(100).all()
+    else:
+        abort(403)
     return jsonify({'referrals': [{
         'id': r.id,
         'patient_id': r.patient_id,
@@ -401,10 +509,11 @@ def referrals():
 
 
 @api_bp.route('/referrals', methods=['POST'])
-@csrf.exempt
 @login_required
 def create_referral():
     """Create a referral. JSON body: patient_id, to_specialty, reason, to_doctor_id."""
+    if not _csrf_valid():
+        return jsonify({'error': 'Invalid or missing CSRF token'}), 400
     data = request.get_json(silent=True) or {}
     doctor = _doctor_of(current_user)
     patient_id = data.get('patient_id')
@@ -413,6 +522,11 @@ def create_referral():
         return jsonify({'error': 'Only doctors can create referrals'}), 403
     if not (patient_id and to_specialty):
         return jsonify({'error': 'patient_id and to_specialty are required'}), 400
+    patient = db.session.get(Patient, int(patient_id))
+    if patient is None:
+        return jsonify({'error': 'patient not found'}), 404
+    if not _require_patient_access(patient):
+        return jsonify({'error': 'No documented access to this patient so far'}), 403
     r = Referral(
         patient_id=int(patient_id),
         from_doctor_id=doctor.id,

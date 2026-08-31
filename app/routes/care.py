@@ -8,6 +8,7 @@ from app.models import (
     Patient, Doctor, User, Specialty,
 )
 from app.routes.decorators import roles_required, log_activity
+from app.access import require_patient_access, patient_access_required
 
 care_bp = Blueprint('care', __name__)
 
@@ -61,14 +62,20 @@ def new_referral():
     if not patient_id or not reason:
         flash('Patient and reason are required.', 'warning')
         return redirect(url_for('care.referrals'))
+    p = Patient.query.filter_by(id=int(patient_id)).first()
+    if p is None:
+        flash('Patient not found.', 'warning')
+        return redirect(url_for('care.referrals'))
+    require_patient_access(p)
     ref = Referral(
-        patient_id=int(patient_id),
+        patient_id=p.id,
         from_doctor_id=doc.id if doc else None,
         to_doctor_id=int(to_doctor_id) if to_doctor_id else None,
         to_specialty=to_specialty, reason=reason, status='Pending',
     )
     db.session.add(ref)
-    log_activity('CREATE_REFERRAL', 'referral', None,
+    db.session.flush()
+    log_activity('CREATE_REFERRAL', 'referral', ref.id,
                  f'patient_id={patient_id} to={to_specialty or to_doctor_id}')
     db.session.commit()
     flash('Referral created.', 'success')
@@ -80,6 +87,7 @@ def new_referral():
 @roles_required(*CARE)
 def update_referral_status(ref_id):
     ref = Referral.query.get_or_404(ref_id)
+    require_patient_access(ref.patient)
     new_status = request.form.get('status')
     if new_status in ('Pending', 'Accepted', 'Rejected', 'Completed'):
         ref.status = new_status
@@ -93,6 +101,7 @@ def update_referral_status(ref_id):
 @care_bp.route('/teams/<int:patient_id>')
 @login_required
 @roles_required(*CARE)
+@patient_access_required
 def team(patient_id):
     patient = _patient_or_404(patient_id)
     if not patient:
@@ -108,6 +117,7 @@ def team(patient_id):
 @care_bp.route('/teams/<int:patient_id>/add-member', methods=['POST'])
 @login_required
 @roles_required(*CARE)
+@patient_access_required
 def add_member(patient_id):
     patient = _patient_or_404(patient_id)
     if not patient:
@@ -136,8 +146,12 @@ def add_member(patient_id):
 @care_bp.route('/teams/<int:patient_id>/remove-member/<int:member_id>', methods=['POST'])
 @login_required
 @roles_required(*CARE)
+@patient_access_required
 def remove_member(patient_id, member_id):
     member = CareTeamMember.query.get_or_404(member_id)
+    if not member.team or member.team.patient_id != patient_id:
+        flash('That member does not belong to this patient\'s care team.', 'warning')
+        return redirect(url_for('care.team', patient_id=patient_id))
     db.session.delete(member)
     db.session.commit()
     flash('Member removed from care team.', 'success')
@@ -165,10 +179,16 @@ def new_case():
     if not patient_id or not title:
         flash('Patient and title are required.', 'warning')
         return redirect(url_for('care.cases'))
-    case = MultidisciplinaryCase(patient_id=int(patient_id), title=title,
+    p = Patient.query.filter_by(id=int(patient_id)).first()
+    if p is None:
+        flash('Patient not found.', 'warning')
+        return redirect(url_for('care.cases'))
+    require_patient_access(p)
+    case = MultidisciplinaryCase(patient_id=p.id, title=title,
                                  description=description, status='Open')
     db.session.add(case)
-    log_activity('CREATE_MDCASE', 'md_case', None, title)
+    db.session.flush()
+    log_activity('CREATE_MDCASE', 'md_case', case.id, title)
     db.session.commit()
     flash('Multidisciplinary case opened.', 'success')
     return redirect(url_for('care.cases'))
@@ -179,6 +199,7 @@ def new_case():
 @roles_required(*CARE)
 def update_case_status(case_id):
     case = MultidisciplinaryCase.query.get_or_404(case_id)
+    require_patient_access(case.patient)
     status = request.form.get('status')
     if status in ('Open', 'In Progress', 'Resolved', 'Closed'):
         case.status = status

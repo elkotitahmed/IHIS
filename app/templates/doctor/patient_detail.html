@@ -73,6 +73,7 @@
                                 <th>Diagnosis</th>
                                 <th>ICD-10</th>
                                 <th>Treatment Plan</th>
+                                <th>Status</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -84,13 +85,29 @@
                                     <td>{{ rec.diagnosis or '-' }}</td>
                                     <td><span class="badge bg-secondary">{{ rec.icd10 or '-' }}</span></td>
                                     <td>{{ rec.treatment_plan or '-' }}</td>
-                                    <td class="text-end">
-                                        <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=rec.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+                                    <td>
+                                        {% if rec.status == 'Signed' %}
+                                            <span class="badge bg-success">Signed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Draft</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        {% if current_user.has_permission('MEDICAL_RECORD_AMEND') %}
+                                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('doctor.edit_emr', record_id=rec.id) }}"><i class="fas fa-edit me-1"></i>Edit</a>
+                                        {% endif %}
+                                        {% if current_user.has_permission('MEDICAL_RECORD_SIGN') and rec.status != 'Signed' %}
+                                        <form method="POST" action="{{ url_for('doctor.sign_record', record_id=rec.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button class="btn btn-success btn-sm"><i class="fas fa-signature me-1"></i>Sign</button>
+                                        </form>
+                                        {% endif %}
+                                        <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=rec.id) }}"><i class="fas fa-file-pdf me-1"></i>PDF</a>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr><td colspan="5" class="text-center text-muted py-4">No medical records found.</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted py-4">No medical records found.</td></tr>
                             {% endif %}
                         </tbody>
                     </table>

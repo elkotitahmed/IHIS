@@ -7,6 +7,7 @@ from app.models import (
     Prescription, Appointment,
 )
 from app.routes.decorators import roles_required, log_activity
+from app.access import require_patient_access
 from app.services.ai import (
     get_assistant, AIClinicalAssistant, AIDiagnosisSupport,
     AIPrescriptionChecker, AIDrugInteractionEngine, AILaboratoryInterpretation,
@@ -54,6 +55,7 @@ def summary(patient_id):
     patient = _patient_or_404(patient_id)
     if not patient:
         return redirect(url_for('main.dashboard'))
+    require_patient_access(patient)
     clinical = AIClinicalAssistant()
     risk = AIPatientRiskPrediction()
     rehab = AIRehabilitationAssistant()
@@ -74,6 +76,7 @@ def diagnosis_support(patient_id):
     patient = _patient_or_404(patient_id)
     if not patient:
         return redirect(url_for('main.dashboard'))
+    require_patient_access(patient)
     result = None
     if request.method == 'POST':
         symptoms = request.form.get('symptoms', '')
@@ -92,6 +95,7 @@ def lab_interpret(order_id):
     if not order:
         flash('Lab order not found.', 'warning')
         return redirect(url_for('lab.orders'))
+    require_patient_access(order.patient)
     result = AILaboratoryInterpretation().interpret_result(order_id)
     return render_template('ai/lab_interpretation.html',
                            title='AI Lab Interpretation', order=order,
@@ -106,6 +110,7 @@ def radiology(order_id):
     if not order:
         flash('Radiology order not found.', 'warning')
         return redirect(url_for('radiology.orders'))
+    require_patient_access(order.patient)
     result = AIRadiologyAssistant().analyze_study(order_id)
     return render_template('ai/radiology.html',
                            title='AI Radiology Summary', order=order,
@@ -120,18 +125,22 @@ def prescription(prescription_id):
     if not rx:
         flash('Prescription not found.', 'warning')
         return redirect(url_for('pharmacy.prescriptions'))
+    require_patient_access(rx.patient)
     checker = AIPrescriptionChecker()
     engine = AIDrugInteractionEngine()
     check = checker.check_prescription(prescription_id)
     # Evaluate the current prescription against ALL of the patient's other
-    # active medications, so drug-drug interactions are actually detected
-    # (a single-medication check can never fire the interaction engine).
-    active_ids = [p.medication_id for p in
-                  Prescription.query.filter_by(patient_id=rx.patient_id,
-                                               status='Active').all()
-                  if p.medication_id]
-    if rx.medication_id and rx.medication_id not in active_ids:
-        active_ids.append(rx.medication_id)
+    # active medications (and this prescription's own items), so drug-drug
+    # interactions are actually detected.
+    active_ids = []
+    for p in Prescription.query.filter_by(patient_id=rx.patient_id,
+                                          status='Active').all():
+        for item in p.items:
+            if item.medication_id and item.medication_id not in active_ids:
+                active_ids.append(item.medication_id)
+    for item in rx.items:
+        if item.medication_id and item.medication_id not in active_ids:
+            active_ids.append(item.medication_id)
     interactions = engine.check_interactions(active_ids)
     return render_template('ai/prescription.html',
                            title='AI Prescription Check', rx=rx,
@@ -145,6 +154,7 @@ def rehab(patient_id):
     patient = _patient_or_404(patient_id)
     if not patient:
         return redirect(url_for('main.dashboard'))
+    require_patient_access(patient)
     rehab = AIRehabilitationAssistant()
     log_activity('AI_REHAB_ANALYSIS', 'patient', patient_id)
     return render_template('ai/rehab.html', title='AI Rehabilitation Insights',

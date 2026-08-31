@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-plus-circle text-primary"></i> New Task</h4>
+
+<div class="card card-shadow" style="max-width: 640px;">
+    <div class="card-body">
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">Title *</label>
+                <input type="text" name="title" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Type</label>
+                    <select name="task_type" class="form-select">
+                        {% for t in ['GENERAL','LAB','RADIOLOGY','PHARMACY','NURSING','REFERRAL','PHYSIOTHERAPY','DENTISTRY','DOCUMENT_REVIEW','RESULT_VERIFICATION','ADMISSION'] %}
+                        <option value="{{ t }}">{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Department</label>
+                    <input type="text" name="department" class="form-control" placeholder="e.g. Laboratory">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-select">
+                        {% for p in ['LOW','NORMAL','HIGH','URGENT','CRITICAL'] %}
+                        <option value="{{ p }}" {{ 'selected' if p=='NORMAL' }}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Patient</label>
+                    <select name="patient_id" class="form-select">
+                        <option value="">-- None --</option>
+                        {% for p in patients %}
+                        <option value="{{ p.id }}">{{ p.id }} - {{ p.user.full_name if p.user else '' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Due</label>
+                    <input type="datetime-local" name="due_at" class="form-control">
+                </div>
+            </div>
+            <button class="btn btn-success"><i class="fas fa-check"></i> Create Task</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -14,6 +14,7 @@
                         <th>Patient</th>
                         <th>Reason</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -24,15 +25,30 @@
                             <td>{{ appt.patient.user.full_name if appt.patient and appt.patient.user else 'N/A' }}</td>
                             <td>{{ appt.reason or '-' }}</td>
                             <td>
-                                <span class="badge bg-{% if appt.status == 'confirmed' %}success{% elif appt.status == 'cancelled' %}danger{% elif appt.status == 'completed' %}secondary{% elif appt.status == 'pending' %}warning{% else %}info{% endif %}">
-                                    {{ appt.status|capitalize }}
+                                {% set s = appt.status|lower %}
+                                <span class="badge bg-{% if s == 'scheduled' %}info{% elif s == 'checkedin' %}primary{% elif s == 'confirmed' %}success{% elif s == 'completed' %}secondary{% elif s == 'cancelled' or s == 'noshow' %}danger{% else %}warning{% endif %}">
+                                    {{ appt.status }}
                                 </span>
+                            </td>
+                            <td>
+                                {% if appt.status == 'CheckedIn' %}
+                                <form method="post" action="{{ url_for('doctor.complete_appointment', appt_id=appt.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="mode" value="Completed">
+                                    <button class="btn btn-sm btn-outline-success" title="Complete visit & bill consultation fee"><i class="fas fa-check"></i> Complete</button>
+                                </form>
+                                <form method="post" action="{{ url_for('doctor.complete_appointment', appt_id=appt.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="mode" value="NoShow">
+                                    <button class="btn btn-sm btn-outline-danger" title="Mark as no-show"><i class="fas fa-user-slash"></i> No-Show</button>
+                                </form>
+                                {% else %}<span class="text-muted small">—</span>{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">No appointments found.</td>
+                            <td colspan="5" class="text-center text-muted py-4">No appointments found.</td>
                         </tr>
                     {% endif %}
                 </tbody>

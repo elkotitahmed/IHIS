@@ -52,7 +52,7 @@
                             <span class="badge bg-secondary ms-2">{{ file.document_type }}</span>
                             <div class="small text-muted">{{ file.uploaded_at.strftime('%Y-%m-%d') }}</div>
                         </div>
-                        <a href="{{ file.file_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                         <a href="{{ url_for('patient.download_document', doc_id=file.id) }}" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-download me-1"></i>Open
                         </a>
                     </div>

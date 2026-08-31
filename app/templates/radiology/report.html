@@ -36,31 +36,57 @@
 
 <div class="col-lg-8 px-0">
     <div class="card card-shadow">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">Report</h5>
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Report</h5>
+        {% if report %}
+        <span class="badge {% if report.status == 'Signed' %}bg-success{% elif report.status == 'Draft' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+            {{ report.status }}{% if report.status == 'Signed' %} 🔒{% endif %}
+        </span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if report and report.status == 'Signed' %}
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-lock me-2"></i>
+            <div>This report is <strong>signed and locked</strong>. Direct edits are disabled — use the amendment form below with a reason.</div>
         </div>
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('radiology.enter_report', order_id=order.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+        <form method="POST" action="{{ url_for('radiology.enter_report', order_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if report and report.status == 'Signed' %}
+            <input type="hidden" name="amend" value="1">
+            <div class="mb-3">
+                <label for="reason" class="form-label">Amendment Reason <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="reason" name="reason" rows="2" required
+                          placeholder="Why is this amendment being made?"></textarea>
+            </div>
+            {% endif %}
 
-                <div class="mb-3">
-                    <label for="findings" class="form-label">Findings</label>
-                    <textarea class="form-control" id="findings" name="findings" rows="6" placeholder="Describe the imaging findings...">{{ order.report.findings if order.report else '' }}</textarea>
-                </div>
+            <div class="mb-3">
+                <label for="findings" class="form-label">Findings</label>
+                <textarea class="form-control" id="findings" name="findings" rows="6" placeholder="Describe the imaging findings...">{{ report.findings if report else '' }}</textarea>
+            </div>
 
-                <div class="mb-3">
-                    <label for="impression" class="form-label">Impression</label>
-                    <textarea class="form-control" id="impression" name="impression" rows="4" placeholder="Overall impression / diagnosis...">{{ order.report.impression if order.report else '' }}</textarea>
-                </div>
+            <div class="mb-3">
+                <label for="impression" class="form-label">Impression</label>
+                <textarea class="form-control" id="impression" name="impression" rows="4" placeholder="Overall impression / diagnosis...">{{ report.impression if report else '' }}</textarea>
+            </div>
 
-                <div class="mb-3">
-                    <label for="recommendation" class="form-label">Recommendation</label>
-                    <textarea class="form-control" id="recommendation" name="recommendation" rows="4" placeholder="Suggested follow-up or next steps...">{{ order.report.recommendation if order.report else '' }}</textarea>
-                </div>
+            <div class="mb-3">
+                <label for="recommendation" class="form-label">Recommendation</label>
+                <textarea class="form-control" id="recommendation" name="recommendation" rows="4" placeholder="Suggested follow-up or next steps...">{{ report.recommendation if report else '' }}</textarea>
+            </div>
 
-                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>Save Report</button>
-            </form>
-        </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>{% if report and report.status == 'Signed' %}Save Amendment{% else %}Save Report{% endif %}</button>
+        </form>
+
+        {% if report and report.status != 'Signed' %}
+        <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="mt-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-success w-100"><i class="fas fa-signature me-1"></i>Sign &amp; Lock Report</button>
+        </form>
+        {% endif %}
+    </div>
     </div>
 </div>
 {% endblock %}

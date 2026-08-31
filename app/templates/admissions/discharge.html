@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-user-check text-success me-2"></i>Discharge Patient</h4>
+    <a href="{{ url_for('admissions.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back
+    </a>
+</div>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="fas fa-info-circle text-primary me-2"></i>Admission Summary</h6>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3 text-muted">Patient</dt>
+            <dd class="col-sm-9">{{ admission.patient.user.full_name if admission.patient and admission.patient.user else 'Unknown' }}</dd>
+            <dt class="col-sm-3 text-muted">Admission #</dt>
+            <dd class="col-sm-9">{{ admission.admission_no }}</dd>
+            <dt class="col-sm-3 text-muted">Ward / Bed</dt>
+            <dd class="col-sm-9">{{ admission.ward.name if admission.ward else '-' }} / {{ admission.bed.bed_no if admission.bed else '-' }}</dd>
+            <dt class="col-sm-3 text-muted">Admitted</dt>
+            <dd class="col-sm-9">{{ admission.admitted_at.strftime('%d %b %Y') if admission.admitted_at else '-' }} ({{ admission.days_stayed() }} day(s))</dd>
+            <dt class="col-sm-3 text-muted">Reason for Admission</dt>
+            <dd class="col-sm-9">{{ admission.reason or '-' }}</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="fas fa-file-medical text-success me-2"></i>Discharge Summary</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admissions.discharge', id=admission.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label for="discharge_diagnosis" class="form-label">Discharge Diagnosis</label>
+                <input type="text" class="form-control" id="discharge_diagnosis" name="discharge_diagnosis"
+                       placeholder="e.g. Community-acquired pneumonia, resolved">
+            </div>
+            <div class="mb-3">
+                <label for="discharge_summary" class="form-label">Clinical Summary</label>
+                <textarea class="form-control" id="discharge_summary" name="discharge_summary" rows="4"
+                          placeholder="Summary of the admission, treatments given, and response..."></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="discharge_medications" class="form-label">Medications on Discharge</label>
+                <textarea class="form-control" id="discharge_medications" name="discharge_medications" rows="2"
+                          placeholder="e.g. Amoxicillin 500mg TID x 7 days; Paracetamol 1g PRN"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="follow_up_instructions" class="form-label">Follow-Up Instructions</label>
+                <textarea class="form-control" id="follow_up_instructions" name="follow_up_instructions" rows="2"
+                          placeholder="Clinic follow-up date, warning signs, lifestyle advice..."></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="discharge_notes" class="form-label">Nursing / Discharge Notes</label>
+                <textarea class="form-control" id="discharge_notes" name="discharge_notes" rows="3"
+                          placeholder="Additional notes for the discharge record..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-success"
+                    onclick="return confirm('Confirm discharge? The summary will be recorded and the bed released.')">
+                <i class="fas fa-check me-1"></i>Confirm Discharge
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

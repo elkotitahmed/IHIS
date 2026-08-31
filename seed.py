@@ -3,15 +3,17 @@ test catalog, medications, and demo users for every portal.
 """
 from datetime import datetime, timedelta
 from app import create_app, db
+from app.permissions import seed_permissions
 from app.models import (
     User, Role, Permission, Department, Specialty, Doctor, Patient,
     ImagingType, LabTestCatalog, Medication, PharmacyInventory,
     DentalSpecialty, Dentist, PhysicalTherapist, SystemSetting,
-    MedicalRecord, Diagnosis, Prescription, LabOrder, LabResult,
+    MedicalRecord, Diagnosis, Prescription, PrescriptionItem, LabOrder, LabResult,
     RadiologyOrder, RadiologyReport, Referral, CareTeam, CareTeamMember,
     MultidisciplinaryCase, Appointment, VitalSign, NursingNote, CarePlan,
     DentalRecord, DentalChart, TherapyAssessment, TherapyPlan,
-    Notification, PatientDocument,
+    Notification, PatientDocument, ServiceCatalog, Bill, BillItem, Payment,
+    Ward, Bed, Admission,
 )
 
 app = create_app('development')
@@ -105,10 +107,30 @@ def main():
             if perm not in super_admin_role.permissions:
                 super_admin_role.permissions.append(perm)
 
+        # Seed the granular, record-level permission catalog onto default roles
+        created, assigned = seed_permissions(db)
+        if created or assigned:
+            print(f'  + Permissions seeded: {created} new, {assigned} role links')
+
+
         # Departments
         for d in DEPARTMENTS:
             if not Department.query.filter_by(name=d).first():
                 db.session.add(Department(name=d))
+
+        # Wards & beds
+        WARDS = [
+            ('General Ward A', 'General', 150.0, 12),
+            ('Private Ward B', 'Private', 500.0, 6),
+            ('ICU', 'ICU', 1200.0, 6),
+        ]
+        for name, wtype, charge, nbeds in WARDS:
+            if not Ward.query.filter_by(name=name).first():
+                ward = Ward(name=name, ward_type=wtype, room_charge_per_day=charge)
+                db.session.add(ward)
+                db.session.flush()
+                for i in range(1, nbeds + 1):
+                    db.session.add(Bed(ward_id=ward.id, bed_no=f'B{i:02d}'))
         # Specialties
         for s in SPECIALTIES:
             if not Specialty.query.filter_by(name=s).first():
@@ -220,6 +242,23 @@ def main():
         for k, v in defaults.items():
             if not SystemSetting.query.filter_by(key=k).first():
                 db.session.add(SystemSetting(key=k, value=v, category='general'))
+
+        # Service catalog (billable ad-hoc services)
+        SERVICES = [
+            ('General Consultation', 'Consultation', 150.0),
+            ('Specialist Consultation', 'Consultation', 300.0),
+            ('Emergency Room Visit', 'Consultation', 400.0),
+            ('Private Room (per day)', 'Room', 500.0),
+            ('Semi-Private Room (per day)', 'Room', 300.0),
+            ('Ward Bed (per day)', 'Room', 150.0),
+            ('Minor Procedure', 'Procedure', 600.0),
+            ('Surgery (basic)', 'Procedure', 3000.0),
+            ('Nursing Care (per day)', 'Other', 200.0),
+        ]
+        for name, cat, price in SERVICES:
+            if not ServiceCatalog.query.filter_by(name=name).first():
+                db.session.add(ServiceCatalog(name=name, category=cat, price=price,
+                                              is_active=True))
 
         # Demo clinical records (make reports & portals functional out of the box)
         demo_patient = Patient.query.filter_by(user_id=pat_user.id).first() if pat_user else None
@@ -362,6 +401,38 @@ def main():
                                        interventions='Stretching, quadriceps strengthening, balance training.',
                                        status='Active'))
 
+        # Demo billing record
+        if demo_patient and not Bill.query.first():
+            reception_user = User.query.filter_by(username='reception').first()
+            bill = Bill(patient_id=demo_patient.id,
+                        created_by=reception_user.id if reception_user else None,
+                        status='Paid', bill_no='INV-1001',
+                        source_type='Manual', notes='General consultation + room charge')
+            db.session.add(bill)
+            db.session.flush()
+            db.session.add(BillItem(bill_id=bill.id, description='General Consultation',
+                                    quantity=1, unit_price=150.0))
+            db.session.add(BillItem(bill_id=bill.id, description='Ward Bed (per day)',
+                                    quantity=1, unit_price=150.0))
+            db.session.flush()
+            db.session.add(Payment(bill_id=bill.id, amount=300.0, method='Cash',
+                                   reference='', received_by=reception_user.id if reception_user else None,
+                                   receipt_no='RCT-10001'))
+
+        # Demo admission
+        if demo_patient and not Admission.query.first():
+            ward = Ward.query.filter_by(name='General Ward A').first()
+            bed = ward.beds[0] if ward and ward.beds else None
+            if ward and bed and bed.status == 'Available':
+                admission = Admission(admission_no='ADM-1001',
+                                      patient_id=demo_patient.id, ward_id=ward.id,
+                                      bed_id=bed.id,
+                                      admitting_doctor_id=demo_doctor.id if demo_doctor else None,
+                                      reason='Admitted for diabetes stabilization and monitoring.',
+                                      status='Admitted')
+                bed.status = 'Occupied'
+                db.session.add(admission)
+
         # Demo notifications for every user account
         if User.query.count() and not Notification.query.first():
             special = {
@@ -384,10 +455,12 @@ def main():
                 db.session.add(Notification(user_id=u.id, title=spec[0], message=spec[1],
                                             notification_type=spec[2], is_read=spec[3]))
 
-        # Demo patient document (with a sample file on disk)
+        # Demo patient document (with a sample file on disk, kept out of static/)
         if demo_patient and not PatientDocument.query.first():
             from pathlib import Path
-            samples = Path('app/static/uploads/medical_documents')
+            from flask import current_app
+            base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
+            samples = Path(base) / 'medical_documents'
             samples.mkdir(parents=True, exist_ok=True)
             sample_file = samples / 'sample_lab_result.txt'
             sample_file.write_text(
@@ -396,7 +469,7 @@ def main():
             db.session.add(PatientDocument(patient_id=demo_patient.id,
                                            title='Sample Lab Result',
                                            document_type='report',
-                                           file_url='/static/uploads/medical_documents/sample_lab_result.txt'))
+                                           file_url='medical_documents/sample_lab_result.txt'))
 
         db.session.commit()
         print('Seed complete!')

@@ -65,6 +65,7 @@
                                 <th>Duration</th>
                                 <th>Status</th>
                                 <th>Notes</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -73,11 +74,44 @@
                                 <td>{{ s.session_type }}</td>
                                 <td>{{ s.scheduled_at.strftime('%d %b %Y %H:%M') if s.scheduled_at else '-' }}</td>
                                 <td>{{ s.duration_minutes }} min</td>
-                                <td><span class="badge bg-primary">{{ s.status }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if s.status=='Completed' else ('warning' if s.status=='In Progress' else ('secondary' if s.status in ('Cancelled','No Show') else 'primary')) }}">{{ s.status }}</span></td>
                                 <td>{{ s.notes or '-' }}</td>
+                                <td>
+                                    {% if s.status == 'Scheduled' %}
+                                    <form method="POST" action="{{ url_for('physiotherapy.session_start', session_id=s.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-primary" title="Start session"><i class="fas fa-play"></i></button>
+                                    </form>
+                                    {% endif %}
+                                    {% if s.status in ('Scheduled', 'In Progress') %}
+                                    <details class="d-inline">
+                                        <summary class="btn btn-sm btn-success">Complete</summary>
+                                        <form method="POST" action="{{ url_for('physiotherapy.session_complete', session_id=s.id) }}" class="mt-1">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <div class="mb-1"><input type="number" name="pain_after" min="0" max="10" placeholder="Pain after (0-10)" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="text" name="exercises_performed" placeholder="Exercises performed" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="text" name="modalities" placeholder="Modalities" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="text" name="patient_response" placeholder="Patient response" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="text" name="adherence" placeholder="Adherence" class="form-control form-control-sm"></div>
+                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="followup_required" id="fu{{ s.id }}"><label class="form-check-label" for="fu{{ s.id }}">Follow-up required</label></div>
+                                            <button class="btn btn-sm btn-success w-100">Save &amp; bill</button>
+                                        </form>
+                                    </details>
+                                    {% endif %}
+                                    {% if s.status == 'Scheduled' %}
+                                    <form method="POST" action="{{ url_for('physiotherapy.session_no_show', session_id=s.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-outline-warning" title="No show"><i class="fas fa-user-slash"></i></button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('physiotherapy.session_cancel', session_id=s.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-outline-danger" title="Cancel"><i class="fas fa-times"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="5" class="text-center text-muted py-3">No sessions scheduled yet</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-3">No sessions scheduled yet</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>

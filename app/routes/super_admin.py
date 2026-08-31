@@ -1,7 +1,6 @@
 """Super Admin portal - full system control."""
 import os
 import shutil
-from datetime import datetime
 
 from flask import Blueprint, request, redirect, url_for, flash, render_template, abort, current_app
 from flask_login import login_required, current_user
@@ -11,6 +10,8 @@ from app.models import (
     User, Role, Permission, AuditLog, SystemSetting, Patient, Doctor,
 )
 from app.routes.decorators import roles_required, permissions_required, log_activity
+from app.permissions import ADMIN_MANAGE_PERMISSIONS, ADMIN_MANAGE_ROLES, ADMIN_MANAGE_USERS
+from app.utils import utcnow
 
 super_admin_bp = Blueprint('super_admin', __name__)
 
@@ -151,7 +152,7 @@ def roles():
 @super_admin_bp.route('/permissions', methods=['GET', 'POST'])
 @login_required
 @roles_required('SuperAdmin')
-@permissions_required('manage_system')
+@permissions_required(ADMIN_MANAGE_PERMISSIONS)
 def permissions():
     if request.method == 'POST':
         role_id = request.form.get('role_id', type=int)
@@ -226,7 +227,7 @@ def backup():
         )
         os.makedirs(backups_dir, exist_ok=True)
 
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        timestamp = utcnow().strftime('%Y%m%d_%H%M%S')
         base, ext = os.path.splitext(os.path.basename(db_path))
         dest_path = os.path.join(backups_dir, f'{base}_{timestamp}{ext}')
 

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">
+    <i class="fas fa-file-invoice text-primary"></i> Bill {{ bill.bill_no }}
+    <span class="badge bg-{% if bill.status=='Paid' %}success{% elif bill.status=='PartiallyPaid' %}warning{% elif bill.status=='Voided' %}secondary{% else %}danger{% endif %}">{{ bill.status }}</span>
+</h4>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent d-flex justify-content-between">
+                <h6 class="mb-0"><i class="fas fa-user"></i> {{ bill.patient.user.full_name }}</h6>
+                <a class="btn btn-sm btn-outline-secondary" href="javascript:window.print()"><i class="fas fa-print"></i> Print</a>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-1">Patient: {{ bill.patient.user.email }} &middot; Source: {{ bill.source_type or 'Manual' }} &middot; Issued: {{ bill.issued_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% if bill.notes %}<p class="small mb-3">{{ bill.notes }}</p>{% endif %}
+
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>#</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                    {% for i in bill.items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ i.description }}</td>
+                            <td class="text-end">{{ i.quantity }}</td>
+                            <td class="text-end">{{ "%.2f"|format(i.unit_price) }}</td>
+                            <td class="text-end">{{ "%.2f"|format(i.total()) }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="text-end small">
+                    <p class="mb-0">Subtotal: {{ "%.2f"|format(bill.subtotal()) }}</p>
+                    {% if bill.tax_percent %}<p class="mb-0">Tax ({{ bill.tax_percent|int }}%): {{ "%.2f"|format(bill.tax_amount()) }}</p>{% endif %}
+                    {% if bill.discount %}<p class="mb-0">Discount: -{{ "%.2f"|format(bill.discount) }}</p>{% endif %}
+                    <hr>
+                    <h5 class="mb-0">Total: {{ "%.2f"|format(bill.total()) }}</h5>
+                    <p class="mb-0 text-success">Paid: {{ "%.2f"|format(bill.paid_amount()) }}</p>
+                    <p class="mb-0 {% if bill.balance()>0 %}text-danger fw-bold{% else %}text-muted{% endif %}">Balance: {{ "%.2f"|format(bill.balance()) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if bill.status != 'Voided' and bill.balance() > 0 %}
+        <div class="card card-shadow mb-3">
+            <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-credit-card"></i> Record Payment</h6></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('billing.record_payment', bill_id=bill.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-2">
+                        <label class="form-label small">Amount</label>
+                        <input class="form-control" type="number" step="0.01" name="amount" value="{{ "%.2f"|format(bill.balance()) }}" max="{{ bill.balance() }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Method</label>
+                        <select class="form-select" name="method">
+                            {% for m in ['Cash','Card','Insurance','BankTransfer','Other'] %}
+                            <option>{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Reference (optional)</label>
+                        <input class="form-control" name="reference" placeholder="card / claim no">
+                    </div>
+                    <button class="btn btn-success w-100"><i class="fas fa-check-circle"></i> Record Payment</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card card-shadow">
+            <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-list"></i> Payment History</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Receipt</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
+                    <tbody>
+                    {% for p in bill.payments %}
+                        <tr>
+                            <td>{{ p.receipt_no }}</td>
+                            <td class="text-success">{{ "%.2f"|format(p.amount) }}</td>
+                            <td>{{ p.method }}</td>
+                            <td class="small">{{ p.received_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No payments recorded.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if bill.status != 'Voided' and bill.paid_amount() == 0 and (current_user.has_role('Admin') or current_user.has_role('SuperAdmin')) %}
+        <div class="card card-shadow mt-3 border-danger">
+            <div class="card-body">
+                <form method="post" action="{{ url_for('billing.void_bill', bill_id=bill.id) }}" onsubmit="return confirm('Void this bill? This cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input class="form-control form-control-sm mb-2" name="reason" placeholder="Reason for voiding">
+                    <button class="btn btn-sm btn-outline-danger w-100">Void Bill</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

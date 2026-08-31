@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-door-open text-info"></i> Admissions Dashboard</h4>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-info card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-arrow-up-right-from-square icon me-3"></i>
+                <div><h5 class="card-title mb-0">Current Admissions</h5>
+                <p class="display-6 mb-0">{{ current|length }}</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-bed icon me-3"></i>
+                <div><h5 class="card-title mb-0">Total Beds</h5>
+                <p class="display-6 mb-0">{{ beds_total }}</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-user-injured icon me-3"></i>
+                <div><h5 class="card-title mb-0">Occupied Beds</h5>
+                <p class="display-6 mb-0">{{ beds_occupied }}</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success card-shadow h-100">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-bed-pulse icon me-3"></i>
+                <div><h5 class="card-title mb-0">Available Beds</h5>
+                <p class="display-6 mb-0">{{ beds_available }}</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+    <h5><i class="fas fa-list"></i> Active Admissions</h5>
+    <div>
+        <a class="btn btn-outline-info" href="{{ url_for('admissions.admissions') }}"><i class="fas fa-list-alt"></i> All Admissions</a>
+        {% if current_user.has_permission('BED_MANAGE') %}
+        <a class="btn btn-outline-secondary" href="{{ url_for('admissions.wards') }}"><i class="fas fa-building-shield"></i> Wards & Beds</a>
+        {% endif %}
+    </div>
+</div>
+<div class="card card-shadow">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Admission #</th><th>Patient</th><th>Ward</th><th>Bed</th><th>Admitted</th><th>Reason</th><th></th></tr></thead>
+            <tbody>
+            {% for a in current %}
+                <tr>
+                    <td>{{ a.admission_no }}</td>
+                    <td>{{ a.patient.user.full_name }}</td>
+                    <td>{{ a.ward.name if a.ward else '-' }}</td>
+                    <td>{{ a.bed.bed_no if a.bed else '-' }}</td>
+                    <td>{{ a.admitted_at.strftime('%Y-%m-%d') }}<div class="small text-muted">{{ a.days_stayed() }}d</div></td>
+                    <td class="small">{{ (a.reason or '')[:50] }}</td>
+                    <td>
+                        {% if current_user.has_permission('ADMISSION_DISCHARGE') %}
+                        <a href="{{ url_for('admissions.discharge', id=a.id) }}" class="btn btn-sm btn-outline-danger">
+                            Discharge
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No active admissions.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

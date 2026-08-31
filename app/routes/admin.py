@@ -5,7 +5,7 @@ from sqlalchemy import func
 from app import db
 from app.models import (
     User, Role, Department, Doctor, Patient, Appointment,
-    Specialty, LabOrder, RadiologyOrder,
+    Specialty, LabOrder, RadiologyOrder, Bill, Payment,
 )
 from app.routes.decorators import roles_required, log_activity
 
@@ -29,9 +29,11 @@ def dashboard():
         func.date(Appointment.scheduled_at) == today
     ).count()
 
-    revenue = db.session.query(
-        func.sum(Doctor.consultation_fee)
-    ).scalar() or 0.0
+    # Real financial figures derived from actual billing transactions, never
+    # from summing doctor consultation fees.
+    revenue = db.session.query(func.sum(Payment.amount)).scalar() or 0.0
+    _open_bills = Bill.query.filter(Bill.status.in_(['Unpaid', 'PartiallyPaid'])).all()
+    outstanding = sum(b.balance() for b in _open_bills)
 
     appointments_by_status = db.session.query(
         Appointment.status, func.count(Appointment.id)
@@ -52,6 +54,7 @@ def dashboard():
         total_departments=total_departments,
         appointments_today=appointments_today,
         revenue=revenue,
+        outstanding=outstanding,
         status_labels=status_labels,
         status_counts=status_counts,
     )
@@ -94,6 +97,19 @@ def update_roles(user_id):
     if role_id:
         role = Role.query.get(role_id)
         if role:
+            # Privilege-escalation guard: only a SuperAdmin may grant or
+            # revoke the SuperAdmin role (prevents an Admin escalating
+            # themselves or others to full system control).
+            if role.name == 'SuperAdmin' and not current_user.has_role('SuperAdmin'):
+                flash('Only a SuperAdmin can assign or remove the SuperAdmin role.', 'danger')
+                return redirect(url_for('admin.manage_staff', user_id=user.id))
+            # A regular Admin cannot elevate a user to Administrator level either.
+            if (role.name == 'Admin'
+                    and not current_user.has_role('SuperAdmin')
+                    and current_user.id == user.id):
+                flash('You cannot assign the Admin role to yourself.', 'danger')
+                return redirect(url_for('admin.manage_staff', user_id=user.id))
+
             if action == 'add' and role not in user.roles:
                 user.roles.append(role)
                 log_activity('ADD_ROLE_TO_USER', resource='user', resource_id=user.id,

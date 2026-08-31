@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-file-invoice text-primary"></i> Bills</h4>
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end mb-2">
+            <div class="col-md-4">
+                <label class="form-label small">Search (bill # / patient)</label>
+                <input class="form-control" name="q" value="{{ q }}" placeholder="INV-1001 or patient name">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All</option>
+                    {% for s in ['Unpaid','PartiallyPaid','Paid','Voided'] %}
+                    <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary"><i class="fas fa-search"></i> Filter</button>
+                <a class="btn btn-outline-success" href="{{ url_for('billing.new_bill') }}"><i class="fas fa-plus"></i> New Bill</a>
+            </div>
+        </form>
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr><th>Bill #</th><th>Patient</th><th>Source</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>Date</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for b in items %}
+                <tr>
+                    <td>{{ b.bill_no }}</td>
+                    <td>{{ b.patient.user.full_name }}</td>
+                    <td><span class="badge bg-light text-dark">{{ b.source_type or 'Manual' }}</span></td>
+                    <td>{{ "%.2f"|format(b.total()) }}</td>
+                    <td class="text-success">{{ "%.2f"|format(b.paid_amount()) }}</td>
+                    <td class="{% if b.balance()>0 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ "%.2f"|format(b.balance()) }}</td>
+                    <td><span class="badge bg-{% if b.status=='Paid' %}success{% elif b.status=='PartiallyPaid' %}warning{% elif b.status=='Voided' %}secondary{% else %}danger{% endif %}">{{ b.status }}</span></td>
+                    <td class="small">{{ b.issued_at.strftime('%Y-%m-%d') }}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('billing.view_bill', bill_id=b.id) }}">View</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="9" class="text-center text-muted py-4">No bills found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

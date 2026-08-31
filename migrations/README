@@ -1,1 +1,38 @@
 Single-database configuration for Flask.
+
+Database migrations (Alembic via Flask-Migrate)
+================================================
+
+The schema is now owned by Alembic migrations plus model metadata. In the
+`production` profile, Flask does NOT run `db.create_all()`; you must apply
+migrations before first boot:
+
+    flask db upgrade
+
+Workflow
+--------
+  FLASK_APP=run.py
+  # development / production
+  flask db migrate -m "describe change"   # autogenerate diff from models
+  flask db upgrade                        # apply pending migrations
+  flask db downgrade <rev>                # roll back when needed
+  flask db current                        # revision the DB is on
+  flask db heads                          # latest revisions
+
+Baseline
+--------
+The single revision `12ee9a1299d2` ("full_schema_baseline") is a squashed
+baseline capturing the entire current schema (61 tables). It replaces older
+partial migrations that only covered a subset of tables. Existing databases
+that were previously created with `db.create_all()` are stamped at this
+revision (`flask db stamp 12ee9a1299d2`) so future `flask db upgrade` runs
+cleanly against them.
+
+Note: for local development convenience the non-production profiles still
+auto-create missing tables on boot (`db.create_all()`). Production relies
+strictly on migrations.
+
+Indexing / audit
+----------------
+Audit tables (`audit_logs`) carry indexes on `user_id`, `action` and
+`created_at` for fast, uncorrupted append-only history queries.

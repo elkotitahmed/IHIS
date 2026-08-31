@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-building-shield text-info"></i> Wards & Beds</h4>
+
+{% if current_user.has_permission('BED_MANAGE') %}
+<div class="card card-shadow mb-3">
+    <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-plus"></i> Add Ward</h6></div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('admissions.add_ward') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3"><label class="form-label small">Ward name</label><input class="form-control" name="name" required></div>
+            <div class="col-md-2"><label class="form-label small">Type</label>
+                <select class="form-select" name="ward_type">
+                    {% for t in ['General','Private','SemiPrivate','ICU'] %}<option>{{ t }}</option>{% endfor %}
+                </select></div>
+            <div class="col-md-2"><label class="form-label small">Floor</label><input class="form-control" name="floor"></div>
+            <div class="col-md-2"><label class="form-label small">Charge/day</label><input class="form-control" type="number" step="0.01" name="room_charge_per_day" value="0"></div>
+            <div class="col-md-2"><label class="form-label small">Beds</label><input class="form-control" type="number" min="0" name="num_beds" value="0"></div>
+            <div class="col-md-1 d-flex align-items-end"><button class="btn btn-info w-100"><i class="fas fa-plus"></i></button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+{% for w in items %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between">
+                <h6 class="mb-0"><i class="fas fa-bed"></i> {{ w.name }}</h6>
+                <span class="badge bg-info">{{ w.ward_type }}{% if w.room_charge_per_day %} · {{ w.room_charge_per_day }}/day{% endif %}</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-1">
+                    {% for b in w.beds %}
+                    <span class="badge bg-{% if b.status=='Available' %}success{% elif b.status=='Occupied' %}danger{% else %}secondary{% endif %}"
+                          title="{{ b.bed_no }}: {{ b.status }}"> {{ b.bed_no }} </span>
+                    {% endfor %}
+                </div>
+                <div class="small text-muted mt-2">
+                    {{ w.beds|selectattr('status','equalto','Occupied')|list|length }}/{{ w.beds|length }} occupied
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="col-12"><div class="alert alert-info">No wards yet. Add a ward to begin bed management.</div></div>
+{% endfor %}
+</div>
+{% endblock %}

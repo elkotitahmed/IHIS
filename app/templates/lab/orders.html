@@ -5,6 +5,23 @@
     <a href="{{ url_for('lab.new_order') }}" class="btn btn-info text-white"><i class="fas fa-plus me-1"></i>New Lab Order</a>
 </div>
 
+<div class="card card-shadow mb-3">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2 small">
+            <span class="me-2">Workflow:
+                <span class="badge bg-warning">Pending</span> &rarr;
+                <span class="badge bg-primary">Accepted</span> &rarr;
+                <span class="badge bg-info">Collected</span> &rarr;
+                <span class="badge bg-secondary">ReceivedAtLab</span> &rarr;
+                <span class="badge bg-secondary">Processing</span> &rarr;
+                <span class="badge bg-success">Resulted</span> &rarr;
+                <span class="badge bg-success">Verified</span> &rarr;
+                <span class="badge bg-success">Finalized</span>
+            </span>
+        </div>
+    </div>
+</div>
+
 <div class="card card-shadow">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -12,11 +29,12 @@
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
+                        <th>Accession</th>
                         <th>Patient</th>
                         <th>Test</th>
+                        <th>Specimen</th>
                         <th>Status</th>
                         <th>Priority</th>
-                        <th>Order Date</th>
                         <th>Result</th>
                         <th>Actions</th>
                     </tr>
@@ -25,61 +43,110 @@
                     {% for order in orders %}
                     <tr>
                         <td>{{ order.id }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ order.accession_number or ('LAB-' ~ order.id ~ '') }}</span></td>
                         <td>{{ order.patient.user.full_name if order.patient and order.patient.user else 'Unknown' }}</td>
                         <td>{{ order.test.test_name if order.test else 'Unknown' }}</td>
+                        <td>{{ order.specimen_type or '-' }}</td>
+                        <td><span class="badge bg-{{ status_badge(order.status) }}">{{ order.status }}</span></td>
                         <td>
-                            {% set status_class = {
-                                'Pending': 'warning',
-                                'SampleCollected': 'info',
-                                'InProgress': 'secondary',
-                                'Completed': 'success'
-                            }.get(order.status, 'secondary') %}
-                            <span class="badge bg-{{ status_class }}">{{ order.status }}</span>
-                        </td>
-                        <td>
-                            {% set priority_class = {'Urgent': 'danger', 'Stat': 'danger', 'Normal': 'success'}.get(order.priority, 'secondary') %}
+                            {% set priority_class = {'Urgent': 'danger', 'Stat': 'danger', 'HIGH': 'warning', 'Normal': 'success', 'LOW': 'secondary'}.get(order.priority, 'secondary') %}
                             <span class="badge bg-{{ priority_class }}">{{ order.priority }}</span>
                         </td>
-                        <td>{{ order.order_date.strftime('%d %b %Y %H:%M') if order.order_date else '-' }}</td>
                         <td>
-                            {% if order.status == 'Completed' and order.result %}
-                                <span class="text-success fw-semibold">{{ order.result.result_value or 'N/A' }}</span>
-                                {% if order.result.is_abnormal %}
-                                    <span class="badge bg-danger ms-1">Abnormal</span>
-                                {% endif %}
+                            {% if order.result and order.result.result_value %}
+                                <span class="fw-semibold">{{ order.result.result_value }}{{ ' ' ~ order.result.result_unit if order.result.result_unit }}</span>
+                                {% if order.result.is_critical %}<span class="badge bg-danger ms-1">CRITICAL</span>{% endif %}
+                                {% if order.result.is_abnormal %}<span class="badge bg-warning text-dark ms-1">Abnormal</span>{% endif %}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if order.status == 'Pending' %}
+                            <form method="POST" action="{{ url_for('lab.accept_order', order_id=order.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-primary" title="Accept"><i class="fas fa-check me-1"></i>Accept</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('lab.reject_sample', order_id=order.id) }}" class="d-inline" onsubmit="return promptReason(this);">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="reason" class="reject-reason">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject"><i class="fas fa-times me-1"></i>Reject</button>
+                            </form>
+                            {% elif order.status == 'Accepted' %}
                             <form method="POST" action="{{ url_for('lab.collect_sample', order_id=order.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-info text-white" title="Collect Sample">
-                                    <i class="fas fa-syringe me-1"></i>Collect Sample
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-info text-white" title="Collect Sample"><i class="fas fa-syringe me-1"></i>Collect</button>
                             </form>
-                            {% elif order.status == 'SampleCollected' %}
-                            <a href="{{ url_for('lab.enter_result', order_id=order.id) }}" class="btn btn-sm btn-success" title="Enter Result">
-                                <i class="fas fa-edit me-1"></i>Enter Result
-                            </a>
-                            {% elif order.status == 'Completed' %}
-                            <span class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>Completed</span>
-                            {% if order.result %}
-                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI Interpret</a>
-                            <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.lab_result', order_id=order.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+                            <form method="POST" action="{{ url_for('lab.reject_sample', order_id=order.id) }}" class="d-inline" onsubmit="return promptReason(this);">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="reason" class="reject-reason">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject"><i class="fas fa-times me-1"></i>Reject</button>
+                            </form>
+                            {% elif order.status == 'Collected' %}
+                            <form method="POST" action="{{ url_for('lab.receive_sample', order_id=order.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-secondary" title="Receive at lab"><i class="fas fa-box-open me-1"></i>Receive</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('lab.reject_sample', order_id=order.id) }}" class="d-inline" onsubmit="return promptReason(this);">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="reason" class="reject-reason">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject"><i class="fas fa-times me-1"></i>Reject</button>
+                            </form>
+                            {% elif order.status in ('ReceivedAtLab',) %}
+                            <form method="POST" action="{{ url_for('lab.start_processing', order_id=order.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Start"><i class="fas fa-play me-1"></i>Start Processing</button>
+                            </form>
+                            {% elif order.status in ('Processing', 'Resulted') %}
+                            <a href="{{ url_for('lab.enter_result', order_id=order.id) }}" class="btn btn-sm btn-success" title="Enter Result"><i class="fas fa-edit me-1"></i>Enter Result</a>
+                            {% if order.result and order.result.status != 'Verified' %}
+                            <form method="POST" action="{{ url_for('lab.verify_result', order_id=order.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Verify"><i class="fas fa-check-double me-1"></i>Verify</button>
+                            </form>
                             {% endif %}
+                            {% elif order.status == 'Verified' %}
+                            <a href="{{ url_for('lab.enter_result', order_id=order.id) }}" class="btn btn-sm btn-outline-secondary" title="View/Correct"><i class="fas fa-eye me-1"></i></a>
+                            <form method="POST" action="{{ url_for('lab.finalize_result', result_id=order.result.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Finalize"><i class="fas fa-lock me-1"></i>Finalize</button>
+                            </form>
+                            {% elif order.status == 'Finalized' %}
+                            <span class="text-success"><i class="fas fa-check-circle me-1"></i>Finalized</span>
+                            {% if order.result %}
+                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI</a>
+                            <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.lab_result', order_id=order.id) }}"><i class="fas fa-file-pdf me-1"></i></a>
+                            {% endif %}
+                            {% elif order.status == 'Rejected' %}
+                            <span class="text-danger"><i class="fas fa-times-circle me-1"></i> {{ order.rejection_reason or 'Rejected' }}</span>
+                            {% if order.doctor %}
+                            <form method="POST" action="{{ url_for('lab.reorder', order_id=order.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Reorder"><i class="fas fa-redo me-1"></i>Reorder</button>
+                            </form>
+                            {% endif %}
+                            {% elif order.status == 'Cancelled' %}
+                            <span class="text-muted">Cancelled</span>
                             {% else %}
-                            <span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>
+                            <a href="{{ url_for('lab.enter_result', order_id=order.id) }}" class="btn btn-sm btn-success"><i class="fas fa-edit me-1"></i>Enter Result</a>
                             {% endif %}
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="8" class="text-center text-muted py-3">No lab orders found</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-3">No lab orders found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<script>
+function promptReason(form) {
+    var reason = window.prompt("Rejection reason:");
+    if (reason === null) return false;
+    form.querySelector('.reject-reason').value = reason;
+    return true;
+}
+</script>
 {% endblock %}

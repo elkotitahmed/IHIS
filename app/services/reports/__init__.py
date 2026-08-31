@@ -4,7 +4,6 @@ All report types build on reportlab and share a consistent branded header.
 Each generator returns raw PDF bytes ready to be sent as a Flask response.
 """
 import io
-from datetime import datetime
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -14,6 +13,8 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, HRFlowable,
 )
+
+from app.utils import utcnow
 
 HOSPITAL_NAME = "iHIS Intelligent Health Information System"
 
@@ -57,7 +58,7 @@ def _header(canvas, doc):
     canvas.drawString(18 * mm, doc.pagesize[1] - 22, HOSPITAL_NAME)
     canvas.setFont("Helvetica", 8)
     canvas.drawString(18 * mm, doc.pagesize[1] - 32,
-                     f"Generated on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+                     f"Generated on {utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
     canvas.setFillColor(colors.white)
     canvas.drawRightString(doc.pagesize[0] - 18 * mm, doc.pagesize[1] - 22, "Confidential")
     canvas.setStrokeColor(ACCENT)

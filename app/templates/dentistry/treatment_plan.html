@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.record', patient_id=patient.id) }}">{{ patient.user.full_name }}</a></li>
+        <li class="breadcrumb-item active">Treatment Plan</li>
+    </ol>
+</nav>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-clipboard-list"></i> New Treatment Plan - {{ patient.user.full_name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('dentistry.treatment_plans', patient_id=patient.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="title" required
+                           placeholder="E.g. Posterior composites, plan 1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="start_date">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" name="end_date">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="Planned">Planned</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Diagnosis</label>
+                    <input type="text" class="form-control" name="diagnosis">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" name="notes" rows="2"></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-check me-1"></i>Create Plan</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent">
+        <h5><i class="fas fa-list"></i> Treatment Plans</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Diagnosis</th>
+                        <th>Status</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Procedures</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in plans %}
+                    <tr>
+                        <td>{{ plan.title }}</td>
+                        <td>{{ plan.diagnosis or 'N/A' }}</td>
+                        <td><span class="badge bg-{{ 'success' if plan.status=='Completed' else ('warning' if plan.status=='In Progress' else 'primary') }}">{{ plan.status }}</span></td>
+                        <td>{{ plan.start_date.strftime('%Y-%m-%d') if plan.start_date else '-' }}</td>
+                        <td>{{ plan.end_date.strftime('%Y-%m-%d') if plan.end_date else '-' }}</td>
+                        <td>{{ plan.procedures|length }}</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('dentistry.plan_procedures', plan_id=plan.id) }}">
+                                <i class="fas fa-hand-holding-medical me-1"></i>Procedures
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center">No treatment plans created yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn btn-outline-secondary mt-3">
+    <i class="fas fa-arrow-left me-1"></i>Back to Dental Chart
+</a>
+{% endblock %}

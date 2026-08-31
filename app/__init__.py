@@ -39,7 +39,16 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     bcrypt.init_app(app)
     csrf.init_app(app)
-    cors.init_app(app)
+
+    # CORS is restricted to configured origins only. The app is a same-origin
+    # server-rendered Flask application; if no CORS_ORIGINS is configured we do
+    # NOT open cross-origin access (defaults to deny), preventing cross-site
+    # state-changing requests against the session-cookie-authenticated API.
+    allowed_origins = app.config.get('CORS_ORIGINS')
+    if allowed_origins:
+        if isinstance(allowed_origins, str):
+            allowed_origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
+        cors.init_app(app, resources={r'/*': {'origins': allowed_origins}})
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'warning'
@@ -63,6 +72,9 @@ def create_app(config_name=None):
     from app.routes.reports import reports_bp
     from app.routes.ai import ai_bp
     from app.routes.care import care_bp
+    from app.routes.billing import billing_bp
+    from app.routes.admissions import admissions_bp
+    from app.routes.tasks import tasks_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -81,10 +93,17 @@ def create_app(config_name=None):
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(ai_bp, url_prefix='/ai')
     app.register_blueprint(care_bp, url_prefix='/care')
+    app.register_blueprint(billing_bp, url_prefix='/billing')
+    app.register_blueprint(admissions_bp, url_prefix='/admissions')
+    app.register_blueprint(tasks_bp, url_prefix='/tasks')
 
-    # Create database tables if they don't exist
-    with app.app_context():
-        db.create_all()
+    # In production the schema is owned by Alembic migrations (`flask db
+    # upgrade`). For local development the convenience of auto-creating missing
+    # tables from the models is harmless, but it must never shadow the migration
+    # process in production.
+    if config_name != 'production':
+        with app.app_context():
+            db.create_all()
 
     register_context_processors(app)
 
@@ -107,6 +126,7 @@ def register_context_processors(app):
                 {'label': 'Lab Results', 'url': '/patient/lab-results', 'icon': 'fa-flask'},
                 {'label': 'Radiology Reports', 'url': '/patient/radiology-reports', 'icon': 'fa-x-ray'},
                 {'label': 'Documents', 'url': '/patient/documents', 'icon': 'fa-folder-open'},
+                {'label': 'Bills', 'url': '/patient/bills', 'icon': 'fa-file-invoice-dollar'},
                 {'label': 'Messages', 'url': '/patient/messages', 'icon': 'fa-envelope'},
             ]
         if current_user.has_any_role('Doctor'):
@@ -127,11 +147,25 @@ def register_context_processors(app):
         if current_user.has_any_role('Nurse'):
             items += [{'label': 'Dashboard', 'url': '/nursing/dashboard', 'icon': 'fa-stethoscope'}]
         if current_user.has_any_role('Receptionist'):
-            items += [{'label': 'Dashboard', 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'}]
+            items += [
+                {'label': 'Dashboard', 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'},
+                {'label': 'Admissions', 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+                {'label': 'Billing', 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+            ]
+        if current_user.has_any_role('Admin', 'SuperAdmin'):
+            items += [
+                {'label': 'Billing', 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                {'label': 'Admissions', 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+            ]
         if current_user.has_any_role('Dentist'):
             items += [{'label': 'Dashboard', 'url': '/dentistry/dashboard', 'icon': 'fa-tooth'}]
         if current_user.has_any_role('Physiotherapist'):
             items += [{'label': 'Dashboard', 'url': '/physiotherapy/dashboard', 'icon': 'fa-person-walking'}]
+        # Any authenticated staff user gets access to the shared task queue.
+        if current_user.has_any_role('SuperAdmin', 'Admin', 'Doctor', 'Nurse',
+                                     'LabTechnician', 'Radiologist', 'Pharmacist',
+                                     'Receptionist', 'Dentist', 'Physiotherapist'):
+            items += [{'label': 'My Tasks', 'url': '/tasks/my-tasks', 'icon': 'fa-tasks'}]
         # Admin / SuperAdmin additions are handled by the dashboard main card,
         # so keep the sidebar portal-focused and merge by endpoint (dedupe).
         seen = set()

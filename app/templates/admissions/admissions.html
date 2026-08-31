@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-arrow-up-right-from-square text-info"></i> Admissions</h4>
+
+{% if current_user.has_permission('ADMISSION_CREATE') %}
+<div class="card card-shadow mb-3">
+    <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-user-plus"></i> Admit Patient</h6></div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('admissions.admit') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3">
+                <label class="form-label small">Patient</label>
+                <select class="form-select" name="patient_id" required>
+                    <option value="">-- Select --</option>
+                    {% for p in patients %}<option value="{{ p.id }}">{{ p.user.full_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Ward</label>
+                <select class="form-select" name="ward_id" id="wardSelect" required>
+                    <option value="">-- Select --</option>
+                    {% for w in wards %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Bed (available only)</label>
+                <select class="form-select" name="bed_id" id="bedSelect" required>
+                    <option value="">-- Select ward first --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Admitting Doctor</label>
+                <select class="form-select" name="doctor_id">
+                    <option value="">-- Optional --</option>
+                    {% for d in doctors %}<option value="{{ d.id }}">{{ d.user.full_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">Admitting Diagnosis / Reason</label>
+                <input class="form-control" name="reason" placeholder="Provisional diagnosis">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Expected Discharge</label>
+                <input class="form-control" type="date" name="expected_discharge">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-info w-100"><i class="fas fa-arrow-up-right-from-square"></i> Admit</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end mb-2">
+            <div class="col-md-3">
+                <label class="form-label small">Status</label>
+                <select class="form-select" name="status" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    {% for s in ['Admitted','Discharged','Moved'] %}
+                    <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Admission #</th><th>Patient</th><th>Ward / Bed</th><th>Admitted</th><th>Days</th><th>Status</th><th>Discharged</th></tr></thead>
+            <tbody>
+            {% for a in items %}
+                <tr>
+                    <td>{{ a.admission_no }}</td>
+                    <td>{{ a.patient.user.full_name }}</td>
+                    <td>{{ (a.ward.name if a.ward else '-') }} / {{ (a.bed.bed_no if a.bed else '-') }}</td>
+                    <td>{{ a.admitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ a.days_stayed() }}</td>
+                    <td><span class="badge bg-{% if a.status=='Admitted' %}info{% elif a.status=='Discharged' %}success{% else %}warning{% endif %}">{{ a.status }}</span></td>
+                    <td>{{ a.discharged_at.strftime('%Y-%m-%d') if a.discharged_at else '-' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No admissions found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const wardBeds = {{ ward_beds|tojson }};
+const wardSelect = document.getElementById('wardSelect');
+const bedSelect = document.getElementById('bedSelect');
+wardSelect.addEventListener('change', function() {
+  bedSelect.innerHTML = '<option value="">-- Select --</option>';
+  (wardBeds[this.value] || []).forEach(([id, label]) => {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = label;
+    bedSelect.appendChild(opt);
+  });
+});
+</script>
+{% endblock %}

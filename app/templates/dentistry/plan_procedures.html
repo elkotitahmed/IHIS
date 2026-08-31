@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.record', patient_id=plan.patient_id) }}">{{ plan.patient.user.full_name }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.treatment_plans', patient_id=plan.patient_id) }}">Treatment Plans</a></li>
+        <li class="breadcrumb-item active">{{ plan.title }}</li>
+    </ol>
+</nav>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-clipboard-list me-1"></i> {{ plan.title }}</h5>
+        <span class="badge bg-white text-info">{{ plan.status }}</span>
+    </div>
+    <div class="card-body">
+        <div class="row text-muted small">
+            <div class="col-md-3"><strong>Patient:</strong> {{ plan.patient.user.full_name }}</div>
+            <div class="col-md-3"><strong>Diagnosis:</strong> {{ plan.diagnosis or 'N/A' }}</div>
+            <div class="col-md-3"><strong>Start:</strong> {{ plan.start_date.strftime('%Y-%m-%d') if plan.start_date else '-' }}</div>
+            <div class="col-md-3"><strong>End:</strong> {{ plan.end_date.strftime('%Y-%m-%d') if plan.end_date else '-' }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-plus-circle me-1"></i> Add Procedure to Plan</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('dentistry.plan_procedures', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Procedure Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="procedure_name" required
+                           placeholder="E.g. Root canal">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tooth Number</label>
+                    <input type="text" class="form-control" name="tooth_number" placeholder="E.g. 36">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="Planned">Planned</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="InProgress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cost</label>
+                    <input type="number" step="0.01" class="form-control" name="cost" min="0" value="0">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Scheduled At</label>
+                    <input type="datetime-local" class="form-control" name="scheduled_at">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Materials</label>
+                    <input type="text" class="form-control" name="materials" placeholder="E.g. Composite resin, rubber dam">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Optional notes">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-plus me-1"></i>Add Procedure</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-shadow">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-list me-1"></i> Procedures ({{ procedures|length }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Procedure</th>
+                        <th>Tooth</th>
+                        <th>Status</th>
+                        <th>Cost</th>
+                        <th>Materials</th>
+                        <th>Scheduled</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in procedures %}
+                    <tr>
+                        <td>{{ p.procedure_name }}</td>
+                        <td>{{ p.tooth_number or 'N/A' }}</td>
+                        <td>
+                            {% set badge = {'Planned': 'secondary', 'Scheduled': 'info', 'InProgress': 'warning', 'Completed': 'success', 'Cancelled': 'danger'} %}
+                            <span class="badge bg-{{ badge.get(p.status, 'secondary') }}">{{ p.status }}</span>
+                        </td>
+                        <td>${{ '%.2f'|format(p.cost or 0) }}</td>
+                        <td>{{ p.materials or '-' }}</td>
+                        <td>{{ p.scheduled_at.strftime('%Y-%m-%d %H:%M') if p.scheduled_at else '-' }}</td>
+                        <td>
+                            {% if p.status not in ('Completed', 'Cancelled') %}
+                            <div class="btn-group btn-group-sm">
+                                {% for s in ['Scheduled', 'InProgress', 'Completed'] %}
+                                {% if s != p.status %}
+                                <form method="POST" action="{{ url_for('dentistry.procedure_status', procedure_id=p.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="status" value="{{ s }}">
+                                    <button type="submit" class="btn btn-outline-{{ 'info' if s=='Scheduled' else ('warning' if s=='InProgress' else 'success') }}"
+                                            title="{{ s }}">
+                                        {% if s == 'Scheduled' %}<i class="fas fa-calendar-check"></i>
+                                        {% elif s == 'InProgress' %}<i class="fas fa-play"></i>
+                                        {% else %}<i class="fas fa-check"></i>{% endif %}
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No procedures added to this plan yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('dentistry.treatment_plans', patient_id=plan.patient_id) }}" class="btn btn-outline-secondary mt-3">
+    <i class="fas fa-arrow-left me-1"></i>Back to Treatment Plans
+</a>
+{% endblock %}
