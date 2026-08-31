@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-prescription-bottle-medical me-2 text-primary"></i>AI Medication Review</h4>
+    <div>
+        {% if patient %}
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pharmacy.prescriptions') }}">
+            <i class="fas fa-arrow-left me-1"></i>Back</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-user me-2"></i>{{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-muted small">
+            <div class="col-md-3"><strong>MRN:</strong> {{ patient.mrn or 'N/A' }}</div>
+            <div class="col-md-3"><strong>Gender:</strong> {{ patient.gender or 'N/A' }}</div>
+            <div class="col-md-3"><strong>Blood:</strong> {{ patient.blood_type or 'N/A' }}</div>
+        </div>
+        {% if patient.allergies %}
+        <hr><span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Allergies: {{ patient.allergies }}</span>
+        {% endif %}
+        <hr class="my-2">
+        <form method="POST" action="{{ url_for('ai.medication_review', patient_id=patient.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-primary" type="submit" {% if not available %}disabled{% endif %}>
+                <i class="fas fa-brain me-1"></i>Run AI Medication Review
+            </button>
+            {% if not available %}
+            <span class="text-muted small ms-2">AI service (Gemini) is not configured.</span>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if not available %}
+<div class="alert alert-warning">
+    <i class="fas fa-info-circle me-2"></i>
+    The LLM medication review service requires a <strong>GEMINI_API_KEY</strong> to be set
+    in the server environment. Once configured, this page will run a comprehensive
+    medication therapy review for the patient.
+</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+{% if review %}
+<div class="card card-shadow">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="fas fa-clipboard-check me-1"></i>Review Result</span>
+        <span class="text-muted small">{{ review.duration_ms / 1000 if review.duration_ms else 0 }} s</span>
+    </div>
+    <div class="card-body">
+        {% if review.error %}
+        <div class="alert alert-danger">{{ review.error }}</div>
+        {% endif %}
+        {% if review.sections %}
+        <div class="row g-3">
+            {% for key in review.order %}
+            <div class="col-lg-6">
+                <div class="card card-shadow h-100">
+                    <div class="card-header bg-light fw-bold small">{{ key }}</div>
+                    <div class="card-body small">
+                        {{ review.sections[key]|replace('\n', '<br>')|safe }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif review.content and not review.error %}
+        <pre class="small text-wrap">{{ review.content }}</pre>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

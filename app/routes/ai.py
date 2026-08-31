@@ -1,4 +1,8 @@
 """AI layer routes: expose clinical decision-support assistants."""
+import os
+import re
+import time
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
@@ -12,7 +16,7 @@ from app.services.ai import (
     get_assistant, AIClinicalAssistant, AIDiagnosisSupport,
     AIPrescriptionChecker, AIDrugInteractionEngine, AILaboratoryInterpretation,
     AIRadiologyAssistant, AIPatientRiskPrediction, AIRehabilitationAssistant,
-    AIHospitalAnalytics,
+    AIHospitalAnalytics, AIClinicalPharmacist,
 )
 
 ai_bp = Blueprint('ai', __name__)
@@ -172,3 +176,88 @@ def analytics():
     result = AIHospitalAnalytics().forecast_occupancy()
     return render_template('ai/analytics.html', title='AI Hospital Analytics',
                            result=result)
+
+
+# ---------------------------------------------------------------------------
+# Integrated standalone AI models
+# ---------------------------------------------------------------------------
+
+@ai_bp.route('/medication-review/<int:patient_id>', methods=['GET', 'POST'])
+@login_required
+@roles_required('Pharmacist', 'Doctor', 'Admin', 'SuperAdmin')
+def medication_review(patient_id):
+    """Gemini-powered comprehensive medication therapy review."""
+    patient = _patient_or_404(patient_id)
+    if not patient:
+        return redirect(url_for('main.dashboard'))
+    require_patient_access(patient)
+
+    pharmacist = AIClinicalPharmacist()
+    available = pharmacist.available()
+
+    review = None
+    if request.method == 'POST':
+        review = pharmacist.review(patient)
+        log_activity('AI_MEDICATION_REVIEW', 'patient', patient_id,
+                     f'Medication review for {patient.user.full_name}')
+
+    return render_template(
+        'ai/medication_review.html', title='AI Medication Review',
+        patient=patient, available=available,
+        review=review,
+        error=review.get('error') if review else None)
+
+
+@ai_bp.route('/fracture-detection', methods=['GET', 'POST'])
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
+                'Dentist', 'Admin', 'SuperAdmin')
+def fracture_detection():
+    """YOLOv8 bone-fracture detection on uploaded X-rays."""
+    from app.services.ai.fracture_detection import (
+        detect_fracture, fracture_model_available,
+    )
+    result = None
+    error = None
+    if request.method == 'POST':
+        if 'file' not in request.files or not request.files['file'].filename:
+            error = 'Please select an image to analyze.'
+        else:
+            result = detect_fracture(request.files['file'])
+            if 'error' in result:
+                error = result.pop('error', None)
+            else:
+                log_activity('AI_FRACTURE_DETECTION', 'radiology_order', 0,
+                             'Fracture detection run')
+
+    available = fracture_model_available()
+    return render_template(
+        'ai/fracture_detection.html', title='AI Fracture Detection',
+        result=result, error=error, available=available)
+
+
+@ai_bp.route('/tooth-segmentation', methods=['GET', 'POST'])
+@login_required
+@roles_required('Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin')
+def tooth_segmentation():
+    """U-Net dental (panoramic) tooth segmentation."""
+    from app.services.ai.tooth_segmentation import (
+        segment_tooth, tooth_model_available,
+    )
+    result = None
+    error = None
+    if request.method == 'POST':
+        if 'file' not in request.files or not request.files['file'].filename:
+            error = 'Please select an image to analyze.'
+        else:
+            result = segment_tooth(request.files['file'])
+            if 'error' in result:
+                error = result.pop('error', None)
+            else:
+                log_activity('AI_TOOTH_SEGMENTATION', 'dental_record', 0,
+                             'Tooth segmentation run')
+
+    available = tooth_model_available()
+    return render_template(
+        'ai/tooth_segmentation.html', title='AI Tooth Segmentation',
+        result=result, error=error, available=available)

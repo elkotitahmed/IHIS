@@ -12,6 +12,7 @@ from .ai_interfaces import (
     AIHospitalAnalytics,
     AIRehabilitationAssistant,
 )
+from .clinical_pharmacist import AIClinicalPharmacist
 
 
 def get_assistant(name):

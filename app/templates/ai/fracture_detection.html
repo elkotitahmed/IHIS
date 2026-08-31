@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-bone me-2 text-primary"></i>AI Fracture Detection</h4>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('radiology.orders') }}">
+        <i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Bone X-Ray</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">
+            This AI tool (fine-tuned <strong>YOLOv8</strong>, 92.5% mAP@50) detects bone
+            fractures from X-ray images. It assists clinicians — it does not replace
+            radiological interpretation.
+        </p>
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('ai.fracture_detection') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="input-group">
+                <input type="file" class="form-control" name="file" accept=".png,.jpg,.jpeg" required>
+                <button class="btn btn-primary" type="submit"><i class="fas fa-x-ray me-1"></i>Analyze X-Ray</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if result and result.error is not defined %}
+<div class="card card-shadow">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Detection Result</span>
+        {% if result.detected %}
+        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Fracture Detected</span>
+        {% else %}
+        <span class="badge bg-success"><i class="fas fa-check me-1"></i>No Fracture Detected</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if result.detected %}
+        <div class="mb-3">
+            <p class="mb-1"><strong>Average confidence:</strong>
+                <span class="badge bg-primary">{{ result.avg_confidence }}%</span></p>
+            <div class="d-flex flex-wrap gap-2">
+                {% for label, count in result.count_by_class.items() %}
+                <span class="badge bg-secondary">{{ label }}: {{ count }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <table class="table table-sm">
+            <thead class="table-light"><tr><th>#</th><th>Location / Type</th><th>Confidence</th></tr></thead>
+            <tbody>
+                {% for d in result.detections %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ d.label }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height:8px;">
+                                <div class="progress-bar {{ 'bg-danger' if d.percent >= 70 else ('bg-warning' if d.percent >= 40 else 'bg-info') }}"
+                                     style="width: {{ d.percent }}%"></div>
+                            </div>
+                            <span class="small">{{ d.percent }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted mb-0">No fracture was detected in the submitted image.</p>
+        {% endif %}
+        <hr>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h6 class="fw-bold">Original X-Ray</h6>
+                <img src="{{ url_for('static', filename=result.orig_url) }}" class="img-fluid border rounded" alt="Original">
+            </div>
+            <div class="col-md-6">
+                <h6 class="fw-bold text-danger">AI Annotated Result</h6>
+                <img src="{{ url_for('static', filename=result.result_url) }}" class="img-fluid border border-danger rounded" alt="Annotated">
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

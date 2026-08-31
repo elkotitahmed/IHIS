@@ -9,6 +9,7 @@ WTForms==3.1.2
 email-validator==2.2.0
 python-dotenv==1.0.1
 reportlab==4.2.0
+requests>=2.31.0
 
 # Production WSGI servers (gunicorn for Linux/macOS, waitress also works on Windows)
 gunicorn==23.0.0
@@ -16,3 +17,10 @@ waitress==3.0.2
 
 # PostgreSQL driver (needed when DATABASE_URL points to a PostgreSQL database)
 psycopg2-binary==2.9.10
+
+# AI / ML dependencies
+ultralytics>=8.0.0
+tensorflow-cpu>=2.15.0
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0

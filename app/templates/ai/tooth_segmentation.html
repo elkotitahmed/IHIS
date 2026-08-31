@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-tooth me-2 text-primary"></i>AI Tooth Segmentation</h4>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dentistry.patients') }}">
+        <i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Panoramic X-Ray</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">
+            This AI tool (a <strong>U-Net</strong> trained on the TUFTS panoramic
+            radiograph dataset) automatically segments teeth to support dental
+            assessment. It assists clinicians and does not replace a dentist's
+            judgment.
+        </p>
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('ai.tooth_segmentation') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="input-group">
+                <input type="file" class="form-control" name="file" accept=".png,.jpg,.jpeg" required>
+                <button class="btn btn-primary" type="submit"><i class="fas fa-tooth me-1"></i>Segment Teeth</button>
+            </div>
+            <div class="form-text">Accepted formats: .png, .jpg, .jpeg (max 16 MB).</div>
+        </form>
+    </div>
+</div>
+
+{% if result and result.error is not defined %}
+<div class="card card-shadow">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Segmentation Result</span>
+        <span class="badge bg-info text-dark">Detected tooth coverage: {{ result.coverage_percent }}%</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h6 class="fw-bold">Original Panoramic X-Ray</h6>
+                <img src="{{ url_for('static', filename=result.orig_url) }}" class="img-fluid border rounded" alt="Original">
+            </div>
+            <div class="col-md-6">
+                <h6 class="fw-bold text-primary">Predicted Tooth Mask</h6>
+                <img src="{{ url_for('static', filename=result.mask_url) }}" class="img-fluid border border-primary rounded" alt="Segmentation Mask">
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

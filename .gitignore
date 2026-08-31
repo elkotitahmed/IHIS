@@ -33,6 +33,15 @@ app/static/uploads/
 logs/
 *.log
 
+# ---------- AI model weights & runtime artifacts ----------
+# Model binaries are large and trained externally; re-copy from the source
+# "AI apps" projects if missing. Runtime uploads/results are generated data.
+app/static/ai_models/*.pt
+app/static/ai_models/*.keras
+app/static/ai_models/*.h5
+app/static/ai_models/uploads/
+app/static/ai_models/results/
+
 # ---------- Test & coverage artifacts ----------
 .pytest_cache/
 .mypy_cache/

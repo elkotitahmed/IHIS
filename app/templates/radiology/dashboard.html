@@ -41,6 +41,21 @@
     </div>
 </div>
 
+<div class="row g-2 mb-4">
+    <div class="col-12">
+        <div class="card card-shadow">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="fw-bold text-primary me-2"><i class="fas fa-brain me-1"></i>AI Tools:</span>
+                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('ai.fracture_detection') }}">
+                        <i class="fas fa-bone me-1"></i>Fracture Detection</a>
+                    <span class="text-muted small ms-2">Auto-detect bone fractures from uploaded X-rays (YOLOv8).</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4 mb-4">
     <div class="col-lg-6">
         <div class="card card-shadow">
