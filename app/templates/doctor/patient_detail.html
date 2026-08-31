@@ -50,6 +50,9 @@
                     <a href="{{ url_for('ai.summary', patient_id=patient.id) }}" class="btn btn-outline-primary">
                         <i class="fas fa-brain me-1"></i>AI Summary
                     </a>
+                    <a href="{{ url_for('ai.medication_review', patient_id=patient.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-capsules me-1"></i>AI Medication Review
+                    </a>
                     <a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn btn-outline-primary">
                         <i class="fas fa-users me-1"></i>Care Team
                     </a>

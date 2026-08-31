@@ -184,7 +184,7 @@ def analytics():
 
 @ai_bp.route('/medication-review/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
-@roles_required('Pharmacist', 'Doctor', 'Admin', 'SuperAdmin')
+@roles_required('Pharmacist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
 def medication_review(patient_id):
     """Gemini-powered comprehensive medication therapy review."""
     patient = _patient_or_404(patient_id)

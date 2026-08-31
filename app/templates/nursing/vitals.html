@@ -8,8 +8,13 @@
 </nav>
 
 <div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-heartbeat"></i> Record Vital Signs - {{ patient.user.full_name }}</h5>
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-heartbeat"></i> Record Vital Signs - {{ patient.user.full_name }}</h5>
+        {% if current_user.has_any_role('Pharmacist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin') %}
+        <a href="{{ url_for('ai.medication_review', patient_id=patient.id) }}" class="btn btn-sm btn-light">
+            <i class="fas fa-capsules me-1"></i>AI Medication Review
+        </a>
+        {% endif %}
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('nursing.vitals', patient_id=patient.id) }}">
