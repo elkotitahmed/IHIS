@@ -36,7 +36,7 @@
                         <div class="patient-avatar-lg">{{ p.user.full_name[0]|upper if p.user else 'P' }}</div>
                         <div style="flex:1;min-width:0">
                             <div style="font-weight:600;color:var(--ihis-text);font-size:0.875rem">{{ p.user.full_name if p.user else 'Patient' }}</div>
-                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">MRN {{ p.mrn or '-' }}
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ (p.mrn or '-')|mrn_label }}
                                 {% if p.gender %} &middot; {{ p.gender }}{% endif %}</div>
                         </div>
                         <form method="POST" action="{{ url_for('clinical.order_set_apply', order_set_id=oset.id, patient_id=p.id) }}">

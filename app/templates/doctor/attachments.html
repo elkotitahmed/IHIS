@@ -47,7 +47,7 @@
                             <div style="font-weight:500;font-size:0.8125rem">{{ doc.title or doc.file_url.split('/')[-1] }}</div>
                             <div style="font-size:0.75rem;color:var(--ihis-text-muted)">
                                 {{ doc.patient.user.full_name if doc.patient and doc.patient.user else 'Patient' }}
-                                {% if doc.patient and doc.patient.mrn %} &middot; MRN {{ doc.patient.mrn }}{% endif %}
+                                {% if doc.patient and doc.patient.mrn %} &middot; {{ doc.patient.mrn|mrn_label }}{% endif %}
                             </div>
                             <div style="font-size:0.75rem;color:var(--ihis-text-muted);margin-top:2px">
                                 {{ doc.uploaded_at.strftime('%d %b %Y %H:%M') }}

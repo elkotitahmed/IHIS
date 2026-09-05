@@ -65,7 +65,7 @@
                            style="font-weight:600;color:var(--ihis-primary);text-decoration:none">
                             {{ row.patient.user.full_name if row.patient.user else 'Patient' }}
                         </a>
-                        <div class="text-muted" style="font-size:0.75rem">MRN {{ row.patient.mrn or '-' }}
+                        <div class="text-muted" style="font-size:0.75rem">{{ (row.patient.mrn or '-')|mrn_label }}
                             {% if row.patient.allergies %} &middot; <span class="status-badge s-cancelled" style="font-size:0.625rem">{{ 'حساسية' if g.lang == 'ar' else 'Allergy' }}</span>{% endif %}
                         </div>
                     </div>

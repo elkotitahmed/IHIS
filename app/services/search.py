@@ -43,7 +43,7 @@ def global_search(query, limit=20):
     else:
         patients = []
     results['patients'] = [
-        {'id': p.id, 'label': full_name(p), 'subtitle': f'MRN {p.mrn or '-'}',
+        {'id': p.id, 'label': full_name(p), 'subtitle': (p.mrn or 'No MRN'),
          'extra': p.gender or ''} for p in patients]
 
     doctors = (Doctor.query.join(User, Doctor.user_id == User.id)

@@ -15,7 +15,7 @@
             {{ 'ملخص طبي موحد' if g.lang == 'ar' else 'Unified Clinical Summary' }}</h1>
         <p class="text-muted" style="font-size:0.85rem">
             {{ 'مريض:' if g.lang == 'ar' else 'Patient:' }} <strong>{{ patient.user.full_name if patient.user else 'Patient' }}</strong>
-            {% if patient.mrn %} · MRN {{ patient.mrn }}{% endif %}
+            {% if patient.mrn %} · {{ patient.mrn|mrn_label }}{% endif %}
         </p>
     </div>
     <div style="display:flex;gap:var(--sp-2)">

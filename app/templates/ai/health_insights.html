@@ -22,7 +22,7 @@
                 <label class="form-label-ihs">{{ t('patient') }}</label>
                 <select name="pid" class="form-select" onchange="this.form.submit()">
                     {% for p in patients %}
-                    <option value="{{ p.id }}" {% if p.id == patient.id %}selected{% endif %}>{{ p.user.full_name }} (MRN: {{ p.mrn }})</option>
+                    <option value="{{ p.id }}" {% if p.id == patient.id %}selected{% endif %}>{{ p.user.full_name }} ({{ p.mrn|mrn_label }})</option>
                     {% endfor %}
                 </select>
                 <div class="form-hint">{{ 'اختر المريض ثم يتم توليد الرؤى الصحية تلقائياً.' if g.lang == 'ar' else 'Select a patient and AI health insights generate automatically.' }}</div>
@@ -41,7 +41,7 @@
             <div class="t-h4 mb-0">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}:
                 <strong>{{ patient.user.full_name }}</strong>
             </div>
-            <div class="cell-muted small">MRN: {{ patient.mrn }}</div>
+            <div class="cell-muted small">{{ patient.mrn|mrn_label }}</div>
         </div>
         <span class="status-badge s-active"><i class="fas fa-robot"></i> AI</span>
     </div>

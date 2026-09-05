@@ -167,6 +167,17 @@ def create_app(config_name=None):
 def register_context_processors(app):
     """Provide role-based sidebar menus, unread counts, and language to all templates."""
 
+    @app.template_filter('mrn_label')
+    def mrn_label(value):
+        """Render a medical record number with a single 'MRN' prefix.
+
+        Seeded MRNs look like ``P10001`` while assigned ones look like
+        ``MRN-000042``; templates used to print ``MRN MRN-000042``."""
+        if not value:
+            return ''
+        text = str(value)
+        return text if text.upper().startswith('MRN') else f'MRN {text}'
+
     ROLE_LABELS = {
         'SuperAdmin': 'Super Administrator',
         'Admin': 'Administrator',

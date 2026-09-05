@@ -18,7 +18,7 @@
                 {% endif %}
             </div>
             <div class="patient-header-meta">
-                <span>MRN {{ patient.mrn or '—' }}</span>
+                <span>{{ (patient.mrn or '—')|mrn_label }}</span>
                 {% if patient.gender %}<span>· {{ patient.gender }}</span>{% endif %}
                 {% if patient.date_of_birth %}
                 <span>· {{ patient.date_of_birth.strftime('%d %b %Y') }}

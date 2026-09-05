@@ -3,7 +3,7 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">{{ t('welcome') }}, {{ patient.user.full_name if patient and patient.user else (patient_name if patient_name is defined else 'Patient') }}</h1>
-        <p class="page-subtitle">{{ t('dashboard') }}{% if patient.mrn %} &middot; MRN {{ patient.mrn }}{% endif %}</p>
+        <p class="page-subtitle">{{ t('dashboard') }}{% if patient.mrn %} &middot; {{ patient.mrn|mrn_label }}{% endif %}</p>
     </div>
     <div class="page-actions">
         <a href="{{ url_for('patient.book_appointment') }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-calendar-plus"></i> {{ t('book_appointment') }}</a>
