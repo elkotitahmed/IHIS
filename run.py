@@ -12,7 +12,17 @@ from app.models import (
     FunctionalOutcome, Referral, CareTeam, MultidisciplinaryCase,
 )
 
-app = create_app(os.environ.get('FLASK_CONFIG') or 'development')
+# run.py is the *development* runner (Flask debug server). The production
+# entry point is wsgi.py. A `.env` that pins FLASK_CONFIG=production for the
+# deployment host must not turn this debug server into a production process,
+# so anything other than an explicit non-production profile falls back to
+# development here.
+_config_name = os.environ.get('FLASK_CONFIG') or 'development'
+if _config_name == 'production':
+    print('[run.py] FLASK_CONFIG=production ignored by the development runner; '
+          'use wsgi.py (waitress/gunicorn) for production.')
+    _config_name = 'development'
+app = create_app(_config_name)
 
 
 @app.shell_context_processor
@@ -21,4 +31,4 @@ def make_shell_context():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    app.run(debug=True, port=int(os.environ.get('PORT', 5000)), host='0.0.0.0')

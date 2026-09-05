@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ihis",
+      "runtimeExecutable": "venv/Scripts/python.exe",
+      "runtimeArgs": ["run.py"],
+      "port": 5000,
+      "autoPort": true
+    }
+  ]
+}
