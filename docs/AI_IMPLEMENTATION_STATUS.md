@@ -707,3 +707,28 @@ Continued the same master prompt, targeting the remaining P0/P1/P2 gaps.
   the only remaining gap is #19 (dynamic form-designer DSL), deliberately
   out of scope — iHIS prefers native forms.
 
+
+
+---
+
+## Session 2026-09-05/06 — Full-system takeover audit
+
+Scope and evidence live in `docs/SYSTEM_AUDIT_REPORT.md`. AI-specific outcomes:
+
+- `gemini_base.py`: API key travels in the `x-goog-api-key` header (never the
+  URL), provider errors are sanitised (`AIServiceError`), connect/read
+  timeouts `(10, 90)`; regression tests assert no key leakage.
+- `clinical_pharmacist.py`, `ai_patient_communication.py`,
+  `ai_clinical_notes.py`, `ai_diagnosis.py`, `ai_lab_interpretation.py`,
+  `ai_risk_prediction.py`, `ai_smart_orders.py`, `ai_medical_coding.py`,
+  `ai_clinical_alerts.py`: None guards, sanitised errors, canonical
+  severities/types, deduped alerts, no patient names in prompts.
+- Image tools (`fracture_detection.py`, `tooth_segmentation.py`,
+  `skin_lesion_classification.py`) fail soft when their runtime is missing.
+  The skin-lesion page reported a missing model only when the server ran on a
+  system interpreter without `timm`; running from the project venv restores
+  the result card (verified in the browser on port 5000).
+- AI smart-order suggestions are now linked from the doctor's patient page.
+- RadiologyTechnician role gets `AI_IMAGE_ANALYSIS`; Radiologist gets inbox,
+  alerts and timeline.
+- Full suite: **257 tests pass**.

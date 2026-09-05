@@ -130,6 +130,10 @@
                                     <input type="hidden" name="reason" class="reject-reason">
                                     <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" style="color:var(--ihis-danger);border-color:var(--ihis-danger)" title="Reject"><i class="fas fa-times"></i> {{ 'رفض' if g.lang == 'ar' else 'Reject' }}</button>
                                 </form>
+                                <form method="POST" action="{{ url_for('lab.cancel_order', order_id=order.id) }}" style="display:inline" onsubmit="return confirm('{{ 'إلغاء هذا الطلب؟' if g.lang == 'ar' else 'Cancel this lab order?' }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="Cancel order"><i class="fas fa-ban"></i> {{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</button>
+                                </form>
                             </div>
                             {% elif order.status == 'Accepted' %}
                             <div style="display:flex;gap:var(--sp-1);flex-wrap:wrap">
@@ -141,6 +145,10 @@
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="reason" class="reject-reason">
                                     <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" style="color:var(--ihis-danger);border-color:var(--ihis-danger)" title="Reject"><i class="fas fa-times"></i> {{ 'رفض' if g.lang == 'ar' else 'Reject' }}</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('lab.cancel_order', order_id=order.id) }}" style="display:inline" onsubmit="return confirm('{{ 'إلغاء هذا الطلب؟' if g.lang == 'ar' else 'Cancel this lab order?' }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="Cancel order"><i class="fas fa-ban"></i> {{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</button>
                                 </form>
                             </div>
                             {% elif order.status == 'Collected' %}

@@ -1,7 +1,7 @@
 # iHIS Release Candidate
 
 **Candidate:** `release-candidate` (working branch of the production-readiness
-effort, 2026-09-02; clinical benchmark cycle 2026-09-05)
+effort, 2026-09-02; clinical benchmark cycle 2026-09-05; full-system audit 2026-09-06)
 **Target platform:** PythonAnywhere (single WSGI web app + PostgreSQL/MySQL)
 **Gate status:** PRODUCTION-READY CANDIDATE
 
@@ -66,12 +66,23 @@ system audited, verified, and strengthened for production.
   Migrations `f1b1a6907bef` (5 clinical tables) and `8f3c0d1a2e9b`
   (critical thresholds).
 
+- **Full-system audit (2026-09-06)** — see `docs/SYSTEM_AUDIT_REPORT.md`:
+  need-to-know access rewritten for all roles (new RadiologyTechnician role),
+  one shared order-creation service, referral/lab/radiology/pharmacy/nursing/
+  reception/admissions/billing state machines wired end to end with tasks,
+  notifications and timeline events, Patient 360 merged timeline, System
+  Health and Hospital Demo pages, legacy status normalisation migration
+  `b7c2e9d41f05`, Clinical Inbox N+1 removed, global-search crash fixed,
+  every state-changing route reachable from the UI, CI extended with the
+  migration-chain check, seeded route smoke and query-budget profile.
+
 ## Verified by
 
-- **226 automated tests pass** (`python -m pytest tests -q`), no regressions.
+- **257 automated tests pass** (`python -m pytest tests -q`), no regressions;
+  2,587 role/route combinations render without white pages.
 - Full DB migration chain applies cleanly to an empty database; single Alembic
-  head `8f3c0d1a2e9b`.
-- Backup verify + restore to a scratch DB (77+ tables) succeeds.
+  head `b7c2e9d41f05`.
+- Backup verify + restore to a scratch DB (92 tables) succeeds (SQLite, 2026-09-06).
 - WSGI exports `application`; production import + boot validated.
 
 ## Known limitations (non-blocking)

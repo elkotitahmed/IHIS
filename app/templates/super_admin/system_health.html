@@ -9,6 +9,11 @@
         <a href="{{ url_for('super_admin.system_health') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-rotate"></i> {{ 'إعادة الفحص' if g.lang == 'ar' else 'Re-check' }}</a>
         <a href="{{ url_for('super_admin.backup') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-database"></i> {{ 'النسخ الاحتياطي' if g.lang == 'ar' else 'Backup' }}</a>
         <a href="{{ url_for('super_admin.audit_logs') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-clock-rotate-left"></i> {{ 'سجل المراجعة' if g.lang == 'ar' else 'Audit Log' }}</a>
+        <a href="{{ url_for('fhir.patient_index') }}" class="btn-ihs btn-ihs-outline" target="_blank" title="FHIR R4 Patient bundle"><i class="fas fa-fire"></i> FHIR</a>
+        <form method="POST" action="{{ url_for('super_admin.preventive_sweep') }}" style="display:inline" onsubmit="return confirm('{{ 'تشغيل فحص الرعاية الوقائية الآن؟' if g.lang == 'ar' else 'Run the preventive-care sweep now? Reminders are generated for due follow-ups, vaccines and missed appointments.' }}');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-broom"></i> {{ 'فحص الرعاية الوقائية' if g.lang == 'ar' else 'Preventive sweep' }}</button>
+        </form>
     </div>
 </div>
 

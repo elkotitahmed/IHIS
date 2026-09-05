@@ -83,6 +83,14 @@
                         <span class="cell-muted" style="margin-left:var(--sp-2);font-weight:400">{{ rx.prescribed_date.strftime('%Y-%m-%d') if rx.prescribed_date else '' }}</span>
                     </div>
                     <span class="status-badge {{ 's-completed' if rx.status == 'Dispensed' else 's-cancelled' if rx.status == 'Cancelled' else 's-active' }}">{{ rx.status }}</span>
+                    {% if rx.status not in ('Dispensed', 'Cancelled') and current_user.has_permission('PRESCRIPTION_CANCEL') %}
+                    <form method="POST" action="{{ url_for('doctor.cancel_prescription', rx_id=rx.id) }}" style="display:inline;margin-inline-start:var(--sp-2)"
+                          onsubmit="var r=prompt('{{ 'سبب الإلغاء' if g.lang == 'ar' else 'Reason for cancelling this prescription' }}'); if(r===null) return false; this.reason.value=r; return true;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="reason" value="">
+                        <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" style="color:var(--ihis-danger);border-color:var(--ihis-danger)" title="Cancel prescription"><i class="fas fa-ban"></i> {{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</button>
+                    </form>
+                    {% endif %}
                 </div>
                 <div class="card-body flush">
                     <div class="table-wrapper">

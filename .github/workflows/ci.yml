@@ -34,3 +34,23 @@ jobs:
           FLASK_CONFIG: testing
         run: |
           python -c "from app import create_app; app = create_app('testing'); client = app.test_client(); assert client.get('/auth/login').status_code == 200; print('App boots OK')"
+
+      - name: Migration chain applies to an empty database (single head)
+        run: python scripts/_mig_chain_check.py
+
+      - name: Seed a scratch database and run the role-by-route white-page audit
+        # Every (role, GET route) combination must render without a 500, a
+        # blank body or a redirect loop, and hot pages must stay inside the
+        # SQL query budget. The development profile builds the schema with
+        # create_all (the migration chain itself is proven by the step above),
+        # so the scratch DB is stamped at head afterwards. The demo seed is
+        # CI-only; production uses `seed.py --roles-only`.
+        env:
+          FLASK_CONFIG: development
+          DATABASE_URL: sqlite:///ci_smoke.db
+          SECRET_KEY: ci-only-not-a-secret
+        run: |
+          python seed.py
+          flask db stamp head
+          python scripts/smoke_all_routes.py
+          python scripts/profile_queries.py

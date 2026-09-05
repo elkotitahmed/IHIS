@@ -49,7 +49,7 @@
                     <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=item.id) }}">
                         {{ 'فتح' if g.lang == 'ar' else 'Open' }} <i class="fas fa-arrow-right"></i>
                     </a>
-                    {% else %}
+                    {% elif item.patient_id %}
                     <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=item.patient_id) }}">
                         {{ 'المريض' if g.lang == 'ar' else 'Patient' }} <i class="fas fa-arrow-right"></i>
                     </a>

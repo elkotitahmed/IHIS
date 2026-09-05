@@ -57,6 +57,8 @@ YELLOW (medium), BLUE (improvement), GREEN (acceptable).
 | 45 | Preventive care | GREEN | Automated screening reminders via `preventive.py` service |
 | 46 | Deployment artifacts (NEW) | GREEN | `deployment/nginx.conf`, `.env.production.example`; DEPLOYMENT_GUIDE; **`docs/PYTHONANYWHERE_DEPLOYMENT.md`**; WSGI loads `.env` + `application` alias |
 | 47 | Security operations (NEW) | GREEN | `docs/SECURITY_OPERATIONS.md` — secrets, RBAC, network, incident response |
+| 49 | Full-system audit (2026-09-06) | GREEN | Need-to-know rewrite (13 roles), shared order service, workflow state machines wired, Patient 360 merged timeline, UI reachability audit, inbox N+1 removed, search crash fixed — `docs/SYSTEM_AUDIT_REPORT.md` |
+| 50 | CI gates | GREEN | Suite + migration chain + seeded role-by-route smoke (`scripts/smoke_all_routes.py`) + query budget (`scripts/profile_queries.py`) |
 | 48 | Release gate | GREEN | **PRODUCTION-READY CANDIDATE** — see gate below. `docs/RELEASE_CHECKLIST.md` + `docs/RELEASE_READINESS.md` gate the go-live |
 
 ## Gate decision (Phase 48)
@@ -74,7 +76,7 @@ and deployment/security-operations documentation are in place.
 
 1. `cp deployment/.env.production.example .env` and set a strong `SECRET_KEY`
    and a PostgreSQL `DATABASE_URL` — the app refuses to boot otherwise.
-2. `FLASK_CONFIG=production flask db upgrade` to reach head `59f96da6bbf3`.
+2. `FLASK_CONFIG=production flask db upgrade` to reach head `b7c2e9d41f05`.
 3. `python seed.py --roles-only` (production) — never demo data.
 4. Run `python scripts/preflight_check.py` and resolve any FAIL.
 5. Serve behind nginx (see `deployment/nginx.conf`): TLS termination, proxy
@@ -93,7 +95,8 @@ and deployment/security-operations documentation are in place.
 
 ### Test evidence
 
-- **124 tests pass** (`python -m pytest tests -q`, ~3 min)
+- **257 tests pass** (`python -m pytest tests -q`, ~3 min); 2,587 role/route
+  combinations render without white pages; hot pages within the SQL budget
 - 5 security regression tests (open-redirect, status injection, referral status)
 - 13 hardening tests (`test_production_hardening.py`): error handlers for
   400/401/403/404/409/422/429/500/503 (JSON + HTML, no leak), production
@@ -106,4 +109,8 @@ and deployment/security-operations documentation are in place.
 - 2 inventory-concurrency tests (`test_inventory_concurrency.py`): no negative
   stock / lost update on double dispense
 - 2 E2E hospital simulation tests covering the full patient journey
+- 23 audit regression tests (`test_audit_regressions.py`): need-to-know
+  scoping, lab reorder/verify/cancel, pharmacy expiry/intervention, referral
+  lifecycle, reception check-in/reschedule, prescription cancel → MAR,
+  admissions, technician vs radiologist, search, UI action wiring
 - 0 failures across all sessions

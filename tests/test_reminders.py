@@ -97,7 +97,7 @@ class ReminderTestCase(unittest.TestCase):
         db.session.add(ImmunizationRecord(patient_id=self.pat.id,
                                           vaccine_name='HepB',
                                           administered_at=utcnow(),
-                                          next_due=date.today()))
+                                          next_due=utcnow().date()))
         db.session.commit()
         self._login()
         self.client.get('/clinical/reminders')

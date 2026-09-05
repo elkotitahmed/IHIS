@@ -111,5 +111,5 @@ def record_rows(Model, filter_clause, like, label_fn, kind, limit):
     rows = Model.query.filter(filter_clause, or_clause).limit(limit).all()
     return [{'id': r.id, 'label': label_fn(r),
              'subtitle': f'{kind.replace("_", " ").title()} #{r.id}',
-             'extra': r.status or '',
+             'extra': getattr(r, 'status', None) or getattr(r, 'category', None) or '',
              'patient_id': getattr(r, 'patient_id', None)} for r in rows]

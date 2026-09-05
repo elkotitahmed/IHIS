@@ -69,6 +69,7 @@
                     <a href="{{ url_for('ai.soap_notes', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-file-lines"></i> {{ 'ملاحظة SOAP' if g.lang == 'ar' else 'SOAP Note Draft' }}</a>
                     <a href="{{ url_for('ai.medical_coding', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-code"></i> {{ 'ترميز ICD-10' if g.lang == 'ar' else 'ICD-10 Coding' }}</a>
                     <a href="{{ url_for('ai.patient_communication', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-comment-medical"></i> {{ 'شرح للمريض' if g.lang == 'ar' else 'Patient-friendly Explanation' }}</a>
+                    <a href="{{ url_for('ai.smart_orders', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-wand-magic-sparkles"></i> {{ 'اقتراح الطلبات' if g.lang == 'ar' else 'Smart Order Suggestions' }}</a>
                 </div>
                 <p class="cell-muted mb-0 mt-2" style="font-size:0.6875rem"><i class="fas fa-shield-halved"></i> {{ 'مخرجات الذكاء الاصطناعي استشارية وتتطلب مراجعة الطبيب' if g.lang == 'ar' else 'AI output is advisory and requires clinician review; it never changes the record by itself.' }}</p>
             </div>

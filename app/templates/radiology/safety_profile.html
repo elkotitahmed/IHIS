@@ -70,6 +70,16 @@
                     <span class="badge {% if imp.mr_safety_class == 'MR Safe' %}bg-success{% elif imp.mr_safety_class == 'MR Conditional' %}bg-warning text-dark{% elif imp.mr_safety_class == 'MR Unsafe' %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size:0.65rem">{{ imp.mr_safety_class }}</span>
                     <span class="badge {% if imp.verification_status == 'Verified' %}bg-success{% else %}bg-secondary{% endif %}" style="font-size:0.6rem">{{ imp.verification_status }}</span>
                     <div class="cell-muted" style="font-size:0.7rem">{{ imp.manufacturer or '' }} {{ imp.model_number or '' }}</div>
+                    {% if imp.verification_status != 'Verified' and current_user.has_any_role('Radiologist', 'Admin', 'SuperAdmin') %}
+                    <form method="POST" action="{{ url_for('radiology.verify_implant', implant_id=imp.id) }}" class="d-flex gap-1 mt-1 flex-wrap align-items-center">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="mr_safety_class" class="form-select form-select-sm" style="max-width:150px">
+                            {% for c in ('MR Safe', 'MR Conditional', 'MR Unsafe', 'Unknown') %}<option value="{{ c }}" {{ 'selected' if imp.mr_safety_class == c }}>{{ c }}</option>{% endfor %}
+                        </select>
+                        <input type="text" name="verification_source" class="form-control form-control-sm" style="max-width:200px" placeholder="{{ 'مصدر التحقق (MRIsafety.com، الشركة المصنّعة)' if g.lang == 'ar' else 'Source (manufacturer card, MRIsafety.com)' }}" required>
+                        <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check-double"></i> {{ 'تحقق' if g.lang == 'ar' else 'Verify' }}</button>
+                    </form>
+                    {% endif %}
                 </div>
                 {% else %}
                 <p class="cell-muted small mb-0">{{ 'لا توجد غرسات مسجلة.' if g.lang == 'ar' else 'No implants registered.' }}</p>

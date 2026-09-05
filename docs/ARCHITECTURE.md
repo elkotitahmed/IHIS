@@ -155,6 +155,23 @@ New permissions: `ORDER_SET_VIEW/CREATE/EDIT`, `TEMPLATE_VIEW/CREATE/EDIT`,
 `INBOX_VIEW`, `RESULT_ACK`, `REMINDER_VIEW`, `REMINDER_ACK`,
 `CLINICAL_SUMMARY_VIEW` (see `app/permissions.py`).
 
+## Shared clinical services (2026-09-06 audit)
+
+| Module | Responsibility |
+|--------|----------------|
+| `app/access.py` | Need-to-know policy: `has_need_to_know`, `accessible_patient_ids`, `patient_access_required`, `require_patient_access` for all 13 roles (department, care team, authorship, today's appointment, admission, orders, specialty referrals, bills) |
+| `app/services/clinical_orders.py` | The single creation path for lab orders, radiology orders, prescriptions and referrals: record → safety screen → task → timeline → notification; referral state machine (`transition_referral`) |
+| `app/services/status.py` | Workflow state machines (lab order, radiology order, appointment, admission, therapy session, MAR) with `assert_transition` |
+| `app/services/tasks.py` | Task engine incl. resource-scoped `complete_for_resource` / `cancel_for_resource` |
+| `app/services/notifications.py` | `notify` with unread-duplicate suppression, `notify_users`, `care_team_user_ids`, `notify_ordering_clinicians` |
+| `app/services/timeline.py` | `record_event` plus `merged_timeline`, which synthesises events for source records that predate the timeline |
+| `app/services/billing.py` | PK-derived bill/receipt numbers, service-to-bill materialisation |
+| `app/utils.py` | `LOCKED_STATUSES` (`Verified`, `Signed`, `Locked`, `Finalized`), MRN assignment, appointment conflict window |
+
+Roles: SuperAdmin, Admin, Doctor, Nurse, LabTechnician, Radiologist,
+RadiologyTechnician, Pharmacist, Physiotherapist, Dentist, Receptionist,
+Cashier, Patient (`docs/ROLE_CAPABILITIES.md`).
+
 ## Security
 
 - Global CSRF protection (Flask-WTF `CSRFProtect`); the JSON REST API is `csrf.exempt`.
@@ -174,8 +191,11 @@ radiology report, prescription, pharmacy inventory, hospital statistics. A centr
 ```mermaid
 flowchart LR
     G[GitHub] --> CI[GitHub Actions CI]
-    CI --> TESTS[unittest suite]
+    CI --> TESTS[pytest suite - 257 tests]
     CI --> BOOT[App boot smoke]
+    CI --> MIG[Migration chain on empty DB]
+    CI --> SMOKE[Seeded role-by-route white-page audit]
+    CI --> PROF[SQL query-budget profile]
     APP[Flask app] --> DB[(SQLite/Postgres)]
 
     style CI fill:#f9f,stroke:#333,stroke-width:2px

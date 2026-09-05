@@ -15,7 +15,7 @@ class StatusTransitionError(Exception):
 # Each map: current_status -> set(legal_next_statuses)
 WORKFLOWS = {
     'lab_order': {
-        'Pending': {'Accepted', 'Collected', 'Rejected'},
+        'Pending': {'Accepted', 'Collected', 'Rejected', 'Cancelled'},
         'Accepted': {'Collected', 'Processing', 'Cancelled'},
         'Collected': {'ReceivedAtLab', 'Processing', 'Rejected'},
         'ReceivedAtLab': {'Processing', 'Rejected'},

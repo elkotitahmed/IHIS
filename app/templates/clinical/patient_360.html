@@ -150,7 +150,26 @@
                             <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ al.reaction or '' }} &middot; {{ al.severity }}</div>
                         </div>
                         <span class="status-badge {{ 's-cancelled' if al.severity == 'Severe' else 's-pending' }}" style="font-size:0.6875rem">{{ al.status }}</span>
+                        {% if current_user.has_permission('ALLERGY_EDIT') %}
+                        <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="Edit" onclick="var f=document.getElementById('al-edit-{{ al.id }}');f.hidden=!f.hidden"><i class="fas fa-pen"></i></button>
+                        {% endif %}
                     </div>
+                    {% if current_user.has_permission('ALLERGY_EDIT') %}
+                    <form id="al-edit-{{ al.id }}" hidden method="post" action="{{ url_for('clinical.edit_allergy', patient_id=patient.id, allergy_id=al.id) }}" style="padding:var(--sp-2) var(--sp-3);background:var(--ihis-surface)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="input-group input-group-sm mb-1">
+                            <input type="text" name="substance" class="form-control" value="{{ al.substance }}" required>
+                            <input type="text" name="reaction" class="form-control" value="{{ al.reaction or '' }}" placeholder="{{ 'رد الفعل' if g.lang == 'ar' else 'Reaction' }}">
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <select name="severity" class="form-select" style="max-width:120px">
+                                {% for sv in ('Mild', 'Moderate', 'Severe') %}<option value="{{ sv }}" {{ 'selected' if al.severity == sv }}>{{ sv }}</option>{% endfor %}
+                            </select>
+                            <input type="text" name="notes" class="form-control" value="{{ al.notes or '' }}" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
+                            <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-save"></i></button>
+                        </div>
+                    </form>
+                    {% endif %}
                     {% else %}
                     <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
                     {% endfor %}
@@ -194,7 +213,26 @@
                             <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ pr.severity }}</div>
                         </div>
                         <span class="status-badge {{ 's-completed' if pr.status == 'Resolved' else 's-pending' }}" style="font-size:0.6875rem">{{ pr.status }}</span>
+                        {% if current_user.has_permission('PROBLEM_EDIT') %}
+                        <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="Edit" onclick="var f=document.getElementById('pr-edit-{{ pr.id }}');f.hidden=!f.hidden"><i class="fas fa-pen"></i></button>
+                        {% endif %}
                     </div>
+                    {% if current_user.has_permission('PROBLEM_EDIT') %}
+                    <form id="pr-edit-{{ pr.id }}" hidden method="post" action="{{ url_for('clinical.edit_problem', patient_id=patient.id, problem_id=pr.id) }}" style="padding:var(--sp-2) var(--sp-3);background:var(--ihis-surface)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="input-group input-group-sm mb-1">
+                            <input type="text" name="icd10_code" class="form-control" value="{{ pr.icd10_code or '' }}" placeholder="ICD-10" style="max-width:110px">
+                            <input type="text" name="description" class="form-control" value="{{ pr.description }}" required>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <select name="status" class="form-select" style="max-width:130px">
+                                {% for st in ('Active', 'Inactive', 'Resolved') %}<option value="{{ st }}" {{ 'selected' if pr.status == st }}>{{ st }}</option>{% endfor %}
+                            </select>
+                            <input type="text" name="notes" class="form-control" value="{{ pr.notes or '' }}" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
+                            <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-save"></i></button>
+                        </div>
+                    </form>
+                    {% endif %}
                     {% else %}
                     <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
                     {% endfor %}

@@ -156,4 +156,30 @@
         </div>
     </div>
 </div>
+
+{% if current_user.has_permission('INTERVENTION_CREATE') and rx.status not in ('Cancelled',) %}
+<div class="card-premium mt-3">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-doctor" style="color:var(--ihis-warning)"></i> {{ 'رفع تدخل صيدلاني' if g.lang == 'ar' else 'Raise Clinical Intervention' }}</div>
+        <a href="{{ url_for('pharmacy.interventions') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm"><i class="fas fa-list"></i> {{ 'كل التدخلات' if g.lang == 'ar' else 'All interventions' }}</a>
+    </div>
+    <div class="card-body">
+        <p class="cell-muted" style="font-size:0.8rem">{{ 'يُبلَّغ الطبيب الواصف مباشرة، ولا تُعدَّل الوصفة.' if g.lang == 'ar' else 'The prescriber is notified directly; the prescription itself is not modified.' }}</p>
+        <form method="POST" action="{{ url_for('pharmacy.create_intervention', rx_id=rx.id) }}" class="row g-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3"><label class="form-label small">{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</label>
+                <select name="category" class="form-select form-select-sm">
+                    {% for c in ('DOSE', 'INTERACTION', 'ALLERGY', 'DUPLICATE_THERAPY', 'CONTRAINDICATION', 'RENAL_ADJUSTMENT', 'OTHER') %}<option value="{{ c }}">{{ c|replace('_', ' ')|title }}</option>{% endfor %}
+                </select></div>
+            <div class="col-md-3"><label class="form-label small">{{ 'الخطورة' if g.lang == 'ar' else 'Severity' }}</label>
+                <select name="severity" class="form-select form-select-sm">
+                    <option value="Minor">Minor</option><option value="Moderate" selected>Moderate</option><option value="Major">Major</option><option value="Contraindicated">Contraindicated</option>
+                </select></div>
+            <div class="col-md-6"><label class="form-label small">{{ 'المشكلة' if g.lang == 'ar' else 'Issue' }}</label><input type="text" name="issue" class="form-control form-control-sm" required placeholder="{{ 'صف المشكلة الدوائية' if g.lang == 'ar' else 'Describe the medication issue' }}"></div>
+            <div class="col-md-9"><label class="form-label small">{{ 'التوصية' if g.lang == 'ar' else 'Recommendation' }}</label><input type="text" name="recommendation" class="form-control form-control-sm" placeholder="{{ 'التعديل المقترح' if g.lang == 'ar' else 'Suggested change' }}"></div>
+            <div class="col-md-3 d-flex align-items-end"><button type="submit" class="btn-ihs btn-ihs-warning btn-ihs-sm w-100"><i class="fas fa-flag"></i> {{ 'إرسال للطبيب' if g.lang == 'ar' else 'Send to prescriber' }}</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

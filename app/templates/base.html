@@ -95,6 +95,9 @@
                 <button class="btn-icon" id="themeToggle" title="{{ 'الوضع الداكن' if g.lang == 'ar' else 'Toggle dark mode' }}" aria-label="Toggle dark mode">
                     <i class="fas fa-moon"></i>
                 </button>
+                <a class="btn-icon" href="{{ url_for('auth.profile') }}" title="{{ 'ملفي الشخصي' if g.lang == 'ar' else 'My profile' }}" aria-label="My profile">
+                    <i class="fas fa-user-gear"></i>
+                </a>
                 <a class="btn-icon" href="{{ url_for('auth.logout') }}" title="{{ 'تسجيل الخروج' if g.lang == 'ar' else 'Logout' }}" aria-label="Logout">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>

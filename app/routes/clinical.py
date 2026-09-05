@@ -810,30 +810,35 @@ def inbox():
     pids = accessible_patient_ids(current_user)
     pid_filter = pids or [-1]
 
-    lab_rows = []
-    for order in (LabOrder.query.filter(LabOrder.patient_id.in_(pid_filter))
-                  .order_by(LabOrder.order_date.desc()).limit(120).all()):
-        result = order.result
-        if not result or result.status not in ('Verified', 'Locked'):
-            continue
-        if (ResultAcknowledgement.query
-                .filter_by(result_type='LAB', result_id=result.id,
-                           ack_by=current_user.id).first()):
-            continue
-        lab_rows.append(order)
+    from sqlalchemy.orm import joinedload
 
-    rad_rows = []
-    for order in (RadiologyOrder.query
-                  .filter(RadiologyOrder.patient_id.in_(pid_filter))
-                  .order_by(RadiologyOrder.order_date.desc()).limit(120).all()):
-        report = order.report
-        if not report or report.status not in ('Signed', 'Locked'):
-            continue
-        if (ResultAcknowledgement.query
-                .filter_by(result_type='RADIOLOGY', result_id=report.id,
-                           ack_by=current_user.id).first()):
-            continue
-        rad_rows.append(order)
+    def _acked(kind):
+        return {rid for (rid,) in db.session.query(ResultAcknowledgement.result_id)
+                .filter_by(result_type=kind, ack_by=current_user.id).all()}
+
+    # Verified/signed results not yet acknowledged by this clinician. Joined
+    # and eager-loaded in one round-trip each (previously an N+1 per order).
+    acked_lab = _acked('LAB')
+    lab_rows = [o for o in (LabOrder.query
+                            .join(LabResult, LabResult.order_id == LabOrder.id)
+                            .filter(LabOrder.patient_id.in_(pid_filter),
+                                    LabResult.status.in_(['Verified', 'Locked']))
+                            .options(joinedload(LabOrder.result),
+                                     joinedload(LabOrder.test),
+                                     joinedload(LabOrder.patient).joinedload(Patient.user))
+                            .order_by(LabOrder.order_date.desc()).limit(120).all())
+                if o.result and o.result.id not in acked_lab]
+
+    acked_rad = _acked('RADIOLOGY')
+    rad_rows = [o for o in (RadiologyOrder.query
+                            .join(RadiologyReport, RadiologyReport.order_id == RadiologyOrder.id)
+                            .filter(RadiologyOrder.patient_id.in_(pid_filter),
+                                    RadiologyReport.status.in_(['Signed', 'Locked']))
+                            .options(joinedload(RadiologyOrder.report),
+                                     joinedload(RadiologyOrder.imaging_type),
+                                     joinedload(RadiologyOrder.patient).joinedload(Patient.user))
+                            .order_by(RadiologyOrder.order_date.desc()).limit(120).all())
+                if o.report and o.report.id not in acked_rad]
 
     open_alerts = (ClinicalAlert.query
                    .filter(ClinicalAlert.patient_id.in_(pid_filter),

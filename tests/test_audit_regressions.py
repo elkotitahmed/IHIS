@@ -497,3 +497,116 @@ class RadiologySeparationTests(AuditBase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class GlobalSearchDocumentsTest(AuditBase):
+    """Regression: /search crashed with AttributeError when the query matched a
+    PatientDocument (no `status` column)."""
+
+    def test_search_matching_document_title_does_not_500(self):
+        from app.models import PatientDocument
+        sa = self.user('sa', 'admin', 'SuperAdmin')
+        p = self.patient()
+        doc = PatientDocument(patient_id=p.id, title='Zeta discharge letter',
+                              document_type='report', file_url='x.pdf',
+                              uploaded_by=sa.id, category='Letters')
+        db.session.add(doc)
+        db.session.commit()
+        self.login('sa@t.com')
+        r = self.client.get('/search?q=Zeta')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Zeta discharge letter', r.data)
+
+
+class UiActionWiringTests(AuditBase):
+    """Every state-changing route must be reachable from the UI (dead-feature
+    audit): cancel prescription, cancel lab order, raise pharmacy intervention,
+    inline allergy/problem edits, radiation-dose capture, implant verification,
+    preventive sweep, profile link."""
+
+    def _rx(self, doc, p):
+        med = Medication(generic_name='Lisinopril')
+        db.session.add(med)
+        db.session.flush()
+        rx = Prescription(patient_id=p.id, doctor_id=doc.doctor_profile.id, status='Active')
+        db.session.add(rx)
+        db.session.flush()
+        db.session.add(PrescriptionItem(prescription_id=rx.id, medication_id=med.id))
+        db.session.commit()
+        return rx
+
+    def test_doctor_prescriptions_page_offers_cancel(self):
+        doc = self.user('doc', 'doctor', 'Doctor')
+        p = self.patient()
+        rx = self._rx(doc, p)
+        self.login(doc.email)
+        r = self.client.get(f'/doctor/patients/{p.id}/prescriptions')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(f'/doctor/prescriptions/{rx.id}/cancel'.encode(), r.data)
+
+    def test_lab_worklist_offers_cancel_for_pending_order(self):
+        doc = self.user('doc', 'doctor', 'Doctor')
+        lab = self.user('lab', 'staff', 'LabTechnician')
+        p = self.patient()
+        t = self.lab_test()
+        o = LabOrder(patient_id=p.id, doctor_id=doc.doctor_profile.id, test_id=t.id,
+                     status='Pending')
+        db.session.add(o)
+        db.session.commit()
+        self.login(lab.email)
+        r = self.client.get('/lab/orders')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(f'/lab/orders/{o.id}/cancel'.encode(), r.data)
+        r = self.client.post(f'/lab/orders/{o.id}/cancel', follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(LabOrder.query.get(o.id).status, 'Cancelled')
+
+    def test_pharmacist_can_raise_intervention_from_prescription_page(self):
+        doc = self.user('doc', 'doctor', 'Doctor')
+        ph = self.user('ph', 'staff', 'Pharmacist')
+        p = self.patient()
+        rx = self._rx(doc, p)
+        self.login(ph.email)
+        r = self.client.get(f'/pharmacy/prescriptions/{rx.id}')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(f'/pharmacy/prescriptions/{rx.id}/intervene'.encode(), r.data)
+        r = self.client.post(f'/pharmacy/prescriptions/{rx.id}/intervene',
+                             data={'issue': 'Dose too high for renal function',
+                                   'severity': 'Major', 'category': 'DOSE',
+                                   'recommendation': 'Halve the dose'},
+                             follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        from app.models import PharmacyIntervention
+        iv = PharmacyIntervention.query.filter_by(prescription_id=rx.id).first()
+        self.assertIsNotNone(iv)
+        self.assertEqual(iv.status, 'OPEN')
+        # prescriber is told directly
+        self.assertTrue(Notification.query.filter_by(user_id=doc.id).count() >= 1)
+
+    def test_patient_360_offers_inline_allergy_and_problem_edit(self):
+        from app.models import Allergy, Problem
+        doc = self.user('sa', 'admin', 'SuperAdmin')  # supervisory need-to-know
+        p = self.patient()
+        db.session.add(Allergy(patient_id=p.id, substance='Penicillin', severity='Severe'))
+        db.session.add(Problem(patient_id=p.id, description='Hypertension', status='Active'))
+        db.session.commit()
+        self.login(doc.email)
+        r = self.client.get(f'/clinical/patient/{p.id}')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(f'/clinical/patient/{p.id}/allergies/'.encode(), r.data)
+        self.assertIn(f'/clinical/patient/{p.id}/problems/'.encode(), r.data)
+        al = Allergy.query.first()
+        r = self.client.post(f'/clinical/patient/{p.id}/allergies/{al.id}/edit',
+                             data={'substance': 'Penicillin V', 'severity': 'Moderate'},
+                             follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(Allergy.query.get(al.id).substance, 'Penicillin V')
+
+    def test_sidebar_links_profile_and_health_page_offers_sweep(self):
+        sa = self.user('sa', 'admin', 'SuperAdmin')
+        self.login(sa.email)
+        r = self.client.get('/super-admin/system-health')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'/auth/profile', r.data)
+        self.assertIn(b'/super-admin/preventive-sweep', r.data)
+        self.assertIn(b'/fhir/patients', r.data)

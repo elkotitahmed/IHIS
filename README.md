@@ -54,7 +54,7 @@ care-coordination modules, reporting/PDF generation, and a JSON REST API.
   medical records, lab results, radiology reports, and prescriptions.
 - **Security** — login lockout, CSRF protection, bcrypt password hashing,
   activity audit logging, and a fine-grained permission system.
-- **Testing & CI** — 26 unit tests and a GitHub Actions CI workflow.
+- **Testing & CI** — 257 automated tests, a role-by-route white-page audit, a SQL query-budget profile and a GitHub Actions CI workflow.
 
 ## Technology Stack
 
@@ -174,10 +174,14 @@ environment. Copy `.env.example` for the full list with placeholders.
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-The suite covers portal RBAC, auth/lockout, the AI layer, care coordination,
-PDF reports, the REST API, profile/password changes, patient documents, and
-notifications (26 tests). CI runs the same suite in
-`.github/workflows/ci.yml`.
+The suite (257 tests) covers portal RBAC and need-to-know scoping, auth and
+lockout, every departmental workflow (lab, radiology, pharmacy, nursing,
+reception, billing, admissions, referrals), the AI layer (resilience and
+privacy), care coordination, PDF reports, the REST API, patient documents,
+notifications and an end-to-end hospital simulation. CI runs the same suite
+plus the migration-chain check, a seeded role-by-route white-page audit
+(`scripts/smoke_all_routes.py`) and a query-budget profile
+(`scripts/profile_queries.py`) in `.github/workflows/ci.yml`.
 
 ## Security
 
@@ -223,9 +227,9 @@ iHIS/
 │   ├── services/            # AI, lab, pharmacy, radiology, reports services
 │   ├── templates/           # Jinja2 templates grouped by portal
 │   └── static/              # CSS (uploads are gitignored)
-├── tests/                   # test_app.py, test_advanced.py
+├── tests/                   # 41 test modules (workflows, security, AI, E2E simulation)
 ├── migrations/              # Alembic migration scripts
-├── docs/                    # ARCHITECTURE.md, API.md, DEPLOYMENT.md
+├── docs/                    # ARCHITECTURE, SYSTEM_AUDIT_REPORT, ROLE_CAPABILITIES, DEMO_GUIDE, API, DEPLOYMENT …
 ├── .github/workflows/        # GitHub Actions CI
 ├── config.py                # environment-driven configuration
 ├── run.py                   # development runner
