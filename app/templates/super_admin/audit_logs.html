@@ -15,6 +15,11 @@
     <div class="card-header">
         <div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-info)"></i> {{ 'سجل نشاط النظام' if g.lang == 'ar' else 'System Activity Log' }}</div>
     </div>
+    <form method="get" class="d-flex gap-2 align-items-center px-3 pt-3 pb-2" style="border-bottom:1px solid var(--ihis-border-light)">
+        <input type="search" name="action" value="{{ action_filter or '' }}" class="form-control form-control-sm" style="max-width:260px" placeholder="{{ 'تصفية حسب الإجراء (مثال LOGIN)' if g.lang == 'ar' else 'Filter by action (e.g. LOGIN, DISPENSE)' }}">
+        <button class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-filter"></i> {{ 'تصفية' if g.lang == 'ar' else 'Filter' }}</button>
+        {% if pagination %}<span class="cell-muted" style="font-size:0.75rem;margin-inline-start:auto">{{ pagination.total }} {{ 'سجل' if g.lang == 'ar' else 'entries' }} &middot; {{ 'صفحة' if g.lang == 'ar' else 'page' }} {{ pagination.page }}/{{ pagination.pages or 1 }}</span>{% endif %}
+    </form>
     <div class="card-body flush">
         <div class="table-wrapper">
             <table class="table-ihs">
@@ -56,6 +61,12 @@
                 </tbody>
             </table>
         </div>
+        {% if pagination and pagination.pages > 1 %}
+        <div class="d-flex justify-content-between align-items-center px-3 py-2" style="border-top:1px solid var(--ihis-border-light)">
+            {% if pagination.has_prev %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('super_admin.audit_logs', page=pagination.prev_num, action=action_filter) }}"><i class="fas fa-chevron-left"></i> {{ 'السابق' if g.lang == 'ar' else 'Previous' }}</a>{% else %}<span></span>{% endif %}
+            {% if pagination.has_next %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('super_admin.audit_logs', page=pagination.next_num, action=action_filter) }}">{{ 'التالي' if g.lang == 'ar' else 'Next' }} <i class="fas fa-chevron-right"></i></a>{% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

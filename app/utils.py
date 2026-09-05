@@ -16,7 +16,7 @@ def utcnow():
 # Clinical records are immutable once they reach a terminal state. "Verified"
 # (lab) and "Signed" (radiology) lock the record; amendments must go through an
 # explicit, audited flow rather than overwriting the original.
-LOCKED_STATUSES = ('Verified', 'Signed', 'Locked')
+LOCKED_STATUSES = ('Verified', 'Signed', 'Locked', 'Finalized')
 
 
 def is_clinical_locked(record):
@@ -132,9 +132,15 @@ def has_appointment_conflict(doctor_id, scheduled_at, duration_minutes,
     start = scheduled_at
     end = start + timedelta(minutes=int(duration_minutes or 30))
     from app.models import Appointment
+    # Only appointments that could possibly overlap are loaded: anything that
+    # starts within one day either side of the proposed slot. This keeps the
+    # check O(day) rather than scanning the doctor's entire history.
+    window = timedelta(days=1)
     q = Appointment.query.filter(
         Appointment.doctor_id == doctor_id,
-        Appointment.status != 'Cancelled',
+        Appointment.status.notin_(('Cancelled', 'NoShow')),
+        Appointment.scheduled_at >= start - window,
+        Appointment.scheduled_at <= end + window,
     )
     if exclude_id:
         q = q.filter(Appointment.id != exclude_id)
@@ -147,3 +153,18 @@ def has_appointment_conflict(doctor_id, scheduled_at, duration_minutes,
             return True
     return False
 
+
+
+def next_mrn(patient_id):
+    """Deterministic, human-readable Medical Record Number for a patient row.
+
+    Derived from the primary key so it is unique without an extra sequence and
+    stable across environments (``MRN-000042``)."""
+    return f'MRN-{int(patient_id):06d}'
+
+
+def assign_mrn(patient):
+    """Give a flushed Patient row an MRN if it does not have one yet."""
+    if patient is not None and not patient.mrn and patient.id:
+        patient.mrn = next_mrn(patient.id)
+    return patient.mrn if patient is not None else None

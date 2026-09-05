@@ -19,7 +19,7 @@
                 <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--ihis-primary)"></i> {{ 'رسالة جديدة' if g.lang == 'ar' else 'New Message' }}</div>
             </div>
             <div class="card-body">
-                <form method="post" action="{{ url_for('patient.compose_message') }}">
+                <form method="post" action="{{ url_for('patient.compose_message', doctor_id=doctor.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-4">
                         <div class="col-md-6">

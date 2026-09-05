@@ -6,9 +6,21 @@
         <p class="page-subtitle">{{ 'متابعة وإدارة سير عمل دراسات الأشعة' if g.lang == 'ar' else 'Track and manage the radiology study workflow' }}</p>
     </div>
     <div class="page-actions">
+        <form method="get" class="d-flex gap-2 align-items-center">
+            <input type="search" name="q" value="{{ search or '' }}" class="form-control form-control-sm" placeholder="{{ 'مريض / MRN / #' if g.lang == 'ar' else 'Patient, MRN or order #' }}" style="width:180px">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">{{ 'كل الحالات' if g.lang == 'ar' else 'All statuses' }}</option>
+                {% for st in ['Pending','Scheduled','Arrived','InProgress','Performed','Reported','Signed','Finalized','Cancelled'] %}
+                <option value="{{ st }}" {{ 'selected' if st == f_status }}>{{ st }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-search"></i></button>
+        </form>
+        {% if current_user.has_any_role('Doctor','Admin','SuperAdmin') %}
         <a href="{{ url_for('radiology.new_order') }}" class="btn-ihs btn-ihs-primary">
             <i class="fas fa-plus"></i> {{ 'طلب جديد' if g.lang == 'ar' else 'New Order' }}
         </a>
+        {% endif %}
     </div>
 </div>
 
@@ -84,7 +96,18 @@
                             </td>
                             <td>
                                 <div style="display:flex;flex-direction:column;gap:var(--sp-2);align-items:flex-start">
-                                {% if order.status == 'Pending' %}
+                                {% if not can_perform and not can_report %}
+                                    {% if order.report %}
+                                    <a href="{{ url_for('radiology.enter_report', order_id=order.id) if can_report else url_for('reports.radiology_report', order_id=order.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm" target="_blank"><i class="fas fa-file-pdf"></i> {{ 'التقرير' if g.lang == 'ar' else 'Report' }}</a>
+                                    {% endif %}
+                                    {% if order.status in ('Pending','Scheduled') %}
+                                    <form method="POST" action="{{ url_for('radiology.cancel_order', order_id=order.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn-ihs btn-ihs-danger btn-ihs-sm"><i class="fas fa-times"></i> {{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</button>
+                                    </form>
+                                    {% endif %}
+                                    <a href="{{ url_for('radiology.safety_screening', order_id=order.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm"><i class="fas fa-shield-halved"></i> {{ 'السلامة' if g.lang == 'ar' else 'Safety' }}</a>
+                                {% elif order.status == 'Pending' %}
                                     <details class="d-inline">
                                         <summary class="btn-ihs btn-ihs-warning btn-ihs-sm"><i class="fas fa-calendar-plus"></i> {{ 'جدولة' if g.lang == 'ar' else 'Schedule' }}</summary>
                                         <form method="POST" action="{{ url_for('radiology.schedule', order_id=order.id) }}" style="display:inline-flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-2)">
@@ -105,9 +128,18 @@
                                     </form>
                                 {% elif order.status in ('InProgress', 'Performed', 'Reported', 'Signed', 'Finalized') %}
                                     <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2)">
+                                        {% if can_report %}
                                         <a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
                                             <i class="fas fa-file-medical"></i>{% if order.report %}{{ 'عرض / تعديل' if g.lang == 'ar' else 'View/Edit Report' }}{% else %}{{ 'إدخال تقرير' if g.lang == 'ar' else 'Enter Report' }}{% endif %}
                                         </a>
+                                        {% elif order.status == 'InProgress' %}
+                                        <form method="POST" action="{{ url_for('radiology.perform', order_id=order.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-camera"></i> {{ 'اكتمل التصوير' if g.lang == 'ar' else 'Mark Performed' }}</button>
+                                        </form>
+                                        {% else %}
+                                        <span class="status-badge s-pending"><i class="fas fa-hourglass-half"></i> {{ 'بانتظار التقرير' if g.lang == 'ar' else 'Awaiting radiologist' }}</span>
+                                        {% endif %}
                                         <form method="POST" enctype="multipart/form-data"
                                               action="{{ url_for('radiology.upload_images', order_id=order.id) }}"
                                               style="display:inline-flex;align-items:center;gap:var(--sp-2)">
@@ -115,7 +147,7 @@
                                             <input type="file" name="images" multiple class="form-control form-control-sm" style="width:170px;">
                                             <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" title="Upload"><i class="fas fa-upload"></i></button>
                                         </form>
-                                        {% if order.report and order.report.status != 'Signed' %}
+                                        {% if can_report and order.report and order.report.status not in ('Signed','Locked','Finalized') %}
                                         <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-sm"><i class="fas fa-signature"></i> {{ 'توقيع' if g.lang == 'ar' else 'Sign' }}</button>

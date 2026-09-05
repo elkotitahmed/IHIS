@@ -79,14 +79,24 @@ def workbench():
     patients = (Patient.query.filter(Patient.id.in_(pids or [-1]))
                 .order_by(Patient.id.desc()).limit(50).all())
     rows = []
+    id_list = [p.id for p in patients] or [-1]
+    open_map = {}
+    top_map = {}
+    for alert in (ClinicalAlert.query
+                  .filter(ClinicalAlert.patient_id.in_(id_list),
+                          ClinicalAlert.status.in_(('OPEN', 'ACKNOWLEDGED')))
+                  .all()):
+        open_map[alert.patient_id] = open_map.get(alert.patient_id, 0) + 1
+        if alert.status == 'OPEN':
+            cur = top_map.get(alert.patient_id)
+            if cur is None or (alert_svc.SEVERITY_WEIGHT.get(alert.severity, 0)
+                               > alert_svc.SEVERITY_WEIGHT.get(cur.severity, 0)):
+                top_map[alert.patient_id] = alert
     for p in patients:
-        open_alerts = ClinicalAlert.query.filter(
-            ClinicalAlert.patient_id == p.id,
-            ClinicalAlert.status.in_(('OPEN', 'ACKNOWLEDGED'))).count()
-        most = alert_svc.most_severe_open(p.id)
-        rows.append({'patient': p, 'open_alerts': open_alerts,
-                     'top_alert': most})
+        rows.append({'patient': p, 'open_alerts': open_map.get(p.id, 0),
+                     'top_alert': top_map.get(p.id)})
     upcoming = FollowUp.query.filter(
+        FollowUp.patient_id.in_(id_list),
         FollowUp.scheduled_for >= utcnow(),
         FollowUp.status == 'Scheduled').order_by(FollowUp.scheduled_for).limit(5).all()
     return render_template('clinical/workbench.html', title='Clinical Workbench',
@@ -135,8 +145,47 @@ def patient_360(patient_id):
                      .order_by(VitalSign.recorded_at.desc()).limit(10).all())
     # Active admission
     active_admission = Admission.query.filter_by(
-        patient_id=patient_id, status='Active'
-    ).first() if hasattr(Admission, 'status') else None
+        patient_id=patient_id, status='Admitted').first()
+    # Cross-department snapshot so the hub links to every source record.
+    recent_labs = (LabOrder.query.filter_by(patient_id=patient_id)
+                   .order_by(LabOrder.order_date.desc()).limit(6).all())
+    recent_imaging = (RadiologyOrder.query.filter_by(patient_id=patient_id)
+                      .order_by(RadiologyOrder.order_date.desc()).limit(6).all())
+    prescriptions = (Prescription.query.filter_by(patient_id=patient_id)
+                     .order_by(Prescription.prescribed_date.desc()).limit(6).all())
+    encounters = (MedicalRecord.query.filter_by(patient_id=patient_id)
+                  .order_by(MedicalRecord.visit_date.desc()).limit(6).all())
+    referrals = (Referral.query.filter_by(patient_id=patient_id)
+                 .order_by(Referral.created_at.desc()).limit(6).all())
+    open_tasks = (Task.query.filter(Task.patient_id == patient_id,
+                                    Task.status.in_(('NEW', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD')))
+                  .order_by(Task.created_at.desc()).limit(8).all())
+    from app.models import (Appointment, Bill, TherapySession, TherapyPlan, DentalProcedure,
+                            DentalTreatmentPlan, NursingNote, CarePlan,
+                            MedicationAdministration, Admission as AdmissionModel)
+    appointments = (Appointment.query.filter_by(patient_id=patient_id)
+                    .order_by(Appointment.scheduled_at.desc()).limit(5).all())
+    bills = Bill.query.filter_by(patient_id=patient_id).order_by(Bill.issued_at.desc()).limit(5).all()
+    balance_due = sum(b.balance() for b in Bill.query.filter_by(patient_id=patient_id).all()
+                      if b.status in ('Unpaid', 'PartiallyPaid'))
+    therapy = (TherapySession.query.filter_by(patient_id=patient_id)
+               .order_by(TherapySession.scheduled_at.desc()).limit(4).all())
+    therapy_plans = TherapyPlan.query.filter_by(patient_id=patient_id).order_by(TherapyPlan.id.desc()).limit(3).all()
+    dental = (DentalProcedure.query.filter_by(patient_id=patient_id)
+              .order_by(DentalProcedure.performed_at.desc()).limit(4).all())
+    dental_plans = DentalTreatmentPlan.query.filter_by(patient_id=patient_id).order_by(DentalTreatmentPlan.id.desc()).limit(3).all()
+    nursing_notes = (NursingNote.query.filter_by(patient_id=patient_id)
+                     .order_by(NursingNote.created_at.desc()).limit(4).all())
+    care_plans = CarePlan.query.filter_by(patient_id=patient_id).order_by(CarePlan.start_date.desc()).limit(3).all()
+    mar_recent = (MedicationAdministration.query.filter_by(patient_id=patient_id)
+                  .order_by(MedicationAdministration.created_at.desc()).limit(5).all())
+    admissions = (AdmissionModel.query.filter_by(patient_id=patient_id)
+                  .order_by(AdmissionModel.admitted_at.desc()).limit(4).all())
+    care_members = (CareTeamMember.query
+                    .join(CareTeam, CareTeamMember.team_id == CareTeam.id)
+                    .filter(CareTeam.patient_id == patient_id).all())
+    diagnoses = (db.session.query(MedicalRecord).filter_by(patient_id=patient_id).count())
+    is_doctor_like = current_user.has_any_role('Doctor', 'Admin', 'SuperAdmin')
     return render_template(
         'clinical/patient_360.html', title=f'Clinical - {patient.user.full_name}',
         patient=patient, timeline=timeline, open_alerts=open_alerts,
@@ -144,6 +193,13 @@ def patient_360(patient_id):
         follow_ups=follow_ups, documents=documents, doctors=doctors,
         latest_vitals=latest_vitals, active_admission=active_admission,
         ai_tools=_ai_image_tools(),
+        recent_labs=recent_labs, recent_imaging=recent_imaging,
+        prescriptions=prescriptions, encounters=encounters, referrals=referrals,
+        open_tasks=open_tasks, appointments=appointments, bills=bills,
+        balance_due=balance_due, therapy=therapy, therapy_plans=therapy_plans,
+        dental=dental, dental_plans=dental_plans, nursing_notes=nursing_notes,
+        care_plans=care_plans, mar_recent=mar_recent, admissions=admissions,
+        care_members=care_members, is_doctor_like=is_doctor_like,
         today=utcnow().date(), active_meds=active_meds)
 
 
@@ -376,6 +432,11 @@ def complete_followup(patient_id, followup_id):
     follow.status = 'Completed'
     follow.completed_at = utcnow()
     follow.notes = request.form.get('notes') or follow.notes
+    record_event(patient_id, 'FOLLOW_UP', 'Follow-up completed',
+                 follow.reason, source_type='follow_up', source_id=follow.id,
+                 department='Clinical')
+    from app.services import tasks as task_svc
+    task_svc.complete_for_resource('follow_up', follow.id, 'Follow-up completed')
     db.session.commit()
     log_activity('COMPLETE_FOLLOWUP', 'follow_up', follow.id)
     flash('Follow-up marked complete.', 'success')
@@ -448,134 +509,45 @@ def apply_order_set(oset, patient, doctor=None):
     timeline -> notifications) so departments never see a different reality.
     Runs inside the caller's transaction; the caller commits.
     """
-    from app.services import tasks as task_svc
-    from app.services.notifications import notify_role
+    from app.services.clinical_orders import (create_lab_order, create_radiology_order,
+                                              create_prescription, create_referral)
 
     counts = {'LAB': 0, 'RADIOLOGY': 0, 'MEDICATION': 0, 'REFERRAL': 0}
+    origin = f'Order set "{oset.name}"'
 
-    # --- Lab orders ---
     for item in oset.items:
-        if item.item_type != 'LAB' or not item.lab_test:
-            continue
-        order = LabOrder(patient_id=patient.id,
-                         doctor_id=doctor.id if doctor else None,
-                         test_id=item.lab_test_id,
-                         priority=item.priority or 'Normal',
-                         notes=item.notes)
-        db.session.add(order)
-        db.session.flush()
-        order.accession_number = f'LAB-{order.id:05d}'
-        order.barcode = f'{order.id:08d}'
-        task_svc.create_task(
-            title=f'Process lab order #{order.id}: {order.test.test_name if order.test else ""}',
-            description=f'Order set "{oset.name}": collect and process; enter and verify.',
-            task_type='LAB', department='Laboratory', patient_id=patient.id,
-            assigned_role='LabTechnician', priority=order.priority,
-            related_resource_type='lab_order', related_resource_id=order.id)
-        record_event(patient.id, 'LAB',
-                     f'Lab order: {order.test.test_name if order.test else "Test"}',
-                     f'via order set "{oset.name}" · priority {order.priority}',
-                     source_type='lab_order', source_id=order.id,
-                     department='Laboratory')
-        counts['LAB'] += 1
+        if item.item_type == 'LAB' and item.lab_test:
+            create_lab_order(patient, doctor, item.lab_test_id,
+                             priority=item.priority or 'Normal', notes=item.notes,
+                             origin=origin)
+            counts['LAB'] += 1
+        elif item.item_type == 'RADIOLOGY' and item.imaging_type:
+            create_radiology_order(patient, doctor, item.imaging_type_id,
+                                   priority=item.priority or 'Normal',
+                                   notes=item.notes, origin=origin)
+            counts['RADIOLOGY'] += 1
 
-    # --- Imaging orders ---
-    for item in oset.items:
-        if item.item_type != 'RADIOLOGY' or not item.imaging_type:
-            continue
-        order = RadiologyOrder(patient_id=patient.id,
-                               doctor_id=doctor.id if doctor else None,
-                               imaging_type_id=item.imaging_type_id,
-                               priority=item.priority or 'Normal',
-                               notes=item.notes)
-        db.session.add(order)
-        db.session.flush()
-        task_svc.create_task(
-            title=f'Perform study #{order.id}: {order.imaging_type.name if order.imaging_type else ""}',
-            description=f'Order set "{oset.name}": capture and prepare for reporting.',
-            task_type='RADIOLOGY', department='Radiology', patient_id=patient.id,
-            assigned_role='Radiologist', priority=order.priority,
-            related_resource_type='radiology_order', related_resource_id=order.id)
-        record_event(patient.id, 'RADIOLOGY',
-                     f'Imaging ordered: {order.imaging_type.name if order.imaging_type else "Study"}',
-                     f'via order set "{oset.name}"',
-                     source_type='radiology_order', source_id=order.id,
-                     department='Radiology')
-        counts['RADIOLOGY'] += 1
-
-    # --- Medication prescription (one prescription, screen for safety) ---
     med_items = [it for it in oset.items
                  if it.item_type == 'MEDICATION' and it.medication]
     if med_items:
-        rx = Prescription(patient_id=patient.id,
-                          doctor_id=doctor.id if doctor else None,
-                          refills=0)
-        db.session.add(rx)
-        db.session.flush()
-        for item in med_items:
-            db.session.add(PrescriptionItem(
-                prescription_id=rx.id, medication_id=item.medication_id,
-                dosage=item.dosage or '', frequency=item.frequency or '',
-                duration=item.duration or '',
-                instructions=item.instructions or '',
-                quantity=item.quantity or 1))
-            counts['MEDICATION'] += 1
-        from app.routes.doctor import flag_prescription_safety
-        flag_prescription_safety(rx)
-        task_svc.create_task(
-            title=f'Dispense prescription #{rx.id}',
-            description=f'Order set "{oset.name}": review and dispense '
-                        f'{counts["MEDICATION"]} item(s). Check interactions and stock.',
-            task_type='PHARMACY', department='Pharmacy', patient_id=patient.id,
-            assigned_role='Pharmacist', priority='NORMAL',
-            related_resource_type='prescription', related_resource_id=rx.id)
-        record_event(patient.id, 'PRESCRIPTION',
-                     f'Order-set prescription ({counts["MEDICATION"]} item(s))',
-                     f'via "{oset.name}"',
-                     source_type='prescription', source_id=rx.id,
-                     department='Doctor')
+        create_prescription(patient, doctor, [{
+            'medication_id': it.medication_id, 'dosage': it.dosage,
+            'frequency': it.frequency, 'duration': it.duration,
+            'instructions': it.instructions, 'quantity': it.quantity or 1,
+        } for it in med_items], refills=0, origin=origin)
+        counts['MEDICATION'] = len(med_items)
 
-    # --- Referrals ---
     for item in oset.items:
-        if item.item_type != 'REFERRAL' or not item.referral_specialty:
-            continue
-        spec = item.referral_specialty
-        referral = Referral(patient_id=patient.id,
-                            from_doctor_id=doctor.id if doctor else None,
-                            to_specialty=spec.name,
-                            reason=item.notes or f'Referral via "{oset.name}"',
-                            status='Pending',
-                            urgency=(item.priority or 'Routine'),
-                            created_by=current_user.id)
-        db.session.add(referral)
-        db.session.flush()
-        task_svc.create_task(
-            title=f'Handle referral #{referral.id}: {spec.name}',
-            description=f'Order set "{oset.name}": review {spec.name} referral.',
-            task_type='REFERRAL', department=spec.name, patient_id=patient.id,
-            assigned_role='Doctor', priority=item.priority or 'NORMAL',
-            related_resource_type='referral', related_resource_id=referral.id)
-        record_event(patient.id, 'REFERRAL',
-                     f'Referral to {spec.name}',
-                     f'via "{oset.name}"',
-                     source_type='referral', source_id=referral.id,
-                     department='Care')
-        counts['REFERRAL'] += 1
+        if item.item_type == 'REFERRAL' and item.referral_specialty:
+            urgency = {'Urgent': 'Urgent', 'Stat': 'Emergency', 'STAT': 'Emergency'}.get(
+                item.priority, 'Routine')
+            create_referral(patient, doctor,
+                            item.notes or f'Referral via "{oset.name}"',
+                            to_specialty=item.referral_specialty.name,
+                            urgency=urgency, origin=origin)
+            counts['REFERRAL'] += 1
 
     if any(counts.values()):
-        notify_role('LabTechnician',
-                    f'Order set "{oset.name}" applied',
-                    f'{counts["LAB"]} lab order(s) created for patient #{patient.id}.',
-                    entity_type='order_set', entity_id=oset.id)
-        notify_role('Radiologist',
-                    f'Order set "{oset.name}" applied',
-                    f'{counts["RADIOLOGY"]} imaging order(s) created for patient #{patient.id}.',
-                    entity_type='order_set', entity_id=oset.id)
-        if counts['MEDICATION']:
-            notify_role('Pharmacist',
-                        f'Order set "{oset.name}" applied',
-                        f'{counts["MEDICATION"]} medication(s) queued for patient #{patient.id}.',
-                        entity_type='order_set', entity_id=oset.id)
         log_activity('APPLY_ORDER_SET', 'order_set', oset.id,
                      f'patient={patient.id} counts={counts}')
 

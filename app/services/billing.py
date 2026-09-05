@@ -125,6 +125,16 @@ def _service_price(category, default):
     return default
 
 
+def bill_number_for(bill_id):
+    """Invoice numbers derive from the primary key so two concurrent requests
+    can never mint the same number (no read-then-increment race)."""
+    return f'INV-{1000 + int(bill_id)}'
+
+
+def receipt_number_for(payment_id):
+    return f'RCT-{10000 + int(payment_id)}'
+
+
 def _ensure_bill(patient_id, source_type, source_id, description, qty, price):
     existing = Bill.query.filter_by(source_type=source_type, source_id=source_id).first()
     if existing:
@@ -132,6 +142,7 @@ def _ensure_bill(patient_id, source_type, source_id, description, qty, price):
     bill = Bill(patient_id=patient_id, source_type=source_type, source_id=source_id)
     db.session.add(bill)
     db.session.flush()
+    bill.bill_no = bill_number_for(bill.id)
     db.session.add(BillItem(bill_id=bill.id, description=description,
                             quantity=qty, unit_price=price))
     db.session.flush()

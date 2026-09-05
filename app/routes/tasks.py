@@ -25,8 +25,8 @@ TASK_ACTIONS = {
 
 # staff roles that may view the queue (not patients)
 STAFF_ROLES = ('SuperAdmin', 'Admin', 'Doctor', 'Nurse', 'LabTechnician',
-               'Radiologist', 'Pharmacist', 'Receptionist', 'Dentist',
-               'Physiotherapist')
+               'Radiologist', 'RadiologyTechnician', 'Pharmacist', 'Receptionist',
+               'Dentist', 'Physiotherapist', 'Cashier')
 
 
 def _staff_only():
@@ -55,14 +55,18 @@ def queue():
     status = request.args.get('status', '').strip()
     q = Task.query
     # Restrict what a non-admin sees to tasks relevant to their own department.
+    role_names = [r.name for r in current_user.roles]
     if not current_user.has_any_role('Admin', 'SuperAdmin'):
+        # A staff member sees work addressed to them, to their role, or to
+        # their own department - never other departments' queues.
+        own_dept = current_user.department.name if current_user.department else None
+        scope = [Task.assigned_to == current_user.id,
+                 Task.assigned_role.in_(role_names)]
+        if own_dept:
+            scope.append(Task.department == own_dept)
+        q = q.filter(db.or_(*scope))
         if dept:
             q = q.filter(Task.department == dept)
-        else:
-            q = q.filter(
-                (Task.assigned_to == current_user.id) |
-                (Task.assigned_role.in_(r.name for r in current_user.roles))
-            )
     else:
         if dept:
             q = q.filter(Task.department == dept)
@@ -70,8 +74,8 @@ def queue():
         q = q.filter(Task.status == status)
     else:
         q = q.filter(Task.status.in_(('NEW', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'REJECTED')))
-    tasks = q.order_by(Task.priority, Task.created_at.asc()).all()
-    departments = sorted({t.department for t in Task.query.all() if t.department})
+    tasks = q.order_by(Task.priority, Task.created_at.asc()).limit(300).all()
+    departments = task_svc.distinct_departments()
     return render_template('tasks/queue.html', title='Department Queue',
                            tasks=tasks, departments=departments,
                            current_department=dept, current_status=status,
@@ -83,9 +87,11 @@ def queue():
 def detail(task_id):
     _staff_only()
     task = db.session.get(Task, task_id) or abort(404)
+    own_dept = current_user.department.name if current_user.department else None
     if not current_user.has_any_role('Admin', 'SuperAdmin') and \
        task.assigned_to != current_user.id and \
-       task.assigned_role not in (r.name for r in current_user.roles):
+       task.assigned_role not in (r.name for r in current_user.roles) and \
+       not (own_dept and task.department == own_dept):
         abort(403)
     activities = TaskActivity.query.filter_by(task_id=task.id).order_by(
         TaskActivity.created_at.desc()).all()
@@ -117,10 +123,18 @@ def assign(task_id):
 def transition(task_id):
     _staff_only()
     task = db.session.get(Task, task_id) or abort(404)
-    if not current_user.has_any_role('Admin', 'SuperAdmin') and \
-       task.assigned_to != current_user.id and task.assigned_to is not None:
-        abort(403)
+    role_names = [r.name for r in current_user.roles]
+    own_dept = current_user.department.name if current_user.department else None
+    if not current_user.has_any_role('Admin', 'SuperAdmin'):
+        if task.assigned_to is not None and task.assigned_to != current_user.id:
+            abort(403)
+        if task.assigned_to is None and task.assigned_role not in role_names \
+                and not (own_dept and task.department == own_dept):
+            abort(403)
     to_status = request.form.get('status', '').upper()
+    # Claiming an unassigned task: whoever starts it owns it.
+    if task.assigned_to is None and to_status in ('IN_PROGRESS', 'ASSIGNED'):
+        task.assigned_to = current_user.id
     note = request.form.get('note')
     try:
         _do_transition(task, to_status, note)
@@ -162,6 +176,9 @@ def new_task():
             except ValueError:
                 due_at = None
         assignee_id = request.form.get('assignee_id', type=int)
+        if patient_id:
+            from app.access import require_patient_access
+            require_patient_access(db.session.get(Patient, patient_id))
         task = task_svc.create_task(
             title=title,
             description=request.form.get('description'),
@@ -179,6 +196,14 @@ def new_task():
         db.session.commit()
         flash('Task created.', 'success')
         return redirect(url_for('tasks.detail', task_id=task.id))
-    patients = Patient.query.order_by(Patient.id).limit(200).all()
+    from app.access import accessible_patient_ids
+    from app.models import User
+    pids = accessible_patient_ids(current_user)
+    patients = (Patient.query.join(User, Patient.user_id == User.id)
+                .filter(Patient.id.in_(sorted(pids) if pids else [-1]))
+                .order_by(User.full_name).limit(300).all())
+    staff = (User.query.filter(User.user_type != 'patient', User.is_active.is_(True))
+             .order_by(User.full_name).all())
     return render_template('tasks/new_task.html', title='New Task',
-                           patients=patients)
+                           patients=patients, staff=staff,
+                           task_types=task_svc.TASK_TYPES)

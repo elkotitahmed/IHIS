@@ -32,8 +32,13 @@
                 <i class="fas fa-cloud-arrow-down"></i> FHIR
             </a>
             {% if active_admission %}
-            <a href="{{ url_for('admissions.view', admission_id=active_admission.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+            <a href="{{ url_for('admissions.view', id=active_admission.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
                 <i class="fas fa-bed-pulse"></i> {{ 'متابعة الاستشفاء' if g.lang == 'ar' else 'View Admission' }}
+            </a>
+            {% endif %}
+            {% if is_doctor_like %}
+            <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+                <i class="fas fa-notes-medical"></i> {{ 'السجل الطبي' if g.lang == 'ar' else 'Medical Record' }}
             </a>
             {% endif %}
         </div>
@@ -439,6 +444,240 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     CROSS-DEPARTMENT RECORD — every card links to the source record
+     ============================================================ -->
+{% if is_doctor_like %}
+<div class="card-premium mt-4">
+    <div class="card-body" style="display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center">
+        <span class="t-h4" style="margin-inline-end:var(--sp-2)"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات' if g.lang == 'ar' else 'Actions' }}</span>
+        <a class="btn-ihs btn-ihs-primary btn-ihs-sm" href="{{ url_for('doctor.add_emr', patient_id=patient.id) }}"><i class="fas fa-plus-circle"></i> {{ 'لقاء جديد' if g.lang == 'ar' else 'New Encounter' }}</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}"><i class="fas fa-pills"></i> {{ 'وصفة' if g.lang == 'ar' else 'Prescribe' }}</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.lab_order', patient_id=patient.id) }}"><i class="fas fa-flask"></i> {{ 'مختبر' if g.lang == 'ar' else 'Order Lab' }}</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}"><i class="fas fa-x-ray"></i> {{ 'تصوير' if g.lang == 'ar' else 'Order Imaging' }}</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.referrals') }}"><i class="fas fa-share-nodes"></i> {{ 'إحالة' if g.lang == 'ar' else 'Refer' }}</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.team', patient_id=patient.id) }}"><i class="fas fa-users"></i> {{ 'فريق الرعاية' if g.lang == 'ar' else 'Care Team' }}</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.summary', patient_id=patient.id) }}"><i class="fas fa-brain"></i> {{ 'ملخص AI' if g.lang == 'ar' else 'AI Summary' }}</a>
+        {% if active_admission and current_user.has_permission('ADMISSION_DISCHARGE') %}
+        <a class="btn-ihs btn-ihs-danger btn-ihs-sm" href="{{ url_for('admissions.discharge', id=active_admission.id) }}"><i class="fas fa-door-open"></i> {{ 'تخريج' if g.lang == 'ar' else 'Discharge' }}</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-6">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-primary)"></i> {{ 'اللقاءات السريرية' if g.lang == 'ar' else 'Encounters' }}</div>
+                {% if is_doctor_like %}<a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'All' }}</a>{% endif %}
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for e in encounters %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">{{ e.diagnosis or ('ملاحظة سريرية' if g.lang == 'ar' else 'Clinical note') }}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ e.visit_date.strftime('%d %b %Y') if e.visit_date else '' }} &middot; {{ e.doctor.user.full_name if e.doctor and e.doctor.user else '-' }}</div>
+                    </div>
+                    <span class="status-badge {{ 's-signed' if e.status in ('Signed','Finalized','Locked') else 's-draft' }}">{{ e.status }}</span>
+                    <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=e.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>
+                </div>
+                {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-flask" style="color:var(--ihis-info)"></i> {{ 'المختبر' if g.lang == 'ar' else 'Laboratory' }}</div>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for o in recent_labs %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">{{ o.test.test_name if o.test else 'Test' }}
+                            {% if o.result %}<span class="cell-mono" style="font-size:0.75rem">— {{ o.result.result_value }} {{ o.result.result_unit or '' }}</span>{% endif %}
+                            {% if o.result and o.result.is_critical %}<span class="status-badge s-cancelled" style="font-size:0.625rem">CRITICAL</span>{% elif o.result and o.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem">ABN</span>{% endif %}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ o.accession_number or ('#' ~ o.id) }} &middot; {{ o.order_date.strftime('%d %b %Y') if o.order_date else '' }}</div>
+                    </div>
+                    <span class="status-badge s-{{ o.status|lower }}">{{ o.status }}</span>
+                    {% if o.result and o.result.status in ('Verified','Locked','Finalized') %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.lab_result', order_id=o.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>{% endif %}
+                    {% if current_user.has_any_role('LabTechnician','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('lab.enter_result', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                </div>
+                {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-x-ray" style="color:var(--ihis-purple)"></i> {{ 'الأشعة' if g.lang == 'ar' else 'Imaging' }}</div>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for o in recent_imaging %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">{{ o.imaging_type.name if o.imaging_type else 'Study' }}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">#{{ o.id }} &middot; {{ o.order_date.strftime('%d %b %Y') if o.order_date else '' }}{% if o.report and o.report.impression %} &middot; {{ o.report.impression[:80] }}{% endif %}</div>
+                    </div>
+                    <span class="status-badge s-{{ o.status|lower }}">{{ o.status }}</span>
+                    {% if o.report and o.report.status in ('Signed','Locked','Finalized') %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.radiology_report', order_id=o.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>{% endif %}
+                    {% if current_user.has_any_role('Radiologist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.enter_report', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                </div>
+                {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-success)"></i> {{ 'الوصفات والصرف' if g.lang == 'ar' else 'Prescriptions & Dispensing' }}</div>
+                {% if is_doctor_like %}<a href="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'All' }}</a>{% endif %}
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for rx in prescriptions %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">Rx #{{ rx.id }} &middot; {% for it in rx.items %}{{ it.medication.generic_name if it.medication else '' }}{% if it.dosage %} {{ it.dosage }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ rx.prescribed_date.strftime('%d %b %Y') if rx.prescribed_date else '' }} &middot; {{ rx.doctor.user.full_name if rx.doctor and rx.doctor.user else '-' }}{% if rx.dispensing_records %} &middot; {{ rx.dispensing_records|length }} {{ 'صرف' if g.lang == 'ar' else 'dispense(s)' }}{% endif %}</div>
+                    </div>
+                    <span class="status-badge {{ 's-completed' if rx.status == 'Dispensed' else 's-cancelled' if rx.status == 'Cancelled' else 's-pending' }}">{{ rx.status }}</span>
+                    {% if current_user.has_any_role('Pharmacist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescription_detail', rx_id=rx.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                </div>
+                {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
+                {% if mar_recent %}
+                <div class="list-item" style="background:var(--ihis-surface-inset);font-size:0.75rem;color:var(--ihis-text-muted);flex-wrap:wrap;gap:0.25rem"><i class="fas fa-syringe"></i> MAR:
+                    {% for d in mar_recent %}<span class="status-badge {{ 's-completed' if d.status == 'Administered' else 's-cancelled' if d.status in ('Refused','Missed','Discontinued') else 's-pending' }}" style="font-size:0.625rem">{{ d.medication.generic_name if d.medication else 'Dose' }} · {{ d.status }}</span>{% endfor %}
+                </div>
+                {% endif %}
+            </div></div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-calendar-check" style="color:var(--ihis-info)"></i> {{ 'المواعيد والاستشفاء' if g.lang == 'ar' else 'Appointments & Admissions' }}</div>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for a in appointments %}
+                <div class="list-item">
+                    <i class="fas fa-calendar-day" style="color:var(--ihis-info);font-size:0.75rem"></i>
+                    <div style="flex:1;font-size:0.8125rem">{{ a.scheduled_at.strftime('%d %b %Y %H:%M') if a.scheduled_at else '' }} &middot; {{ a.doctor.user.full_name if a.doctor and a.doctor.user else '-' }}{% if a.reason %} <span class="cell-muted">— {{ a.reason }}</span>{% endif %}</div>
+                    <span class="status-badge s-{{ a.status|lower }}">{{ a.status }}</span>
+                </div>
+                {% endfor %}
+                {% for ad in admissions %}
+                <div class="list-item">
+                    <i class="fas fa-bed" style="color:var(--ihis-warning);font-size:0.75rem"></i>
+                    <div style="flex:1;font-size:0.8125rem">{{ ad.admission_no }} &middot; {{ ad.ward.name if ad.ward else 'Ward' }} &middot; {{ ad.admitted_at.strftime('%d %b %Y') if ad.admitted_at else '' }}{% if ad.discharged_at %} → {{ ad.discharged_at.strftime('%d %b %Y') }}{% endif %}</div>
+                    <span class="status-badge {{ 's-active' if ad.status == 'Admitted' else 's-completed' }}">{{ ad.status }}</span>
+                    {% if current_user.has_permission('ADMISSION_VIEW') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('admissions.view', id=ad.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                </div>
+                {% endfor %}
+                {% if not appointments and not admissions %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endif %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-share-nodes" style="color:var(--ihis-teal)"></i> {{ 'الإحالات وفريق الرعاية' if g.lang == 'ar' else 'Referrals & Care Team' }}</div>
+                <a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الفريق' if g.lang == 'ar' else 'Team' }}</a>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for r in referrals %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">→ {{ r.to_doctor.user.full_name if r.to_doctor and r.to_doctor.user else (r.to_specialty or 'Specialist') }}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ r.reason }}{% if r.response %} &middot; <span style="color:var(--ihis-success)">{{ r.response[:80] }}</span>{% endif %}</div>
+                    </div>
+                    <span class="status-badge {{ 's-completed' if r.status in ('COMPLETED','Completed') else 's-cancelled' if r.status in ('REJECTED','Rejected','CLOSED') else 's-pending' }}">{{ r.status }}</span>
+                </div>
+                {% endfor %}
+                {% if care_members %}
+                <div class="list-item" style="background:var(--ihis-surface-inset);font-size:0.75rem;flex-wrap:wrap;gap:0.25rem">
+                    <i class="fas fa-users" style="color:var(--ihis-text-muted)"></i>
+                    {% for m in care_members %}<span class="tag-ihs">{{ m.user.full_name if m.user else '-' }} · {{ m.role }}</span>{% endfor %}
+                </div>
+                {% endif %}
+                {% if not referrals and not care_members %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endif %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-nurse" style="color:var(--ihis-purple)"></i> {{ 'التمريض' if g.lang == 'ar' else 'Nursing' }}</div>
+                {% if current_user.has_permission('VITALS_CREATE') %}<a href="{{ url_for('nursing.vitals', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'القياسات' if g.lang == 'ar' else 'Vitals' }}</a>{% endif %}
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for cp in care_plans %}
+                <div class="list-item"><i class="fas fa-clipboard-list" style="color:var(--ihis-purple);font-size:0.75rem"></i><div style="flex:1;font-size:0.8125rem">{{ cp.title or 'Care plan' }} <span class="cell-muted">— {{ (cp.goals or '')[:80] }}</span></div><span class="status-badge s-pending">{{ cp.status }}</span></div>
+                {% endfor %}
+                {% for n in nursing_notes %}
+                <div class="list-item"><i class="fas fa-file-medical" style="color:var(--ihis-purple);font-size:0.75rem"></i><div style="flex:1;font-size:0.8125rem">{{ n.note[:120] }}<div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ n.created_at.strftime('%d %b %Y %H:%M') if n.created_at else '' }}{% if n.shift %} · {{ n.shift }}{% endif %}</div></div></div>
+                {% endfor %}
+                {% if not care_plans and not nursing_notes %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endif %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-person-walking" style="color:var(--ihis-teal)"></i> {{ 'العلاج الطبيعي والأسنان' if g.lang == 'ar' else 'Physiotherapy & Dentistry' }}</div>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for pl in therapy_plans %}
+                <div class="list-item"><i class="fas fa-person-walking" style="color:var(--ihis-teal);font-size:0.75rem"></i><div style="flex:1;font-size:0.8125rem">{{ pl.title or 'Therapy plan' }} <span class="cell-muted">· {{ pl.sessions|length }} {{ 'جلسة' if g.lang == 'ar' else 'session(s)' }}</span></div><span class="status-badge s-pending">{{ pl.status }}</span>{% if current_user.has_any_role('Physiotherapist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.session', plan_id=pl.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}</div>
+                {% endfor %}
+                {% for ts in therapy %}
+                <div class="list-item"><i class="fas fa-dumbbell" style="color:var(--ihis-teal);font-size:0.75rem"></i><div style="flex:1;font-size:0.8125rem">{{ ts.session_type }} {{ 'جلسة' if g.lang == 'ar' else 'session' }} · {{ ts.scheduled_at.strftime('%d %b %Y') if ts.scheduled_at else '' }}{% if ts.pain_after is not none %} · {{ 'ألم' if g.lang == 'ar' else 'pain' }} {{ ts.pain_before }}→{{ ts.pain_after }}{% endif %}</div><span class="status-badge s-{{ ts.status|lower }}">{{ ts.status }}</span></div>
+                {% endfor %}
+                {% for dp in dental_plans %}
+                <div class="list-item"><i class="fas fa-tooth" style="color:var(--ihis-amber);font-size:0.75rem"></i><div style="flex:1;font-size:0.8125rem">{{ dp.title }} <span class="cell-muted">· {{ dp.procedures|length }} {{ 'إجراء' if g.lang == 'ar' else 'procedure(s)' }}</span></div><span class="status-badge s-pending">{{ dp.status }}</span>{% if current_user.has_any_role('Dentist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('dentistry.plan_procedures', plan_id=dp.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}</div>
+                {% endfor %}
+                {% for d in dental %}
+                <div class="list-item"><i class="fas fa-tooth" style="color:var(--ihis-amber);font-size:0.75rem"></i><div style="flex:1;font-size:0.8125rem">{{ d.procedure_name }}{% if d.tooth_number %} · {{ 'سن' if g.lang == 'ar' else 'tooth' }} {{ d.tooth_number }}{% endif %}</div><span class="status-badge s-{{ d.status|lower }}">{{ d.status }}</span></div>
+                {% endfor %}
+                {% if not therapy_plans and not therapy and not dental_plans and not dental %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endif %}
+            </div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-amber)"></i> {{ 'المهام المفتوحة' if g.lang == 'ar' else 'Open Tasks' }}</div>
+                <a href="{{ url_for('tasks.queue') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'القائمة' if g.lang == 'ar' else 'Queue' }}</a>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for tk in open_tasks %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">{{ tk.title }}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ tk.department or '' }} &middot; {{ tk.assigned_role or (tk.assignee.full_name if tk.assignee else '') }} &middot; {{ tk.priority }}</div>
+                    </div>
+                    <span class="status-badge s-{{ tk.status|lower|replace('_','-') }}">{{ tk.status }}</span>
+                </div>
+                {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا مهام مفتوحة' if g.lang == 'ar' else 'No open tasks' }}</div>{% endfor %}
+            </div></div>
+        </div>
+
+        {% if current_user.has_permission('BILL_VIEW') or current_user.has_any_role('Doctor') %}
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-file-invoice-dollar" style="color:var(--ihis-danger)"></i> {{ 'الفواتير' if g.lang == 'ar' else 'Billing' }}</div>
+                <span class="status-badge {{ 's-cancelled' if balance_due else 's-completed' }}">{{ 'المستحق' if g.lang == 'ar' else 'Due' }} {{ '%.2f'|format(balance_due or 0) }}</span>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for b in bills %}
+                <div class="list-item">
+                    <div style="flex:1;font-size:0.8125rem">{{ b.bill_no or ('#' ~ b.id) }} <span class="cell-muted">· {{ b.source_type or 'Manual' }} · {{ b.issued_at.strftime('%d %b %Y') if b.issued_at else '' }}</span></div>
+                    <span class="t-num">{{ '%.2f'|format(b.total()) }}</span>
+                    <span class="status-badge {{ 's-completed' if b.status == 'Paid' else 's-cancelled' if b.status == 'Voided' else 's-pending' }}">{{ b.status }}</span>
+                    {% if current_user.has_permission('BILL_VIEW') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('billing.view_bill', bill_id=b.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                </div>
+                {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا فواتير' if g.lang == 'ar' else 'No bills' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

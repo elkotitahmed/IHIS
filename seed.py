@@ -15,6 +15,7 @@ import sys
 from datetime import datetime, timedelta
 from app import create_app, db
 from app.permissions import seed_permissions
+from app.utils import assign_mrn
 from app.models import (
     User, Role, Permission, Department, Specialty, Doctor, Patient,
     ImagingType, LabTestCatalog, Medication, PharmacyInventory,
@@ -39,7 +40,8 @@ ROLES = {
     'Patient': 'Patient portal access',
     'Nurse': 'Nursing and vitals',
     'LabTechnician': 'Laboratory operations',
-    'Radiologist': 'Radiology operations',
+    'Radiologist': 'Radiology reporting and sign-off',
+    'RadiologyTechnician': 'Radiology study acquisition (no reporting)',
     'Pharmacist': 'Pharmacy operations',
     'Receptionist': 'Appointment and reception',
     'Dentist': 'Dental care',
@@ -310,6 +312,8 @@ def seed_demo_data(app):
                     'lab_technician', ['LabTechnician'], department='Pathology')
         create_user('radio', 'radio@ihis.com', '123456', 'Radiology Specialist',
                     'radiologist', ['Radiologist'], department='Radiology')
+        create_user('radtech', 'radtech@ihis.com', '123456', 'Radiology Technologist Tarek',
+                    'radiology_technician', ['RadiologyTechnician'], department='Radiology')
         create_user('pharma', 'pharma@ihis.com', '123456', 'Pharmacist',
                     'pharmacist', ['Pharmacist'], department='Pharmacy')
         create_user('nurse', 'nurse@ihis.com', '123456', 'Nurse Nour',
@@ -356,9 +360,15 @@ def seed_demo_data(app):
         # Patient profile
         pat_user = User.query.filter_by(username='patient_demo').first()
         if pat_user and not Patient.query.filter_by(user_id=pat_user.id).first():
-            db.session.add(Patient(user_id=pat_user.id, phone='0111111111',
-                                   address='Cairo, Egypt', blood_type='O+', gender='Male',
-                                   allergies='Penicillin', chronic_diseases='Hypertension'))
+            demo_p = Patient(user_id=pat_user.id, phone='0111111111',
+                             address='Cairo, Egypt', blood_type='O+', gender='Male',
+                             allergies='Penicillin', chronic_diseases='Hypertension')
+            db.session.add(demo_p)
+            db.session.flush()
+            assign_mrn(demo_p)
+        # Self-heal: any patient row without an MRN gets one.
+        for _p in Patient.query.filter(Patient.mrn.is_(None)).all():
+            assign_mrn(_p)
 
         # Pharmacy inventory
         for med in Medication.query.all():
@@ -412,7 +422,7 @@ def seed_demo_data(app):
                             category='Standard',
                             specialty_id=_spec_id('Internal Medicine'),
                             is_published=True, is_active=True,
-                            created_by=demo_doctor.id)
+                            created_by=demo_doctor.user_id)
             db.session.add(oset)
             db.session.flush()
             cbc = LabTestCatalog.query.filter_by(
@@ -452,7 +462,7 @@ def seed_demo_data(app):
                     {'key': 'pl', 'label': 'Plan',
                      'placeholder': 'Investigations, medication, follow-up...'},
                 ]),
-                is_active=True, created_by=demo_doctor.id))
+                is_active=True, created_by=demo_doctor.user_id))
         db.session.commit()
 
         print('Demo data seeded.')

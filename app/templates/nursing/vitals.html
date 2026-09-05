@@ -24,50 +24,62 @@
             <div class="row g-4">
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'درجة الحرارة' if g.lang == 'ar' else 'Temperature' }} (&deg;C) [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'درجة الحرارة' if g.lang == 'ar' else 'Temperature' }} (&deg;C)</label>
                         <input type="number" step="0.1" class="form-control" name="temperature" placeholder="36.6">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'ضغط الدم الانقباضي' if g.lang == 'ar' else 'Blood Pressure SYS' }} [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'ضغط الدم الانقباضي' if g.lang == 'ar' else 'Blood Pressure SYS' }}</label>
                         <input type="number" class="form-control" name="blood_pressure_systolic" placeholder="120">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'ضغط الدم الانبساطي' if g.lang == 'ar' else 'Blood Pressure DIA' }} [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'ضغط الدم الانبساطي' if g.lang == 'ar' else 'Blood Pressure DIA' }}</label>
                         <input type="number" class="form-control" name="blood_pressure_diastolic" placeholder="80">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'معدل نبض القلب' if g.lang == 'ar' else 'Heart Rate' }} (bpm) [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'معدل نبض القلب' if g.lang == 'ar' else 'Heart Rate' }} (bpm)</label>
                         <input type="number" class="form-control" name="heart_rate" placeholder="75">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'معدل التنفس' if g.lang == 'ar' else 'Respiratory Rate' }} [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'معدل التنفس' if g.lang == 'ar' else 'Respiratory Rate' }}</label>
                         <input type="number" class="form-control" name="respiratory_rate" placeholder="16">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'تشبع الأكسجين' if g.lang == 'ar' else 'Oxygen Saturation' }} (%) [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'تشبع الأكسجين' if g.lang == 'ar' else 'Oxygen Saturation' }} (%)</label>
                         <input type="number" class="form-control" name="oxygen_saturation" placeholder="98">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'الطول' if g.lang == 'ar' else 'Height' }} (cm) [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'الطول' if g.lang == 'ar' else 'Height' }} (cm)</label>
                         <input type="number" step="0.1" class="form-control" name="height_cm" placeholder="170">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label class="form-label-ihs">{{ 'الوزن' if g.lang == 'ar' else 'Weight' }} (kg) [<span class="required">*</span>]</label>
+                        <label class="form-label-ihs">{{ 'الوزن' if g.lang == 'ar' else 'Weight' }} (kg)</label>
                         <input type="number" step="0.1" class="form-control" name="weight_kg" placeholder="70">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'درجة الألم' if g.lang == 'ar' else 'Pain Score' }} (0-10)</label>
+                        <input type="number" min="0" max="10" class="form-control" name="pain_score" placeholder="0">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'سكر الدم' if g.lang == 'ar' else 'Blood Glucose' }} (mg/dL)</label>
+                        <input type="number" step="0.1" class="form-control" name="blood_glucose" placeholder="90">
                     </div>
                 </div>
             </div>

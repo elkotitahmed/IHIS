@@ -110,7 +110,7 @@
         <div class="admin-banner" id="adminBanner">
             <span class="banner-icon"><i class="fas fa-eye"></i></span>
             <span class="banner-text">
-                {{ 'أنت ت看点 المستشفى بالكامل' if g.lang == 'ar' else 'Global Admin View — You are viewing the entire hospital environment' }}
+                {{ 'عرض المشرف العام — أنت تشاهد بيئة المستشفى بالكامل' if g.lang == 'ar' else 'Global Admin View — You are viewing the entire hospital environment' }}
             </span>
             <div class="banner-actions">
                 <select id="previewRoleSelect" onchange="if(this.value)window.location.href='/super-admin/preview/'+this.value" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--radius-sm);font-size:0.75rem;padding:3px 8px;">
@@ -119,11 +119,14 @@
                     <option value="Nurse">{{ 'ممرض' if g.lang == 'ar' else 'Nurse' }}</option>
                     <option value="LabTechnician">{{ 'مختبري' if g.lang == 'ar' else 'Lab Technician' }}</option>
                     <option value="Radiologist">{{ 'أخصائي أشعة' if g.lang == 'ar' else 'Radiologist' }}</option>
+                    <option value="RadiologyTechnician">{{ 'فني أشعة' if g.lang == 'ar' else 'Radiology Technician' }}</option>
                     <option value="Pharmacist">{{ 'صيدلاني' if g.lang == 'ar' else 'Pharmacist' }}</option>
                     <option value="Physiotherapist">{{ 'علاج طبيعي' if g.lang == 'ar' else 'Physiotherapist' }}</option>
                     <option value="Dentist">{{ 'طبيب أسنان' if g.lang == 'ar' else 'Dentist' }}</option>
                     <option value="Receptionist">{{ 'موظف استقبال' if g.lang == 'ar' else 'Receptionist' }}</option>
                     <option value="Cashier">{{ 'أمين صندوق' if g.lang == 'ar' else 'Cashier' }}</option>
+                    <option value="Patient">{{ 'مريض' if g.lang == 'ar' else 'Patient' }}</option>
+                    <option value="Admin">{{ 'مدير' if g.lang == 'ar' else 'Administrator' }}</option>
                 </select>
             </div>
         </div>

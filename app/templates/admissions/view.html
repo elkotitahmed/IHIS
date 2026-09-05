@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-bed-pulse" style="color:var(--ihis-info)"></i> {{ 'ملف الاستشفاء' if g.lang == 'ar' else 'Admission' }} {{ admission.admission_no }}</h1>
+        <p class="page-subtitle">
+            {{ admission.ward.name if admission.ward else ('جناح' if g.lang == 'ar' else 'Ward') }}
+            {% if admission.bed %} &middot; {{ 'سرير' if g.lang == 'ar' else 'Bed' }} {{ admission.bed.bed_no }}{% endif %}
+            &middot; <span class="status-badge {{ 's-active' if admission.status == 'Admitted' else 's-completed' }}">{{ admission.status }}</span>
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admissions.dashboard') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+        {% if current_user.has_permission('TIMELINE_VIEW') %}
+        <a href="{{ url_for('clinical.patient_360', patient_id=admission.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-nodes"></i> Patient 360</a>
+        {% endif %}
+        {% if admission.status == 'Admitted' and current_user.has_permission('ADMISSION_DISCHARGE') %}
+        <a href="{{ url_for('admissions.discharge', id=admission.id) }}" class="btn-ihs btn-ihs-danger"><i class="fas fa-door-open"></i> {{ 'تخريج' if g.lang == 'ar' else 'Discharge' }}</a>
+        {% elif admission.status == 'Discharged' %}
+        <a href="{{ url_for('admissions.discharge_summary', id=admission.id) }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-file-medical"></i> {{ 'ملخص الخروج' if g.lang == 'ar' else 'Discharge Summary' }}</a>
+        {% endif %}
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-premium mb-4">
+            <div class="card-header"><div class="card-title"><i class="fas fa-circle-info" style="color:var(--ihis-primary)"></i> {{ 'تفاصيل الإقامة' if g.lang == 'ar' else 'Stay Details' }}</div></div>
+            <div class="card-body">
+                <dl class="row" style="font-size:0.8125rem;margin:0">
+                    <dt class="col-5">{{ 'تاريخ الدخول' if g.lang == 'ar' else 'Admitted' }}</dt><dd class="col-7 cell-mono">{{ admission.admitted_at.strftime('%d %b %Y %H:%M') if admission.admitted_at else '-' }}</dd>
+                    <dt class="col-5">{{ 'الخروج المتوقع' if g.lang == 'ar' else 'Expected discharge' }}</dt><dd class="col-7 cell-mono">{{ admission.expected_discharge.strftime('%d %b %Y') if admission.expected_discharge else '-' }}</dd>
+                    <dt class="col-5">{{ 'مدة الإقامة' if g.lang == 'ar' else 'Length of stay' }}</dt><dd class="col-7">{{ admission.days_stayed() }} {{ 'يوم' if g.lang == 'ar' else 'day(s)' }}</dd>
+                    <dt class="col-5">{{ 'الطبيب المعالج' if g.lang == 'ar' else 'Attending doctor' }}</dt><dd class="col-7">{{ admission.admitting_doctor.user.full_name if admission.admitting_doctor and admission.admitting_doctor.user else '-' }}</dd>
+                    <dt class="col-5">{{ 'سبب الدخول' if g.lang == 'ar' else 'Reason' }}</dt><dd class="col-7">{{ admission.reason or '-' }}</dd>
+                    <dt class="col-5">{{ 'سجّله' if g.lang == 'ar' else 'Admitted by' }}</dt><dd class="col-7">{{ admission.admitter.full_name if admission.admitter else '-' }}</dd>
+                    {% if admission.discharged_at %}
+                    <dt class="col-5">{{ 'تاريخ الخروج' if g.lang == 'ar' else 'Discharged' }}</dt><dd class="col-7 cell-mono">{{ admission.discharged_at.strftime('%d %b %Y %H:%M') }}</dd>
+                    <dt class="col-5">{{ 'تشخيص الخروج' if g.lang == 'ar' else 'Discharge diagnosis' }}</dt><dd class="col-7">{{ admission.discharge_diagnosis or '-' }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header"><div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات' if g.lang == 'ar' else 'Actions' }}</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+                {% if current_user.has_permission('VITALS_CREATE') %}
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('nursing.vitals', patient_id=admission.patient_id) }}"><i class="fas fa-heartbeat"></i> {{ 'العلامات الحيوية' if g.lang == 'ar' else 'Vitals' }}</a>
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('nursing.mar', patient_id=admission.patient_id) }}"><i class="fas fa-pills"></i> MAR</a>
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('nursing.notes', patient_id=admission.patient_id) }}"><i class="fas fa-file-medical"></i> {{ 'ملاحظات التمريض' if g.lang == 'ar' else 'Nursing Notes' }}</a>
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('nursing.intake_output', patient_id=admission.patient_id) }}"><i class="fas fa-fill-drip"></i> {{ 'السوائل' if g.lang == 'ar' else 'Intake / Output' }}</a>
+                {% endif %}
+                {% if current_user.has_any_role('Doctor', 'Admin', 'SuperAdmin') %}
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('doctor.patient_detail', patient_id=admission.patient_id) }}"><i class="fas fa-notes-medical"></i> {{ 'السجل الطبي' if g.lang == 'ar' else 'Medical Record' }}</a>
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('doctor.prescriptions', patient_id=admission.patient_id) }}"><i class="fas fa-prescription"></i> {{ 'الوصفات' if g.lang == 'ar' else 'Prescriptions' }}</a>
+                {% endif %}
+                {% if current_user.has_permission('RECONCILIATION_CREATE') %}
+                <a class="btn-ihs btn-ihs-outline" href="{{ url_for('pharmacy.reconcile', patient_id=admission.patient_id) }}"><i class="fas fa-list-check"></i> {{ 'توفيق الأدوية' if g.lang == 'ar' else 'Medication Reconciliation' }}</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if bills %}
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-file-invoice-dollar" style="color:var(--ihis-danger)"></i> {{ 'رسوم الإقامة' if g.lang == 'ar' else 'Room Charges' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for b in bills %}
+                <div class="list-item"><span style="flex:1">{{ b.bill_no }}</span><span class="t-num">{{ '%.2f'|format(b.total()) }}</span><span class="status-badge {{ 's-completed' if b.status == 'Paid' else 's-pending' }}">{{ b.status }}</span></div>
+                {% endfor %}
+            </div></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card-premium mb-4">
+            <div class="card-header"><div class="card-title"><i class="fas fa-heartbeat" style="color:var(--ihis-danger)"></i> {{ 'العلامات الحيوية خلال الإقامة' if g.lang == 'ar' else 'Vitals During Stay' }}</div></div>
+            <div class="card-body flush"><div class="table-wrapper"><table class="table-ihs">
+                <thead><tr><th>{{ 'الوقت' if g.lang == 'ar' else 'Time' }}</th><th>BP</th><th>HR</th><th>RR</th><th>Temp</th><th>SpO₂</th><th>{{ 'ألم' if g.lang == 'ar' else 'Pain' }}</th></tr></thead>
+                <tbody>
+                {% for v in vitals %}
+                <tr>
+                    <td class="cell-mono">{{ v.recorded_at.strftime('%d %b %H:%M') if v.recorded_at else '-' }}</td>
+                    <td class="t-num">{{ v.blood_pressure_systolic or '-' }}/{{ v.blood_pressure_diastolic or '-' }}</td>
+                    <td class="t-num">{{ v.heart_rate or '-' }}</td>
+                    <td class="t-num">{{ v.respiratory_rate or '-' }}</td>
+                    <td class="t-num">{{ v.temperature or '-' }}</td>
+                    <td class="t-num">{{ v.oxygen_saturation or '-' }}</td>
+                    <td class="t-num">{{ v.pain_score if v.pain_score is not none else '-' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7"><div class="empty-state" style="padding:1.5rem"><div class="empty-title">{{ 'لا توجد قياسات بعد' if g.lang == 'ar' else 'No vitals recorded during this stay yet' }}</div></div></td></tr>
+                {% endfor %}
+                </tbody></table></div></div>
+        </div>
+
+        <div class="card-premium mb-4">
+            <div class="card-header"><div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-success)"></i> {{ 'جرعات الأدوية' if g.lang == 'ar' else 'Medication Doses (MAR)' }}</div></div>
+            <div class="card-body flush"><div class="table-wrapper"><table class="table-ihs">
+                <thead><tr><th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th><th>{{ 'الجرعة' if g.lang == 'ar' else 'Dose' }}</th><th>{{ 'الموعد' if g.lang == 'ar' else 'Due' }}</th><th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th></tr></thead>
+                <tbody>
+                {% for d in doses %}
+                <tr>
+                    <td class="cell-primary">{{ d.medication.generic_name if d.medication else (d.dose_given or '-') }}</td>
+                    <td>{{ d.dose_given or '-' }}{% if d.route %} &middot; {{ d.route }}{% endif %}</td>
+                    <td class="cell-mono">{{ d.scheduled_time.strftime('%d %b %H:%M') if d.scheduled_time else '-' }}</td>
+                    <td><span class="status-badge {{ 's-completed' if d.status == 'Administered' else 's-cancelled' if d.status in ('Refused','Missed','Discontinued') else 's-pending' }}">{{ d.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4"><div class="empty-state" style="padding:1.5rem"><div class="empty-title">{{ 'لا توجد جرعات مسجلة' if g.lang == 'ar' else 'No doses scheduled during this stay' }}</div></div></td></tr>
+                {% endfor %}
+                </tbody></table></div></div>
+        </div>
+
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-info)"></i> {{ 'ملاحظات التمريض' if g.lang == 'ar' else 'Nursing Notes' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for n in notes %}
+                <div class="list-item" style="align-items:flex-start">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem">{{ n.note }}</div>
+                        <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ n.created_at.strftime('%d %b %Y %H:%M') if n.created_at else '' }}{% if n.shift %} &middot; {{ n.shift }}{% endif %}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا ملاحظات بعد' if g.lang == 'ar' else 'No nursing notes during this stay yet' }}</div>
+                {% endfor %}
+            </div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

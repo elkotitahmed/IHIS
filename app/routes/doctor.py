@@ -18,7 +18,7 @@ from app.services import alerts as alert_svc
 from app.services.patient_safety import patient_safety_context
 from app.services.templates import (normalize_sections, format_structured_notes,
                                     template_allowed_for)
-from datetime import datetime
+from datetime import datetime, timedelta
 
 doctor_bp = Blueprint('doctor', __name__)
 
@@ -88,14 +88,27 @@ def flag_prescription_safety(rx):
 @roles_required('Doctor', 'Admin', 'SuperAdmin')
 def dashboard():
     doctor = _current_doctor()
-    if not doctor:
-        flash('Doctor profile not found.', 'danger')
+    supervisory = doctor is None and current_user.has_any_role('Admin', 'SuperAdmin')
+    if not doctor and not supervisory:
+        flash('Doctor profile not found. Ask an administrator to link your account to a doctor record.', 'danger')
         return redirect(url_for('main.home'))
     today = utcnow().date()
-    todays_appts = [a for a in doctor.appointments
-                    if a.scheduled_at and a.scheduled_at.date() == today]
-    pending_labs = LabOrder.query.filter_by(status='Pending', doctor_id=doctor.id).count()
-    pending_radio = RadiologyOrder.query.filter_by(status='Pending', doctor_id=doctor.id).count()
+    day_start = datetime.combine(today, datetime.min.time())
+    day_end = day_start + timedelta(days=1)
+    appt_q = Appointment.query.filter(Appointment.scheduled_at >= day_start,
+                                      Appointment.scheduled_at < day_end)
+    if doctor:
+        appt_q = appt_q.filter(Appointment.doctor_id == doctor.id)
+    todays_appts = appt_q.order_by(Appointment.scheduled_at).all()
+    lab_q = LabOrder.query.filter(LabOrder.status.in_(('Pending', 'Accepted', 'Collected',
+                                                       'ReceivedAtLab', 'Processing')))
+    rad_q = RadiologyOrder.query.filter(RadiologyOrder.status.in_(('Pending', 'Scheduled',
+                                                                   'Arrived', 'InProgress')))
+    if doctor:
+        lab_q = lab_q.filter(LabOrder.doctor_id == doctor.id)
+        rad_q = rad_q.filter(RadiologyOrder.doctor_id == doctor.id)
+    pending_labs = lab_q.count()
+    pending_radio = rad_q.count()
     # At-risk patient KPI computed from the doctor's own access scope with SQL
     # only (previously looped the heuristic AI risk model over the whole
     # database — N+1 across the entire patient table). A patient counts when
@@ -120,16 +133,18 @@ def dashboard():
     my_tasks = Task.query.filter(Task.assigned_to == current_user.id) \
         .filter(Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS'])) \
         .order_by(Task.due_at.asc()).limit(8).all()
+    # Alerts are scoped to the doctor's own (need-to-know) patients.
     my_alerts = ClinicalAlert.query.filter(
-        ClinicalAlert.status == 'OPEN'
+        ClinicalAlert.status == 'OPEN',
+        ClinicalAlert.patient_id.in_(sorted(ids) if ids else [-1]),
     ).order_by(ClinicalAlert.created_at.desc()).limit(8).all()
-    # Recently-attended patients (from completed appointments)
+    # Recently-attended patients (from the latest appointments)
     recent_patients = []
-    recent_appts = sorted(doctor.appointments,
-                          key=lambda a: a.scheduled_at or datetime.min,
-                          reverse=True)
+    recent_q = Appointment.query.order_by(Appointment.scheduled_at.desc())
+    if doctor:
+        recent_q = recent_q.filter(Appointment.doctor_id == doctor.id)
     seen_pids = set()
-    for a in recent_appts:
+    for a in recent_q.limit(40).all():
         if a.patient and a.patient.id not in seen_pids:
             seen_pids.add(a.patient.id)
             recent_patients.append(a.patient)
@@ -143,9 +158,7 @@ def dashboard():
                        .order_by(Patient.id.desc()).limit(80).all())
 
     # --- Waiting room: checked-in / in-consultation patients today ---
-    waiting = [a for a in doctor.appointments
-               if a.scheduled_at and a.scheduled_at.date() == today
-               and a.status in ('CheckedIn', 'InConsultation')]
+    waiting = [a for a in todays_appts if a.status in ('CheckedIn', 'InConsultation')]
 
     # --- Notifications for the doctor ---
     doctor_notifications = NotifModel.query.filter_by(user_id=current_user.id) \
@@ -188,6 +201,14 @@ def dashboard():
         spec = doctor.specialty.name.lower()
     else:
         spec = ''
+    # Inpatients under this doctor's care (for the ward round shortcut).
+    from app.models import Admission as AdmissionModel
+    inpatients = []
+    if ids:
+        inpatients = (AdmissionModel.query
+                      .filter(AdmissionModel.status == 'Admitted',
+                              AdmissionModel.patient_id.in_(sorted(ids)))
+                      .order_by(AdmissionModel.admitted_at.desc()).limit(10).all())
     labels_ar_sk = 'آفات الجلد'
     labels_ar_fr = 'كشف الكسور'
     if any(k in spec for k in ('dermat', 'جلد', 'skin')):
@@ -223,7 +244,8 @@ def dashboard():
                            doctor_notifications=doctor_notifications,
                            department_attachments=department_attachments,
                            department_name=department_name,
-                           ai_tools=ai_tools,
+                           ai_tools=ai_tools, supervisory=supervisory,
+                           inpatients=inpatients,
                            clinical_history_count=clinical_history_count)
 
 
@@ -297,8 +319,10 @@ def patients():
     if search:
         query = query.join(Patient.user).filter(
             db.or_(User.full_name.ilike(f'%{search}%'),
-                   User.email.ilike(f'%{search}%')))
-    results = query.limit(100).all()
+                   User.email.ilike(f'%{search}%'),
+                   Patient.mrn.ilike(f'%{search}%'),
+                   Patient.phone.ilike(f'%{search}%')))
+    results = query.order_by(Patient.id.desc()).limit(100).all()
     return render_template('doctor/patients.html', title='Patient Search',
                            patients=results, search=search)
 
@@ -684,82 +708,38 @@ def prescriptions(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     doctor = _current_doctor()
     if request.method == 'POST':
-        rx = Prescription(
-            patient_id=patient.id,
-            doctor_id=doctor.id if doctor else None,
-            refills=int(request.form.get('refills') or 0),
-        )
-        db.session.add(rx)
-        db.session.flush()
-
         med_ids = request.form.getlist('medication_id')
         dosages = request.form.getlist('dosage')
         frequencies = request.form.getlist('frequency')
         durations = request.form.getlist('duration')
         instructions = request.form.getlist('instructions')
         quantities = request.form.getlist('quantity')
-
-        added = 0
+        items = []
         for i, mid in enumerate(med_ids):
             if not mid:
                 continue
-            qty = quantities[i] if i < len(quantities) else 1
-            try:
-                qty = max(1, int(qty))
-            except (TypeError, ValueError):
-                qty = 1
-            db.session.add(PrescriptionItem(
-                prescription_id=rx.id,
-                medication_id=int(mid),
-                dosage=dosages[i] if i < len(dosages) else '',
-                frequency=frequencies[i] if i < len(frequencies) else '',
-                duration=durations[i] if i < len(durations) else '',
-                instructions=instructions[i] if i < len(instructions) else '',
-                quantity=qty,
-            ))
-            added += 1
-
-        if added == 0:
-            db.session.rollback()
-            flash('Add at least one medication to the prescription.', 'danger')
-            return redirect(url_for('doctor.prescriptions', patient_id=patient.id))
-
-        log_activity('CREATE_PRESCRIPTION', 'prescription', rx.id,
-                     f'patient={patient.id} items={added}')
-        record_event(patient.id, 'PRESCRIPTION',
-                     f'Prescription written ({added} item(s))',
-                     f'Refills: {rx.refills}',
-                     source_type='prescription', source_id=rx.id,
-                     department='Doctor')
-        # Clinical safety screens immediately: allergy conflicts and
-        # interactions are flagged as open alerts for the review teams.
-        flag_prescription_safety(rx)
-        # Route the prescription into the pharmacy work queue (commit together
-        # so the task is never rolled back by a notification failure).
-        task = None
-        from app.services import tasks as task_svc
-        task = task_svc.create_task(
-            title=f'Dispense prescription #{rx.id}',
-            description=f'Review and dispense {added} item(s). Check interactions and stock.',
-            task_type='PHARMACY', department='Pharmacy',
-            patient_id=patient.id, assigned_role='Pharmacist',
-            priority='NORMAL', related_resource_type='prescription',
-            related_resource_id=rx.id)
-        db.session.commit()
+            items.append({
+                'medication_id': mid,
+                'dosage': dosages[i] if i < len(dosages) else '',
+                'frequency': frequencies[i] if i < len(frequencies) else '',
+                'duration': durations[i] if i < len(durations) else '',
+                'instructions': instructions[i] if i < len(instructions) else '',
+                'quantity': quantities[i] if i < len(quantities) else 1,
+            })
+        from app.services.clinical_orders import create_prescription
         try:
-            task_svc.notify_task_activity(task)
-            from app.services.notifications import notify_role
-            notify_role('Pharmacist',
-                        f'New prescription #{rx.id}',
-                        f'A new prescription with {added} item(s) was written for patient #{patient.id}.',
-                        entity_type='prescription', entity_id=rx.id)
-            db.session.commit()
-        except Exception:
+            rx = create_prescription(patient, doctor, items,
+                                     refills=request.form.get('refills') or 0)
+        except ValueError as exc:
             db.session.rollback()
-            db.session.commit()
-        flash('Prescription created.', 'success')
+            flash(str(exc), 'danger')
+            return redirect(url_for('doctor.prescriptions', patient_id=patient.id))
+        log_activity('CREATE_PRESCRIPTION', 'prescription', rx.id,
+                     f'patient={patient.id} items={len(rx.items)}')
+        db.session.commit()
+        flash('Prescription created and routed to the pharmacy queue.', 'success')
         return redirect(url_for('doctor.prescriptions', patient_id=patient.id))
-    meds = Medication.query.all()
+    meds = Medication.query.filter_by(is_active=True).order_by(Medication.generic_name).all()
     prescriptions = Prescription.query.filter_by(patient_id=patient.id).all()
     return render_template('doctor/prescriptions.html', title='Prescriptions',
                            patient=patient, meds=meds, items=prescriptions,
@@ -790,6 +770,18 @@ def cancel_prescription(rx_id):
                    old_value={'status': old}, new_value={'status': 'Cancelled'},
                    reason=request.form.get('reason') or 'Cancelled by physician',
                    details=f'patient={rx.patient_id}')
+        from app.services import tasks as task_svc
+        task_svc.cancel_for_resource('prescription', rx.id, 'Prescription cancelled by physician')
+        # Nursing must stop giving doses that were scheduled from this order.
+        from app.models import MedicationAdministration
+        for dose in MedicationAdministration.query.filter(
+                MedicationAdministration.prescription_id == rx.id,
+                MedicationAdministration.status.in_(('Scheduled', 'Due', 'Held'))).all():
+            dose.status = 'Discontinued'
+            dose.reason = 'Prescription cancelled'
+        record_event(rx.patient_id, 'PRESCRIPTION', f'Prescription #{rx.id} cancelled',
+                     request.form.get('reason') or 'Cancelled by physician',
+                     source_type='prescription', source_id=rx.id, department='Doctor')
         db.session.commit()
         flash('Prescription cancelled.', 'success')
     return redirect(url_for('doctor.prescriptions', patient_id=rx.patient_id))
@@ -807,37 +799,11 @@ def lab_order(patient_id):
         if not test_id or not LabTestCatalog.query.get(int(test_id)):
             flash('Please select a valid test.', 'warning')
             return redirect(url_for('doctor.lab_order', patient_id=patient.id))
-        order = LabOrder(
-            patient_id=patient.id,
-            doctor_id=doctor.id if doctor else None,
-            test_id=int(test_id),
-            priority=request.form.get('priority', 'Normal'),
-            notes=request.form.get('notes'),
-        )
-        db.session.add(order)
-        db.session.flush()
-        order.accession_number = f'LAB-{order.id:05d}'
-        order.barcode = f'{order.id:08d}'
-        # Route the order into the shared lab work queue the same way the lab
-        # blueprint does, so it is never dropped into the void.
-        from app.services import tasks as task_svc
-        from app.services.notifications import notify_role
-        task_svc.create_task(
-            title=f'Process lab order #{order.id}: {order.test.test_name if order.test else ""}',
-            description='Collect and process sample; enter and verify the result.',
-            task_type='LAB', department='Laboratory',
-            patient_id=patient.id, assigned_role='LabTechnician',
-            priority=order.priority, related_resource_type='lab_order',
-            related_resource_id=order.id)
-        record_event(patient.id, 'LAB',
-                     f'Lab order: {order.test.test_name if order.test else "Test"}',
-                     f'{request.form.get("specimen_type") or "Blood"} sample · priority {order.priority}',
-                     source_type='lab_order', source_id=order.id,
-                     department='Laboratory')
-        notify_role('LabTechnician',
-                    f'New lab order #{order.id}',
-                    f'A new lab order ({order.test.test_name if order.test else ""}) has been created for patient #{patient.id}.',
-                    entity_type='lab_order', entity_id=order.id)
+        from app.services.clinical_orders import create_lab_order
+        order = create_lab_order(patient, doctor, int(test_id),
+                                 priority=request.form.get('priority', 'Normal'),
+                                 specimen_type=request.form.get('specimen_type'),
+                                 notes=request.form.get('notes'))
         log_activity('REQUEST_LAB', 'lab_order', order.id,
                      f'patient={patient.id} test={test_id}')
         db.session.commit()
@@ -862,33 +828,10 @@ def radiology_order(patient_id):
         if not imaging_type_id or not ImagingType.query.get(int(imaging_type_id)):
             flash('Please select a valid imaging type.', 'warning')
             return redirect(url_for('doctor.radiology_order', patient_id=patient.id))
-        order = RadiologyOrder(
-            patient_id=patient.id,
-            doctor_id=doctor.id if doctor else None,
-            imaging_type_id=int(imaging_type_id),
-            priority=request.form.get('priority', 'Normal'),
-            notes=request.form.get('notes'),
-        )
-        db.session.add(order)
-        db.session.flush()
-        from app.services import tasks as task_svc
-        from app.services.notifications import notify_role
-        task_svc.create_task(
-            title=f'Perform study #{order.id}: {order.imaging_type.name if order.imaging_type else ""}',
-            description='Schedule, capture, and prepare the study for reporting.',
-            task_type='RADIOLOGY', department='Radiology',
-            patient_id=patient.id, assigned_role='Radiologist',
-            priority=order.priority, related_resource_type='radiology_order',
-            related_resource_id=order.id)
-        record_event(patient.id, 'RADIOLOGY',
-                     f'Imaging ordered: {order.imaging_type.name if order.imaging_type else "Study"}',
-                     f'Priority {order.priority}',
-                     source_type='radiology_order', source_id=order.id,
-                     department='Radiology')
-        notify_role('Radiologist',
-                    f'New radiology order #{order.id}',
-                    f'A new imaging order ({order.imaging_type.name if order.imaging_type else ""}) has been created for patient #{patient.id}.',
-                    entity_type='radiology_order', entity_id=order.id)
+        from app.services.clinical_orders import create_radiology_order
+        order = create_radiology_order(patient, doctor, int(imaging_type_id),
+                                       priority=request.form.get('priority', 'Normal'),
+                                       notes=request.form.get('notes'))
         log_activity('REQUEST_RADIOLOGY', 'radiology_order', order.id,
                      f'patient={patient.id} imaging={imaging_type_id}')
         db.session.commit()
@@ -906,9 +849,43 @@ def radiology_order(patient_id):
 @roles_required('Doctor', 'Admin', 'SuperAdmin')
 def appointments():
     doctor = _current_doctor()
-    items = Appointment.query.filter_by(doctor_id=doctor.id).order_by(
-        Appointment.scheduled_at.desc()).all() if doctor else []
+    if doctor:
+        items = Appointment.query.filter_by(doctor_id=doctor.id).order_by(
+            Appointment.scheduled_at.desc()).limit(200).all()
+    elif current_user.has_any_role('Admin', 'SuperAdmin'):
+        items = Appointment.query.order_by(Appointment.scheduled_at.desc()).limit(200).all()
+    else:
+        items = []
     return render_template('doctor/appointments.html', title='My Appointments', items=items)
+
+
+def _appointment_owned(appt):
+    """A doctor may only act on their own appointments; supervisors on any."""
+    if current_user.has_any_role('Admin', 'SuperAdmin'):
+        return True
+    doctor = _current_doctor()
+    return bool(doctor and appt.doctor_id == doctor.id)
+
+
+@doctor_bp.route('/appointments/<int:appt_id>/start', methods=['POST'])
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def start_consultation(appt_id):
+    """Move a checked-in patient into the consultation room."""
+    appt = Appointment.query.get_or_404(appt_id)
+    if not _appointment_owned(appt):
+        abort(403)
+    if appt.status not in ('CheckedIn', 'Scheduled', 'Confirmed'):
+        flash('Only a checked-in appointment can start consultation.', 'warning')
+        return redirect(url_for('doctor.appointments'))
+    appt.status = 'InConsultation'
+    log_activity('START_CONSULTATION', 'appointment', appt.id, f'patient={appt.patient_id}')
+    record_event(appt.patient_id, 'VISIT', 'Consultation started',
+                 f'Appointment #{appt.id}', source_type='appointment',
+                 source_id=appt.id, department='Doctor')
+    db.session.commit()
+    flash('Consultation started.', 'success')
+    return redirect(url_for('doctor.patient_detail', patient_id=appt.patient_id))
 
 
 @doctor_bp.route('/appointments/<int:appt_id>/complete', methods=['POST'])
@@ -920,9 +897,14 @@ def complete_appointment(appt_id):
     When Completed, the consultation fee is pushed into billing automatically
     (one bill per appointment) so front desk collects on the visit."""
     appt = Appointment.query.get_or_404(appt_id)
+    if not _appointment_owned(appt):
+        abort(403)
     mode = request.form.get('mode', 'Completed')
     if mode not in ('Completed', 'NoShow'):
         mode = 'Completed'
+    if appt.status in ('Completed', 'Cancelled', 'NoShow'):
+        flash('This appointment is already closed.', 'info')
+        return redirect(url_for('doctor.appointments'))
     appt.status = mode
     log_activity('COMPLETE_APPOINTMENT', 'appointment', appt.id,
                  f'mode={mode} patient={appt.patient_id}')
@@ -950,6 +932,11 @@ def complete_appointment(appt_id):
 @roles_required('Doctor', 'Admin', 'SuperAdmin')
 def lab_results():
     doctor = _current_doctor()
-    orders = LabOrder.query.filter_by(doctor_id=doctor.id).order_by(
-        LabOrder.order_date.desc()).all() if doctor else []
+    if doctor:
+        orders = LabOrder.query.filter_by(doctor_id=doctor.id).order_by(
+            LabOrder.order_date.desc()).limit(200).all()
+    elif current_user.has_any_role('Admin', 'SuperAdmin'):
+        orders = LabOrder.query.order_by(LabOrder.order_date.desc()).limit(200).all()
+    else:
+        orders = []
     return render_template('doctor/lab_results.html', title='Lab Results', orders=orders)

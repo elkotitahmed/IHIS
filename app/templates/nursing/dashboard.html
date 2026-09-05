@@ -2,8 +2,12 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{{ t('welcome') }}, {{ 'Nurse ' }}{{ current_user.full_name }}</h1>
-        <p class="page-subtitle">{{ 'لوحة التحكم' if g.lang == 'ar' else 'Nursing Operations' }}</p>
+        <h1 class="page-title">{{ t('welcome') }}, {{ current_user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'مساحة عمل التمريض — مرضاك، الجرعات المستحقة، والملاحظات غير الطبيعية' if g.lang == 'ar' else 'Nursing workspace — your patients, due doses and abnormal observations' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('nursing.patients') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-users"></i> {{ 'سجل المرضى' if g.lang == 'ar' else 'Patient Registry' }}</a>
+        <a href="{{ url_for('nursing.medication_schedule') }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-pills"></i> {{ 'جدول الأدوية' if g.lang == 'ar' else 'Medication Schedule' }}</a>
     </div>
 </div>
 
@@ -16,10 +20,10 @@
         </div>
     </div>
     <div class="kpi-card">
-        <div class="kpi-icon info"><i class="fas fa-pills"></i></div>
+        <div class="kpi-icon {{ 'warning' if overdue_doses else 'info' }}"><i class="fas fa-pills"></i></div>
         <div class="kpi-body">
-            <div class="kpi-label">{{ t('medication_tasks') }}</div>
-            <div class="kpi-value">{{ med_count }}</div>
+            <div class="kpi-label">{{ 'جرعات مستحقة' if g.lang == 'ar' else 'Doses Due' }}</div>
+            <div class="kpi-value">{{ med_count }}{% if overdue_doses %} <span style="font-size:0.75rem;color:var(--ihis-danger)">({{ overdue_doses|length }} {{ 'متأخرة' if g.lang == 'ar' else 'overdue' }})</span>{% endif %}</div>
         </div>
     </div>
     <div class="kpi-card">
@@ -29,11 +33,18 @@
             <div class="kpi-value">{{ critical_alerts }}</div>
         </div>
     </div>
+    <div class="kpi-card">
+        <div class="kpi-icon {{ 'warning' if vitals_due else 'success' }}"><i class="fas fa-heartbeat"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('vitals_due') }}</div>
+            <div class="kpi-value">{{ vitals_due|length }}</div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4">
     <div class="col-lg-8">
-        <div class="card-premium">
+        <div class="card-premium mb-4">
             <div class="card-header">
                 <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ t('assigned_patients') }}</div>
                 <a href="{{ url_for('nursing.patients') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
@@ -44,24 +55,37 @@
                         <thead>
                             <tr>
                                 <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
-                                <th>{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}</th>
-                                <th>{{ 'نوع الدم' if g.lang == 'ar' else 'Blood Type' }}</th>
+                                <th>{{ 'الموقع' if g.lang == 'ar' else 'Location' }}</th>
+                                <th>{{ 'آخر قياس' if g.lang == 'ar' else 'Last Vitals' }}</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for patient in patients %}
+                            {% set lv = latest_by_pid.get(patient.id) %}
+                            {% set adm = admitted.get(patient.id) %}
                             <tr>
-                                <td class="cell-primary">{{ patient.user.full_name }}</td>
-                                <td class="cell-secondary">{{ patient.gender or '-' }}</td>
-                                <td>{{ patient.blood_type or '-' }}</td>
                                 <td>
-                                    <a href="{{ url_for('nursing.vitals', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
-                                        <i class="fas fa-heartbeat"></i> {{ t('vitals') }}
-                                    </a>
-                                    <a href="{{ url_for('nursing.notes', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">
-                                        <i class="fas fa-file-medical"></i>
-                                    </a>
+                                    <a href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}" class="cell-primary link-ihs">{{ patient.user.full_name }}</a>
+                                    <div class="cell-muted" style="font-size:0.6875rem">{{ patient.mrn or '' }}{% if patient.blood_type %} &middot; {{ patient.blood_type }}{% endif %}</div>
+                                </td>
+                                <td>
+                                    {% if adm %}<span class="status-badge s-active"><i class="fas fa-bed"></i> {{ adm.ward.name if adm.ward else 'Ward' }}{% if adm.bed %} · {{ adm.bed.bed_no }}{% endif %}</span>
+                                    {% else %}<span class="cell-muted">{{ 'عيادة خارجية' if g.lang == 'ar' else 'Outpatient' }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if lv %}
+                                    <span class="cell-mono" style="font-size:0.75rem">{{ lv.recorded_at.strftime('%d %b %H:%M') }}</span>
+                                    <div style="font-size:0.75rem">BP {{ lv.blood_pressure_systolic or '-' }}/{{ lv.blood_pressure_diastolic or '-' }} · HR {{ lv.heart_rate or '-' }} · SpO₂ {{ lv.oxygen_saturation or '-' }}</div>
+                                    {% else %}<span class="cell-muted">{{ 'لا يوجد' if g.lang == 'ar' else 'None yet' }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    <div style="display:flex;gap:0.25rem;flex-wrap:wrap">
+                                    <a href="{{ url_for('nursing.vitals', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm" title="{{ t('vitals') }}"><i class="fas fa-heartbeat"></i></a>
+                                    <a href="{{ url_for('nursing.mar', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm" title="MAR"><i class="fas fa-pills"></i></a>
+                                    <a href="{{ url_for('nursing.notes', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}"><i class="fas fa-file-medical"></i></a>
+                                    <a href="{{ url_for('nursing.care_plan', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="{{ 'خطة الرعاية' if g.lang == 'ar' else 'Care plan' }}"><i class="fas fa-clipboard-list"></i></a>
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
@@ -70,6 +94,7 @@
                                     <div class="empty-state" style="padding:2rem">
                                         <div class="empty-icon"><i class="fas fa-user-nurse"></i></div>
                                         <div class="empty-title">{{ 'لا يوجد مرضى معينون' if g.lang == 'ar' else 'No assigned patients' }}</div>
+                                        <div class="empty-desc">{{ 'يظهر هنا المرضى المنومون ومرضى عيادات اليوم وفرق الرعاية' if g.lang == 'ar' else 'Inpatients, today’s clinic attendances and care-team assignments appear here.' }}</div>
                                     </div>
                                 </td>
                             </tr>
@@ -79,24 +104,85 @@
                 </div>
             </div>
         </div>
+
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-success)"></i> {{ 'الجرعات المستحقة' if g.lang == 'ar' else 'Doses Due' }}</div>
+                <a href="{{ url_for('nursing.medication_schedule') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for d in due_doses %}
+                    <div class="list-item">
+                        <i class="fas fa-capsules" style="color:{{ 'var(--ihis-danger)' if d.scheduled_time and d.scheduled_time < now else 'var(--ihis-success)' }}"></i>
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">{{ d.medication.generic_name if d.medication else (d.dose_given or 'Dose') }} {% if d.dose_given %}<span class="cell-muted">{{ d.dose_given }}</span>{% endif %}</div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ d.patient.user.full_name if d.patient and d.patient.user else '' }} &middot; {{ d.scheduled_time.strftime('%d %b %H:%M') if d.scheduled_time else ('غير مجدول' if g.lang == 'ar' else 'unscheduled') }}</div>
+                        </div>
+                        <a href="{{ url_for('nursing.mar', patient_id=d.patient_id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'فتح MAR' if g.lang == 'ar' else 'Open MAR' }}</a>
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا جرعات مستحقة' if g.lang == 'ar' else 'No doses due' }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="col-lg-4">
+        {% if abnormal %}
+        <div class="card-premium mb-4" style="border-color:var(--ihis-danger)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-triangle-exclamation" style="color:var(--ihis-danger)"></i> {{ t('abnormal_observations') }}</div>
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for v in abnormal %}
+                    <div class="list-item">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">{{ v.patient.user.full_name if v.patient and v.patient.user else 'Patient' }}</div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">BP {{ v.blood_pressure_systolic or '-' }}/{{ v.blood_pressure_diastolic or '-' }} · HR {{ v.heart_rate or '-' }} · Temp {{ v.temperature or '-' }} · SpO₂ {{ v.oxygen_saturation or '-' }}</div>
+                        </div>
+                        <a href="{{ url_for('nursing.vitals', patient_id=v.patient_id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-heartbeat"></i></a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-primary)"></i> {{ t('my_tasks') }}</div>
+                <a href="{{ url_for('tasks.my_tasks') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for tk in my_tasks %}
+                    <div class="list-item">
+                        <div style="flex:1">
+                            <a href="{{ url_for('tasks.detail', task_id=tk.id) }}" class="link-ihs" style="font-size:0.8125rem;font-weight:500">{{ tk.title }}</a>
+                            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ tk.priority }} &middot; {{ tk.status }}{% if tk.due_at %} &middot; {{ tk.due_at.strftime('%d %b %H:%M') }}{% endif %}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا مهام مفتوحة' if g.lang == 'ar' else 'No open tasks' }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <div class="card-premium">
             <div class="card-header">
                 <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات سريعة' if g.lang == 'ar' else 'Quick Actions' }}</div>
             </div>
             <div class="card-body">
                 <div style="display:flex;flex-direction:column;gap:0.5rem">
-                    <a href="{{ url_for('nursing.medication_schedule') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-pills"></i> {{ 'جدول الأدوية' if g.lang == 'ar' else 'Medication Schedule' }}
-                    </a>
-                    <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-share-nodes"></i> {{ t('referrals') }}
-                    </a>
-                    <a href="{{ url_for('care.cases') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-people-group"></i> {{ 'حالات' if g.lang == 'ar' else 'Cases' }}
-                    </a>
+                    <a href="{{ url_for('admissions.dashboard') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-door-open"></i> {{ 'الاستشفاء والأسرّة' if g.lang == 'ar' else 'Admissions & Beds' }}</a>
+                    {% if current_user.has_permission('INBOX_VIEW') %}                    <a href="{{ url_for('clinical.inbox') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-inbox"></i> {{ 'الصندوق السريري' if g.lang == 'ar' else 'Clinical Inbox' }}</a>{% endif %}
+                    <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-bell"></i> {{ 'التنبيهات السريرية' if g.lang == 'ar' else 'Clinical Alerts' }}</a>
+                    <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-share-nodes"></i> {{ t('referrals') }}</a>
+                    <a href="{{ url_for('pharmacy.drug_check') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-dna"></i> {{ 'فحص التفاعلات' if g.lang == 'ar' else 'Interaction Check' }}</a>
                 </div>
             </div>
         </div>

@@ -26,6 +26,26 @@
                 <form method="POST" action="{{ url_for('dentistry.record', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الشكوى الرئيسية' if g.lang == 'ar' else 'Chief Complaint' }}</label>
+                        <input class="form-control" name="complaint" value="{{ dental_record.complaint if dental_record and dental_record.complaint else '' }}" placeholder="{{ 'مثال: ألم في الضرس السفلي الأيمن' if g.lang == 'ar' else 'e.g. Pain in lower right molar' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نتائج الفحص' if g.lang == 'ar' else 'Examination Findings' }}</label>
+                        <textarea class="form-control" name="examination_findings" rows="3">{{ dental_record.examination_findings if dental_record and dental_record.examination_findings }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التشخيص السني' if g.lang == 'ar' else 'Dental Diagnosis' }}</label>
+                        <input class="form-control" name="diagnosis" value="{{ dental_record.diagnosis if dental_record and dental_record.diagnosis else '' }}" placeholder="{{ 'مثال: تسوس عميق 46' if g.lang == 'ar' else 'e.g. Deep caries 46, irreversible pulpitis' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan (summary)' }}</label>
+                        <textarea class="form-control" name="treatment_plan" rows="2">{{ dental_record.treatment_plan if dental_record and dental_record.treatment_plan }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'ملاحظات اللثة' if g.lang == 'ar' else 'Periodontal Notes' }}</label>
+                        <textarea class="form-control" name="periodontal_notes" rows="2">{{ dental_record.periodontal_notes if dental_record and dental_record.periodontal_notes }}</textarea>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label-ihs">{{ 'التاريخ السني' if g.lang == 'ar' else 'Dental History' }}</label>
                         <textarea class="form-control" name="dental_history" rows="4"
                                   placeholder="{{ 'الزيارات السابقة، العلاجات، تاريخ النظافة' if g.lang == 'ar' else 'Past dental visits, treatments, hygiene history' }}">{{ dental_record.dental_history if dental_record and dental_record.dental_history }}</textarea>
@@ -56,6 +76,14 @@
             <div class="card-body">
                 {% if dental_record %}
                 <div style="margin-bottom:var(--sp-4)">
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--ihis-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-1)">{{ 'الشكوى / التشخيص' if g.lang == 'ar' else 'Complaint / Diagnosis' }}</div>
+                    <p style="margin:0;color:var(--ihis-text)">{{ dental_record.complaint or '—' }}<br><strong>{{ dental_record.diagnosis or '' }}</strong></p>
+                </div>
+                <div style="margin-bottom:var(--sp-4)">
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--ihis-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-1)">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</div>
+                    <p style="margin:0;color:var(--ihis-text)">{{ dental_record.treatment_plan or '—' }}</p>
+                </div>
+                <div style="margin-bottom:var(--sp-4)">
                     <div style="font-size:0.75rem;font-weight:600;color:var(--ihis-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-1)">{{ 'التاريخ السني' if g.lang == 'ar' else 'Dental History' }}</div>
                     <p style="margin:0;color:var(--ihis-text)">{{ dental_record.dental_history or '—' }}</p>
                 </div>
@@ -80,9 +108,11 @@
     </div>
 </div>
 
-<div style="margin-top:var(--sp-4)">
-    <a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
-        <i class="fas fa-arrow-left"></i> {{ 'العودة للرسم السني' if g.lang == 'ar' else 'Back to Chart' }}
-    </a>
+<div style="margin-top:var(--sp-4);display:flex;gap:var(--sp-2);flex-wrap:wrap">
+    <a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-tooth"></i> {{ 'الرسم السني' if g.lang == 'ar' else 'Odontogram' }}</a>
+    <a href="{{ url_for('dentistry.treatment_plans', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-list-check"></i> {{ 'خطط العلاج' if g.lang == 'ar' else 'Treatment Plans' }}</a>
+    <a href="{{ url_for('dentistry.procedures', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-screwdriver-wrench"></i> {{ 'الإجراءات' if g.lang == 'ar' else 'Procedures' }}</a>
+    <a href="{{ url_for('dentistry.imaging', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-x-ray"></i> {{ 'التصوير' if g.lang == 'ar' else 'Imaging' }}</a>
+    <a href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-circle-nodes"></i> Patient 360</a>
 </div>
 {% endblock %}

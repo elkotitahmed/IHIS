@@ -9,7 +9,8 @@ from app.access import accessible_patient_ids, require_patient_access
 from app.utils import (utcnow, is_clinical_locked,
                        apply_lab_abnormality, apply_lab_criticality)
 from app.services.status import assert_transition, StatusTransitionError
-from app.services.notifications import notify, notify_doctor, notify_patient, notify_role
+from app.services.notifications import (notify, notify_doctor, notify_patient, notify_role,
+                                        notify_ordering_clinicians)
 from app.services import tasks as task_svc
 from app.services.timeline import record_event
 from app.services import alerts as alert_svc
@@ -105,41 +106,13 @@ def new_order():
             return redirect(url_for('lab.new_order'))
         patient = db.session.get(Patient, patient_id)
         require_patient_access(patient)
-        priority = request.form.get('priority', 'Normal')
-        specimen_type = (request.form.get('specimen_type') or 'Blood').strip() or 'Blood'
-        notes = request.form.get('notes')
-        order = LabOrder(
-            patient_id=patient_id,
-            doctor_id=current_user.doctor_profile.id if current_user.doctor_profile else None,
-            test_id=test_id,
-            priority=priority,
-            specimen_type=specimen_type,
-            notes=notes,
-        )
-        db.session.add(order)
-        db.session.flush()
-        order.accession_number = f'LAB-{order.id:05d}'
-        order.barcode = f'{order.id:08d}'
+        from app.services.clinical_orders import create_lab_order
+        order = create_lab_order(
+            patient, current_user.doctor_profile, test_id,
+            priority=request.form.get('priority', 'Normal'),
+            specimen_type=(request.form.get('specimen_type') or 'Blood').strip() or 'Blood',
+            notes=request.form.get('notes'))
         log_activity('CREATE_LAB_ORDER', 'lab_order', order.id, f'patient={patient_id} test={test_id}')
-        db.session.commit()
-        # Fan the new order out to lab staff via the task queue + notifications.
-        task_svc.create_task(
-            title=f'Process lab order #{order.id}: {order.test.test_name if order.test else ""}',
-            description=f'Collect and process {specimen_type} sample; enter and verify the result.',
-            task_type='LAB', department='Laboratory',
-            patient_id=patient_id, assigned_role='LabTechnician',
-            priority=priority, related_resource_type='lab_order',
-            related_resource_id=order.id)
-        db.session.commit()
-        notify_role('LabTechnician',
-                    f'New lab order #{order.id}',
-                    f'A new lab order ({order.test.test_name if order.test else ""}) has been created for patient #{order.patient_id}.',
-                    entity_type='lab_order', entity_id=order.id)
-        record_event(patient_id, 'LAB',
-                     f'Lab order: {order.test.test_name if order.test else "Test"}',
-                     f'{specimen_type} sample · priority {priority}',
-                     source_type='lab_order', source_id=order.id,
-                     department='Laboratory')
         db.session.commit()
         flash('Lab order created; sample workflow started.', 'success')
         return redirect(url_for('lab.orders'))
@@ -224,6 +197,9 @@ def reject_sample(order_id):
     order.specimen_status = 'Rejected'
     order.rejection_reason = reason
     log_activity('REJECT_LAB_ORDER', 'lab_order', order.id, reason)
+    record_event(order.patient_id, 'LAB', 'Specimen rejected',
+                 f'{order.test.test_name if order.test else "Test"} · {reason}',
+                 source_type='lab_order', source_id=order.id, department='Laboratory')
     db.session.commit()
     # Notify the ordering doctor so they can re-order / address the problem.
     if order.doctor:
@@ -246,9 +222,19 @@ def reorder(order_id):
         flash(str(e), 'danger'); db.session.rollback()
         return redirect(url_for('lab.orders'))
     order.status = 'Reordered'
-    log_activity('REORDER_LAB', 'lab_order', order.id)
+    task_svc.cancel_for_resource('lab_order', order.id, 'Specimen rejected; re-test ordered')
+    # A re-test is a brand-new accessioned order that carries the lineage.
+    from app.services.clinical_orders import create_lab_order
+    new_order = create_lab_order(order.patient, order.doctor, order.test_id,
+                                 priority=order.priority,
+                                 specimen_type=order.specimen_type,
+                                 notes=f'Re-test of order #{order.id}'
+                                       + (f' ({order.rejection_reason})' if order.rejection_reason else ''),
+                                 origin=f'Reorder of #{order.id}')
+    new_order.reordered_from = order.id
+    log_activity('REORDER_LAB', 'lab_order', order.id, f'new_order={new_order.id}')
     db.session.commit()
-    flash('Lab order reordered.', 'success')
+    flash(f'Re-test ordered as lab order #{new_order.id} ({new_order.accession_number}).', 'success')
     return redirect(url_for('lab.orders'))
 
 
@@ -361,9 +347,10 @@ def enter_result(order_id):
         # If a critical panic value was flagged (manually or by thresholds),
         # escalate immediately.
         if result and result.is_critical:
-            notify_role('Doctor', f'CRITICAL lab result — order #{order.id}',
-                        f'Critical value: {result_value} ({order.test.test_name if order.test else ""}). Review immediately.',
-                        notification_type='critical', entity_type='lab_order', entity_id=order.id)
+            notify_ordering_clinicians(
+                order, f'CRITICAL lab result — order #{order.id}',
+                f'Critical value: {result_value} ({order.test.test_name if order.test else ""}). Review immediately.',
+                notification_type='critical', entity_type='lab_order', entity_id=order.id)
             alert_svc.ensure_open_alert(
                 order.patient_id, 'CRITICAL_LAB', severity='CRITICAL',
                 title=f'Critical lab value: {order.test.test_name if order.test else "Lab"}',
@@ -410,10 +397,10 @@ def verify_result(order_id):
                  source_type='lab_order', source_id=order.id,
                  department='Laboratory')
     if result.is_critical:
-        notify_role('Doctor',
-                    f'CRITICAL lab result verified — order #{order.id}',
-                    f'Critical panic value: {result.result_value} ({order.test.test_name if order.test else ""}). Review immediately.',
-                    notification_type='critical', entity_type='lab_order', entity_id=order.id)
+        notify_ordering_clinicians(
+            order, f'CRITICAL lab result verified — order #{order.id}',
+            f'Critical panic value: {result.result_value} ({order.test.test_name if order.test else ""}). Review immediately.',
+            notification_type='critical', entity_type='lab_order', entity_id=order.id)
         alert_svc.ensure_open_alert(
             order.patient_id, 'CRITICAL_LAB', severity='CRITICAL',
             title=f'Critical lab value: {order.test.test_name if order.test else "Lab"}',
@@ -431,11 +418,12 @@ def verify_result(order_id):
     notify_patient(order.patient, 'Lab result ready',
                    f'Your lab result "{order.test.test_name if order.test else ''}" has been verified and is available.',
                    entity_type='lab_order', entity_id=order.id)
-    # Notify the ordering doctor that their result is ready.
-    if order.doctor:
-        notify_doctor(order.doctor, f'Lab result ready — order #{order.id}',
-                      f'The result for "{order.test.test_name if order.test else ''}" has been verified.',
-                      entity_type='lab_order', entity_id=order.id)
+    # Notify the ordering doctor (and care team) that their result is ready.
+    notify_ordering_clinicians(order, f'Lab result ready — order #{order.id}',
+                               f'The result for "{order.test.test_name if order.test else ''}" has been verified.',
+                               entity_type='lab_order', entity_id=order.id)
+    # The laboratory work item for this order is done.
+    task_svc.complete_for_resource('lab_order', order.id, 'Result verified')
     db.session.commit()
     flash('Lab result verified and locked.', 'success')
     return redirect(url_for('lab.enter_result', order_id=order.id))
@@ -453,6 +441,10 @@ def cancel_order(order_id):
         return redirect(url_for('lab.orders'))
     order.status = 'Cancelled'
     log_activity('CANCEL_LAB_ORDER', 'lab_order', order.id)
+    task_svc.cancel_for_resource('lab_order', order.id, 'Lab order cancelled')
+    record_event(order.patient_id, 'LAB', 'Lab order cancelled',
+                 order.test.test_name if order.test else 'Test',
+                 source_type='lab_order', source_id=order.id, department='Laboratory')
     if order.doctor:
         notify_doctor(order.doctor, f'Lab order #{order.id} cancelled',
                       f'The lab order "{order.test.test_name if order.test else ''}" was cancelled.',
@@ -504,6 +496,11 @@ def finalize_result(result_id):
     if order and order.status == 'Verified':
         order.status = 'Finalized'
     log_activity('FINALIZE_LAB_RESULT', 'lab_result', result.id)
+    if order:
+        record_event(order.patient_id, 'LAB', 'Lab result finalized',
+                     f'{order.test.test_name if order.test else "Test"} · {result.result_value} {result.result_unit or ""}',
+                     source_type='lab_order', source_id=order.id, department='Laboratory')
+        task_svc.complete_for_resource('lab_order', order.id, 'Result finalized')
     db.session.commit()
     flash('Lab result finalized.', 'success')
     return redirect(url_for('lab.orders'))

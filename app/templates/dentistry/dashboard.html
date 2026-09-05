@@ -65,14 +65,60 @@
     </div>
 
     <div class="col-lg-4">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-share-nodes" style="color:var(--ihis-info)"></i> {{ 'إحالات واردة' if g.lang == 'ar' else 'Incoming Referrals' }}</div>
+                <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
+            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for r in pending_referrals %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <a class="link-ihs" style="font-size:0.8125rem;font-weight:500" href="{{ url_for('dentistry.record', patient_id=r.patient_id) }}">{{ r.patient.user.full_name if r.patient and r.patient.user else 'Patient' }}</a>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ r.reason }}</div>
+                    </div>
+                    <span class="status-badge {{ 's-cancelled' if r.urgency == 'Emergency' else 's-pending' }}">{{ r.urgency }}</span>
+                </div>
+                {% else %}
+                <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا إحالات معلقة' if g.lang == 'ar' else 'No pending referrals' }}</div>
+                {% endfor %}
+            </div></div>
+        </div>
         <div class="card-premium">
             <div class="card-header">
-                <div class="card-title"><i class="fas fa-info-circle" style="color:var(--ihis-info)"></i> {{ 'معلومات' if g.lang == 'ar' else 'About' }}</div>
+                <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ 'مرضاي' if g.lang == 'ar' else 'My Patients' }}</div>
+                <a href="{{ url_for('dentistry.patients') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
             </div>
-            <div class="card-body">
-                <p style="font-size:0.8125rem;color:var(--ihis-text-secondary)">{{ 'استخدم صفحة المرضى لفتح الرسم السني وإدارة السجلات وتسجيل الإجراءات' if g.lang == 'ar' else 'Use the Patients page to open dental charts, manage records, record procedures, and upload imaging.' }}</p>
-            </div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for p in recent_patients %}
+                <div class="list-item">
+                    <span style="flex:1;font-size:0.8125rem">{{ p.user.full_name }}</span>
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('dentistry.chart', patient_id=p.id) }}"><i class="fas fa-tooth"></i></a>
+                </div>
+                {% else %}
+                <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا مرضى بعد' if g.lang == 'ar' else 'No patients yet' }}</div>
+                {% endfor %}
+            </div></div>
         </div>
     </div>
+</div>
+<div class="card-premium mt-4">
+    <div class="card-header"><div class="card-title"><i class="fas fa-calendar-check" style="color:var(--ihis-success)"></i> {{ 'إجراءات قادمة' if g.lang == 'ar' else 'Planned & Scheduled Procedures' }}</div></div>
+    <div class="card-body flush"><div class="table-wrapper"><table class="table-ihs">
+        <thead><tr><th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th><th>{{ 'الإجراء' if g.lang == 'ar' else 'Procedure' }}</th><th>{{ 'السن' if g.lang == 'ar' else 'Tooth' }}</th><th>{{ 'الموعد' if g.lang == 'ar' else 'Scheduled' }}</th><th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th><th></th></tr></thead>
+        <tbody>
+        {% for pr in upcoming_procedures %}
+        <tr>
+            <td class="cell-primary">{{ pr.patient.user.full_name if pr.patient and pr.patient.user else '-' }}</td>
+            <td>{{ pr.procedure_name }}</td>
+            <td><span class="tag-ihs">{{ pr.tooth_number or '-' }}</span></td>
+            <td class="cell-mono">{{ pr.scheduled_at.strftime('%d %b %Y %H:%M') if pr.scheduled_at else '-' }}</td>
+            <td><span class="status-badge s-{{ pr.status|lower }}">{{ pr.status }}</span></td>
+            <td><a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('dentistry.plan_procedures', plan_id=pr.treatment_plan_id) if pr.treatment_plan_id else url_for('dentistry.procedures', patient_id=pr.patient_id) }}"><i class="fas fa-arrow-right"></i></a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state" style="padding:1.5rem"><div class="empty-title">{{ 'لا إجراءات مجدولة' if g.lang == 'ar' else 'No planned procedures' }}</div></div></td></tr>
+        {% endfor %}
+        </tbody></table></div></div>
 </div>
 {% endblock %}

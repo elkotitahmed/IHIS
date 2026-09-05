@@ -5,7 +5,7 @@ from app import db, limiter
 from app.models import User, Role, Patient, LoginAttempt
 from app.forms import LoginForm, RegistrationForm
 from app.routes.decorators import log_activity
-from app.utils import utcnow
+from app.utils import utcnow, assign_mrn
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -35,7 +35,9 @@ ROLE_BY_USER_TYPE = {
     'admin': 'Admin',
     'lab_technician': 'LabTechnician',
     'radiologist': 'Radiologist',
+    'radiology_technician': 'RadiologyTechnician',
     'pharmacist': 'Pharmacist',
+    'cashier': 'Cashier',
     'receptionist': 'Receptionist',
     'dentist': 'Dentist',
     'physiotherapist': 'Physiotherapist',
@@ -149,12 +151,15 @@ def register():
         dept_id = form.department_id.data
         if dept_id and not Department.query.get(int(dept_id)):
             dept_id = None
-        db.session.add(Patient(
+        patient = Patient(
             user_id=user.id,
             phone=form.phone.data or None,
             gender=form.gender.data or None,
             department_id=int(dept_id) if dept_id else None,
-        ))
+        )
+        db.session.add(patient)
+        db.session.flush()
+        assign_mrn(patient)
         db.session.commit()
 
         log_activity('REGISTER', 'user', user.id)

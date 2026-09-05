@@ -82,6 +82,15 @@
                         <textarea class="form-control" id="recommendation" name="recommendation" rows="4" placeholder="{{ 'المتابعة المقترحة أو الخطوات التالية...' if g.lang == 'ar' else 'Suggested follow-up or next steps...' }}">{{ report.recommendation if report else '' }}</textarea>
                     </div>
 
+                    <div class="form-group" style="border:1px solid var(--ihis-danger);border-radius:var(--radius-md);padding:var(--sp-3);background:var(--ihis-danger-bg)">
+                        <label class="form-check" style="margin:0;display:flex;gap:0.5rem;align-items:flex-start">
+                            <input class="form-check-input" type="checkbox" name="critical_finding" value="1" style="margin-top:3px">
+                            <span>
+                                <strong style="color:var(--ihis-danger)">{{ 'نتيجة حرجة — إبلاغ الطبيب فوراً' if g.lang == 'ar' else 'Critical finding — notify the ordering clinician immediately' }}</strong>
+                                <input type="text" name="critical_finding_text" class="form-control form-control-sm mt-1" placeholder="{{ 'مثال: استرواح صدري كبير' if g.lang == 'ar' else 'e.g. Large pneumothorax, acute intracranial haemorrhage' }}">
+                            </span>
+                        </label>
+                    </div>
                     <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-lg w-100"><i class="fas fa-save"></i>{% if report and report.status == 'Signed' %}{{ 'حفظ التعديل' if g.lang == 'ar' else 'Save Amendment' }}{% else %}{{ 'حفظ التقرير' if g.lang == 'ar' else 'Save Report' }}{% endif %}</button>
                 </form>
 

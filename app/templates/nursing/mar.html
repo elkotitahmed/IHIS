@@ -156,6 +156,7 @@
                             {% elif a.status == 'Held' %}<span class="status-badge s-hold">Held</span>
                             {% elif a.status == 'Refused' %}<span class="status-badge s-cancelled">Refused</span>
                             {% elif a.status == 'Missed' %}<span class="status-badge s-missed">Missed</span>
+                            {% elif a.status == 'Discontinued' %}<span class="status-badge s-cancelled">Discontinued</span>
                             {% else %}<span class="status-badge s-in-progress">{{ a.status }}</span>{% endif %}
                         </td>
                         <td class="cell-secondary">{{ a.reason or '-' }}</td>

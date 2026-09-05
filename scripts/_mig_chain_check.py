@@ -41,8 +41,16 @@ def main():
         with _db.engine.connect() as conn:
             ver = conn.execute(text('SELECT version_num FROM alembic_version')).scalar()
         print('alembic_version:', ver)
-        assert ver == '59f96da6bbf3', f'unexpected head: {ver}'
-        print('HEAD OK: 59f96da6bbf3')
+        # Compare against the script-derived head so this check never goes
+        # stale when a new migration is added.
+        from alembic.config import Config as AlembicConfig
+        from alembic.script import ScriptDirectory
+        cfg = AlembicConfig(os.path.join(REPO, 'migrations', 'alembic.ini'))
+        cfg.set_main_option('script_location', os.path.join(REPO, 'migrations'))
+        heads = ScriptDirectory.from_config(cfg).get_heads()
+        assert len(heads) == 1, f'multiple migration heads: {heads}'
+        assert ver == heads[0], f'unexpected head: {ver} (script head {heads[0]})'
+        print('HEAD OK:', ver)
     print('MIGRATION CHAIN VERIFIED OK')
     return 0
 

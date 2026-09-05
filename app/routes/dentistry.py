@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, current_app, abort
 from flask_login import login_required, current_user
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 from app import db
 from app.models import (
@@ -8,7 +8,8 @@ from app.models import (
     DentalImage, OrthodonticCase, Patient, Dentist, DentalTreatmentPlan,
 )
 from app.routes.decorators import roles_required, log_activity, save_upload
-from app.access import patient_access_required, require_patient_access
+from app.access import patient_access_required, require_patient_access, accessible_patient_ids
+from app.services.timeline import record_event
 from app.services.patient_safety import patient_safety_context
 from app.utils import utcnow
 
@@ -33,27 +34,59 @@ def _parse_date(value):
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
 def dashboard():
     today = date.today()
+    pids = accessible_patient_ids(current_user)
+    id_list = sorted(pids) if pids else [-1]
+    day_start = datetime.combine(today, datetime.min.time())
     today_appointments = Appointment.query.filter(
-        db.func.date(Appointment.scheduled_at) == today).count()
-    pending_treatment_plans = DentalChart.query.filter(
-        DentalChart.status.notin_(['Healthy', 'Missing'])).count()
-    active_ortho_cases = OrthodonticCase.query.filter_by(status='Active').count()
-    implant_cases = DentalChart.query.filter_by(status='Implant').count() + \
-        DentalProcedure.query.filter(DentalProcedure.procedure_name.ilike('%implant%')).count()
+        Appointment.patient_id.in_(id_list),
+        Appointment.scheduled_at >= day_start,
+        Appointment.scheduled_at < day_start + timedelta(days=1)).count()
+    pending_treatment_plans = DentalTreatmentPlan.query.filter(
+        DentalTreatmentPlan.patient_id.in_(id_list),
+        DentalTreatmentPlan.status.in_(('Planned', 'Scheduled', 'InProgress'))).count()
+    active_ortho_cases = OrthodonticCase.query.filter(
+        OrthodonticCase.patient_id.in_(id_list), OrthodonticCase.status == 'Active').count()
+    implant_cases = DentalChart.query.filter(
+        DentalChart.patient_id.in_(id_list), DentalChart.status == 'Implant').count() + \
+        DentalProcedure.query.filter(DentalProcedure.patient_id.in_(id_list),
+                                     DentalProcedure.procedure_name.ilike('%implant%')).count()
+    upcoming_procedures = (DentalProcedure.query
+                           .filter(DentalProcedure.patient_id.in_(id_list),
+                                   DentalProcedure.status.in_(('Planned', 'Scheduled', 'InProgress')))
+                           .order_by(DentalProcedure.scheduled_at.asc().nulls_last()).limit(10).all())
+    from app.models import Referral
+    from app.access import DENTAL_KEYWORDS
+    pending_referrals = (Referral.query
+                         .filter(db.or_(*[Referral.to_specialty.ilike(f'%{k}%') for k in DENTAL_KEYWORDS]),
+                                 Referral.status.in_(('Pending', 'SENT', 'ACCEPTED', 'IN_REVIEW')))
+                         .order_by(Referral.created_at.desc()).limit(10).all())
+    recent_patients = (Patient.query.filter(Patient.id.in_(id_list))
+                       .order_by(Patient.id.desc()).limit(8).all())
     return render_template('dentistry/dashboard.html', title='Dentistry Dashboard',
                            today_appointments=today_appointments,
                            pending_treatment_plans=pending_treatment_plans,
                            active_ortho_cases=active_ortho_cases,
-                           implant_cases=implant_cases)
+                           implant_cases=implant_cases,
+                           upcoming_procedures=upcoming_procedures,
+                           pending_referrals=pending_referrals,
+                           recent_patients=recent_patients)
 
 
 @dentistry_bp.route('/patients')
 @login_required
 @roles_required('Dentist', 'Admin', 'SuperAdmin')
 def patients():
-    all_patients = Patient.query.all()
+    search = request.args.get('q', '').strip()
+    pids = accessible_patient_ids(current_user)
+    from app.models import User
+    query = Patient.query.join(User, Patient.user_id == User.id).filter(
+        Patient.id.in_(sorted(pids) if pids else [-1]))
+    if search:
+        query = query.filter(db.or_(User.full_name.ilike(f'%{search}%'),
+                                    Patient.mrn.ilike(f'%{search}%')))
+    all_patients = query.order_by(User.full_name).limit(200).all()
     return render_template('dentistry/patients.html', title='Dental Patients',
-                           patients=all_patients)
+                           patients=all_patients, search=search)
 
 
 @dentistry_bp.route('/patients/<int:patient_id>/chart')
@@ -63,9 +96,13 @@ def patients():
 def chart(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     charts = DentalChart.query.filter_by(patient_id=patient.id).order_by(
-        DentalChart.tooth_number.asc()).all()
+        DentalChart.tooth_number.asc(), DentalChart.created_at.desc()).all()
+    # Current state per tooth = the most recent charting; history stays below.
+    current = {}
+    for c in charts:
+        current.setdefault(c.tooth_number, c)
     return render_template('dentistry/chart.html', title='Dental Chart',
-                           patient=patient, charts=charts,
+                           patient=patient, charts=charts, current=current,
                            **patient_safety_context(patient.id),
                            today=utcnow().date())
 
@@ -85,10 +122,14 @@ def add_chart(patient_id):
         tooth_number=tooth,
         numbering_system=request.form.get('numbering_system', 'FDI'),
         status=request.form.get('status', 'Healthy'),
+        surface=request.form.get('surface') or None,
         notes=request.form.get('notes'),
     )
     db.session.add(entry)
     db.session.flush()
+    record_event(patient.id, 'DENTISTRY', f'Tooth {tooth}: {entry.status}',
+                 (entry.surface + ' · ' if entry.surface else '') + (entry.notes or ''),
+                 source_type='dental_chart', source_id=entry.id, department='Dentistry')
     log_activity('ADD_DENTAL_CHART', 'dental_chart', entry.id,
                  f"patient={patient.id} tooth={tooth}")
     db.session.commit()
@@ -105,19 +146,19 @@ def record(patient_id):
     dental_record = DentalRecord.query.filter_by(patient_id=patient.id).first()
 
     if request.method == 'POST':
-        if dental_record:
-            dental_record.dental_history = request.form.get('dental_history')
-            dental_record.dental_allergies = request.form.get('dental_allergies')
-            dental_record.previous_procedures = request.form.get('previous_procedures')
-        else:
-            dental_record = DentalRecord(
-                patient_id=patient.id,
-                dental_history=request.form.get('dental_history'),
-                dental_allergies=request.form.get('dental_allergies'),
-                previous_procedures=request.form.get('previous_procedures'),
-            )
+        fields = ('complaint', 'examination_findings', 'diagnosis', 'periodontal_notes',
+                  'treatment_plan', 'dental_history', 'dental_allergies', 'previous_procedures')
+        if dental_record is None:
+            dental_record = DentalRecord(patient_id=patient.id)
             db.session.add(dental_record)
+        for f in fields:
+            if f in request.form:
+                setattr(dental_record, f, request.form.get(f) or None)
         db.session.flush()
+        record_event(patient.id, 'DENTISTRY', 'Dental record updated',
+                     (dental_record.diagnosis or dental_record.complaint or '')[:140],
+                     source_type='dental_record', source_id=dental_record.id,
+                     department='Dentistry')
         log_activity('UPDATE_DENTAL_RECORD', 'dental_record', dental_record.id,
                      f"patient={patient.id}")
         db.session.commit()
@@ -144,16 +185,31 @@ def procedures(patient_id):
             cost = float(cost)
         except ValueError:
             cost = 0.0
+        if not (request.form.get('procedure_name') or '').strip():
+            flash('Procedure name is required.', 'warning')
+            return redirect(url_for('dentistry.procedures', patient_id=patient.id))
         procedure = DentalProcedure(
             patient_id=patient.id,
             dentist_id=dentist.id if dentist else None,
             procedure_name=request.form.get('procedure_name'),
             tooth_number=request.form.get('tooth_number'),
+            status=request.form.get('status') if request.form.get('status') in
+                   ('Planned', 'Scheduled', 'InProgress', 'Completed') else 'Planned',
             cost=cost,
+            materials=request.form.get('materials'),
             notes=request.form.get('notes'),
         )
+        if procedure.status == 'Completed':
+            procedure.completed_at = datetime.now()
         db.session.add(procedure)
         db.session.flush()
+        record_event(patient.id, 'DENTISTRY', f'Dental procedure: {procedure.procedure_name}',
+                     (f'Tooth {procedure.tooth_number} · ' if procedure.tooth_number else '')
+                     + procedure.status, source_type='dental_procedure',
+                     source_id=procedure.id, department='Dentistry')
+        if procedure.status == 'Completed':
+            from app.services.billing import ensure_bill_for_dental
+            ensure_bill_for_dental(procedure.id)
         log_activity('ADD_DENTAL_PROCEDURE', 'dental_procedure', procedure.id,
                      f"patient={patient.id} procedure={procedure.procedure_name}")
         db.session.commit()
@@ -266,9 +322,13 @@ def ortho():
         flash('Orthodontic case created.', 'success')
         return redirect(url_for('dentistry.ortho'))
 
-    cases = OrthodonticCase.query.order_by(
-        OrthodonticCase.start_date.desc()).all()
-    patients = Patient.query.all()
+    pids = accessible_patient_ids(current_user)
+    from app.models import User
+    cases = (OrthodonticCase.query.filter(OrthodonticCase.patient_id.in_(sorted(pids) if pids else [-1]))
+             .order_by(OrthodonticCase.start_date.desc()).all())
+    patients = (Patient.query.join(User, Patient.user_id == User.id)
+                .filter(Patient.id.in_(sorted(pids) if pids else [-1]))
+                .order_by(User.full_name).all())
     return render_template('dentistry/ortho.html', title='Orthodontic Cases',
                            cases=cases, patients=patients)
 
@@ -294,6 +354,9 @@ def treatment_plans(patient_id):
         )
         db.session.add(plan)
         db.session.flush()
+        record_event(patient.id, 'DENTISTRY', f'Dental treatment plan: {plan.title or "Plan"}',
+                     (plan.diagnosis or '')[:140], source_type='dental_treatment_plan',
+                     source_id=plan.id, department='Dentistry')
         log_activity('CREATE_TREATMENT_PLAN', 'dental_treatment_plan', plan.id,
                      f'patient={patient.id}')
         db.session.commit()
@@ -364,6 +427,11 @@ def procedure_status(procedure_id):
                 procedure.scheduled_at or datetime.now()
         elif new_status == 'Completed':
             procedure.completed_at = datetime.now()
+            record_event(procedure.patient_id, 'DENTISTRY',
+                         f'Procedure completed: {procedure.procedure_name}',
+                         f'Tooth {procedure.tooth_number}' if procedure.tooth_number else None,
+                         source_type='dental_procedure', source_id=procedure.id,
+                         department='Dentistry')
             log_activity('COMPLETE_DENTAL_PROCEDURE', 'dental_procedure', procedure.id,
                          f'patient={procedure.patient_id}')
             from app.services.billing import ensure_bill_for_dental

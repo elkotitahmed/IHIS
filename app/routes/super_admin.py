@@ -38,6 +38,7 @@ ROLE_LABELS = {
     'Nurse': 'Nurse',
     'LabTechnician': 'Lab Technician',
     'Radiologist': 'Radiologist',
+    'RadiologyTechnician': 'Radiology Technician',
     'Pharmacist': 'Pharmacist',
     'Receptionist': 'Receptionist',
     'Dentist': 'Dentist',
@@ -104,22 +105,25 @@ def dashboard():
 
     # --- Lab Operations ---
     pending_lab = LabOrder.query.filter(
-        LabOrder.status.in_(['Pending', 'ORDERED', 'ACCEPTED', 'COLLECTED', 'PROCESSING'])
+        LabOrder.status.in_(['Pending', 'Accepted', 'Collected', 'ReceivedAtLab',
+                             'Processing', 'Reordered'])
     ).count()
-    completed_lab_today = LabOrder.query.filter(
-        LabOrder.status.in_(['RESULTED', 'VERIFIED', 'FINALIZED']),
-        LabOrder.order_date >= today_start,
-    ).count()
+    completed_lab_today = (LabOrder.query
+                           .join(LabResult, LabResult.order_id == LabOrder.id)
+                           .filter(LabResult.status.in_(['Verified', 'Locked', 'Finalized']),
+                                   LabResult.result_date >= today_start)
+                           .count())
     lab_volume_total = LabOrder.query.count()
 
     # --- Radiology Operations ---
     pending_radiology = RadiologyOrder.query.filter(
-        RadiologyOrder.status.in_(['Pending', 'ORDERED', 'SCHEDULED', 'ARRIVED', 'IN_PROGRESS'])
+        RadiologyOrder.status.in_(['Pending', 'Scheduled', 'Arrived', 'InProgress', 'Performed'])
     ).count()
-    completed_radiology_today = RadiologyOrder.query.filter(
-        RadiologyOrder.status.in_(['PERFORMED', 'REPORTED', 'SIGNED', 'FINALIZED']),
-        RadiologyOrder.order_date >= today_start,
-    ).count()
+    completed_radiology_today = (RadiologyOrder.query
+                                 .join(RadiologyReport, RadiologyReport.order_id == RadiologyOrder.id)
+                                 .filter(RadiologyReport.status.in_(['Signed', 'Locked', 'Finalized']),
+                                         RadiologyReport.report_date >= today_start)
+                                 .count())
     radiology_volume_total = RadiologyOrder.query.count()
 
     # --- Prescription / Pharmacy ---
@@ -128,15 +132,18 @@ def dashboard():
     ).count()
     dispensed_today = DispensingRecord.query.filter(
         DispensingRecord.dispensed_at >= today_start,
-    ).count() if hasattr(DispensingRecord, 'dispensed_at') else 0
+    ).count()
     pharmacy_items = PharmacyInventory.query.filter(
-        PharmacyInventory.current_stock > 0
-    ).count() if hasattr(PharmacyInventory, 'current_stock') else 0
+        PharmacyInventory.quantity > 0
+    ).count()
+    low_stock_items = PharmacyInventory.query.filter(
+        PharmacyInventory.quantity <= PharmacyInventory.reorder_level
+    ).count()
 
     # --- Nursing ---
     vitals_today = VitalSign.query.filter(
         VitalSign.recorded_at >= today_start,
-    ).count() if hasattr(VitalSign, 'recorded_at') else 0
+    ).count()
 
     # --- Billing ---
     today_bills = Bill.query.filter(
@@ -171,7 +178,7 @@ def dashboard():
     overdue_tasks = Task.query.filter(
         Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS']),
         Task.due_at < now,
-    ).count() if hasattr(Task, 'due_at') else 0
+    ).count()
 
     # --- Notifications ---
     unread_notifications_total = Notification.query.filter_by(is_read=False).count()
@@ -179,31 +186,32 @@ def dashboard():
     # --- Alerts ---
     open_alerts = ClinicalAlert.query.filter(
         ClinicalAlert.status == 'OPEN'
-    ).count() if hasattr(ClinicalAlert, 'status') else 0
+    ).count()
 
     # --- Admissions & Discharges ---
     active_admissions = Admission.query.filter(
-        Admission.status == 'Active'
-    ).count() if hasattr(Admission, 'status') else 0
+        Admission.status == 'Admitted'
+    ).count()
     admissions_today = Admission.query.filter(
-        Admission.admission_date >= today_start
-    ).count() if hasattr(Admission, 'admission_date') else 0
+        Admission.admitted_at >= today_start
+    ).count()
     discharges_today = Admission.query.filter(
-        Admission.discharge_date >= today_start
-    ).count() if hasattr(Admission, 'discharge_date') else 0
+        Admission.discharged_at >= today_start
+    ).count()
 
     # --- Referrals ---
     pending_referrals = Referral.query.filter(
-        Referral.status.in_(['Pending', 'Active'])
-    ).count() if hasattr(Referral, 'status') else 0
+        Referral.status.in_(['Pending', 'SENT', 'ACCEPTED', 'IN_REVIEW'])
+    ).count()
 
     # --- Dental ---
-    dental_records = DentalRecord.query.count() if hasattr(DentalRecord, 'id') else 0
+    dental_records = DentalRecord.query.count()
 
     # --- Physiotherapy ---
     therapy_sessions = TherapySession.query.filter(
-        TherapySession.session_date >= today_start
-    ).count() if hasattr(TherapySession, 'session_date') else 0
+        TherapySession.scheduled_at >= today_start,
+        TherapySession.scheduled_at < today_start + timedelta(days=1),
+    ).count()
 
     # --- Security ---
     security_alerts = AuditLog.query.filter(
@@ -263,6 +271,7 @@ def dashboard():
         pending_prescriptions=pending_prescriptions,
         dispensed_today=dispensed_today,
         pharmacy_items=pharmacy_items,
+        low_stock_items=low_stock_items,
         # Nursing
         vitals_today=vitals_today,
         # Billing
@@ -714,9 +723,16 @@ def permissions():
 @login_required
 @roles_required('SuperAdmin')
 def audit_logs():
-    logs = db.session.query(AuditLog).outerjoin(User, AuditLog.user_id == User.id).order_by(
-        AuditLog.created_at.desc()).all()
-    return render_template('super_admin/audit_logs.html', title='Audit Logs', logs=logs)
+    page = max(1, request.args.get('page', 1, type=int))
+    action = (request.args.get('action') or '').strip()
+    query = AuditLog.query
+    if action:
+        query = query.filter(AuditLog.action.ilike(f'%{action}%'))
+    pagination = query.order_by(AuditLog.created_at.desc()).paginate(
+        page=page, per_page=100, error_out=False)
+    return render_template('super_admin/audit_logs.html', title='Audit Logs',
+                           logs=pagination.items, pagination=pagination,
+                           action_filter=action)
 
 
 @super_admin_bp.route('/settings')
@@ -781,3 +797,353 @@ def preventive_sweep():
           f'{result.get("vaccine_due")} vaccine due, '
           f'{result.get("upcoming_followup_reminder")} upcoming follow-up).', 'success')
     return redirect(url_for('super_admin.dashboard'))
+
+
+# ---------------------------------------------------------------------------
+# SYSTEM HEALTH — live checks, never fabricated
+# ---------------------------------------------------------------------------
+@super_admin_bp.route('/system-health')
+@login_required
+@roles_required('SuperAdmin')
+def system_health():
+    import platform
+    import sys
+    from sqlalchemy import text
+    from datetime import datetime as _dt
+
+    checks = []
+
+    def add(name, ok, detail='', warn=False):
+        checks.append({'name': name, 'ok': ok, 'warn': warn and not ok, 'detail': detail})
+
+    # Database
+    db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    backend = db_uri.split(':', 1)[0] if db_uri else 'unknown'
+    try:
+        db.session.execute(text('SELECT 1'))
+        add('Database connection', True, f'{backend} reachable')
+    except Exception as exc:  # noqa: BLE001
+        add('Database connection', False, f'{type(exc).__name__}')
+
+    # Migration head vs. applied version
+    try:
+        from alembic.config import Config as AlembicConfig
+        from alembic.script import ScriptDirectory
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        cfg = AlembicConfig(os.path.join(root, 'migrations', 'alembic.ini'))
+        cfg.set_main_option('script_location', os.path.join(root, 'migrations'))
+        heads = ScriptDirectory.from_config(cfg).get_heads()
+        applied = None
+        try:
+            applied = db.session.execute(text('SELECT version_num FROM alembic_version')).scalar()
+        except Exception:  # noqa: BLE001
+            db.session.rollback()
+        if applied is None:
+            add('Schema migrations', False,
+                f'alembic_version table missing (script head {heads[0] if heads else "?"}); run flask db upgrade',
+                warn=True)
+        else:
+            add('Schema migrations', len(heads) == 1 and applied == heads[0],
+                f'applied {applied} · script head {heads[0] if heads else "?"}')
+    except Exception as exc:  # noqa: BLE001
+        add('Schema migrations', False, f'{type(exc).__name__}: {exc}', warn=True)
+
+    # Storage
+    upload = current_app.config.get('UPLOAD_FOLDER') or ''
+    add('Private upload storage', bool(upload) and os.path.isdir(upload) and os.access(upload, os.W_OK),
+        upload)
+    static_private = os.path.join(current_app.static_folder or '', 'uploads')
+    add('No PHI under public static', not os.path.isdir(static_private) or not os.listdir(static_private),
+        'app/static/uploads is empty or absent', warn=True)
+
+    # Security configuration
+    prod = current_app.config.get('ENV_NAME') or ('production' if not current_app.debug else 'development')
+    secret = current_app.config.get('SECRET_KEY', '')
+    add('Strong SECRET_KEY', len(secret) >= 32 and 'change-me' not in secret,
+        f'{len(secret)} characters', warn=current_app.debug)
+    add('Session cookies secure', bool(current_app.config.get('SESSION_COOKIE_SECURE')),
+        'SESSION_COOKIE_SECURE', warn=current_app.debug)
+    add('CSRF protection', bool(current_app.config.get('WTF_CSRF_ENABLED', True)), 'Flask-WTF')
+    add('Rate limiting', bool(current_app.config.get('RATELIMIT_ENABLED')),
+        current_app.config.get('RATELIMIT_STORAGE_URI', 'memory://'),
+        warn=True)
+    add('Debug mode off', not current_app.debug, 'development profile' if current_app.debug else 'production profile',
+        warn=True)
+
+    # AI providers
+    from app.services.ai import gemini_available
+    add('Gemini API key configured', gemini_available(),
+        'LLM features degrade gracefully when absent', warn=True)
+    try:
+        from app.services.ai.fracture_detection import fracture_model_available
+        from app.services.ai.tooth_segmentation import tooth_model_available
+        from app.services.ai.skin_lesion_classification import skin_model_available
+        add('Fracture detection model', fracture_model_available(), 'YOLOv8 weights', warn=True)
+        add('Tooth segmentation model', tooth_model_available(), 'U-Net weights', warn=True)
+        add('Skin lesion model', skin_model_available(), 'ResNet/EfficientNet weights', warn=True)
+    except Exception as exc:  # noqa: BLE001
+        add('Image AI models', False, f'{type(exc).__name__}', warn=True)
+
+    # Backups
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    backup_dir = os.environ.get('BACKUP_DIR') or os.path.join(root, 'backup', 'backups')
+    latest = None
+    if os.path.isdir(backup_dir):
+        files = [f for f in os.listdir(backup_dir) if not f.endswith('.sha256')]
+        if files:
+            files.sort(key=lambda f: os.path.getmtime(os.path.join(backup_dir, f)), reverse=True)
+            latest = files[0]
+            latest_at = _dt.fromtimestamp(os.path.getmtime(os.path.join(backup_dir, latest)))
+            add('Latest backup', True, f'{latest} · {latest_at:%Y-%m-%d %H:%M}')
+    if latest is None:
+        add('Latest backup', False, f'no backup found in {backup_dir}', warn=True)
+
+    # Operational counters (real data)
+    now = utcnow()
+    seven = now - timedelta(days=7)
+    stats = {
+        'users': User.query.count(),
+        'patients': Patient.query.count(),
+        'failed_logins_7d': AuditLog.query.filter(AuditLog.action.in_(DASHBOARD_ACTIONS),
+                                                  AuditLog.created_at >= seven).count(),
+        'open_tasks': Task.query.filter(Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS'])).count(),
+        'overdue_tasks': Task.query.filter(Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS']),
+                                           Task.due_at < now).count(),
+        'open_alerts': ClinicalAlert.query.filter_by(status='OPEN').count(),
+        'critical_alerts': ClinicalAlert.query.filter_by(status='OPEN', severity='CRITICAL').count(),
+        'unread_notifications': Notification.query.filter_by(is_read=False).count(),
+        'audit_24h': AuditLog.query.filter(AuditLog.created_at >= now - timedelta(days=1)).count(),
+        'ai_calls_7d': AuditLog.query.filter(AuditLog.action.like('AI_%'),
+                                             AuditLog.created_at >= seven).count(),
+    }
+    env = {
+        'python': sys.version.split()[0],
+        'platform': platform.platform(),
+        'db_backend': backend,
+        'config': 'debug' if current_app.debug else 'production',
+    }
+    failing = [c for c in checks if not c['ok'] and not c['warn']]
+    warnings = [c for c in checks if not c['ok'] and c['warn']]
+    overall = 'Operational' if not failing else 'Degraded'
+    return render_template('super_admin/system_health.html', title='System Health',
+                           checks=checks, stats=stats, env=env, overall=overall,
+                           failing=len(failing), warnings=len(warnings), now=now)
+
+
+# ---------------------------------------------------------------------------
+# HOSPITAL DEMO CENTER — scenario walkthroughs backed by REAL records
+# ---------------------------------------------------------------------------
+@super_admin_bp.route('/demo')
+@login_required
+@roles_required('SuperAdmin')
+def demo():
+    """Each scenario resolves the most recent real record chain in the
+    database and links every step to the live page that shows it. Nothing
+    is fabricated: a step whose record does not exist yet says so."""
+    from app.models import (MedicalRecord, DispensingRecord, MedicationAdministration,
+                            TherapySession, DentalProcedure, PatientDocument)
+
+    def _pat(rec):
+        return rec.patient if rec is not None and getattr(rec, 'patient', None) else None
+
+    latest_completed_appt = Appointment.query.filter_by(status='Completed').order_by(
+        Appointment.scheduled_at.desc()).first()
+    latest_record = MedicalRecord.query.order_by(MedicalRecord.visit_date.desc()).first()
+    verified_lab = (LabOrder.query.join(LabResult, LabResult.order_id == LabOrder.id)
+                    .filter(LabResult.status.in_(['Verified', 'Locked', 'Finalized']))
+                    .order_by(LabOrder.order_date.desc()).first())
+    critical_lab = (LabOrder.query.join(LabResult, LabResult.order_id == LabOrder.id)
+                    .filter(LabResult.is_critical.is_(True)).order_by(LabOrder.order_date.desc()).first())
+    signed_rad = (RadiologyOrder.query.join(RadiologyReport, RadiologyReport.order_id == RadiologyOrder.id)
+                  .filter(RadiologyReport.status.in_(['Signed', 'Locked', 'Finalized']))
+                  .order_by(RadiologyOrder.order_date.desc()).first())
+    dispensed = DispensingRecord.query.order_by(DispensingRecord.dispensed_at.desc()).first()
+    rx_pending = Prescription.query.filter_by(status='Active').order_by(Prescription.prescribed_date.desc()).first()
+    mar = MedicationAdministration.query.order_by(MedicationAdministration.created_at.desc()).first()
+    therapy = TherapySession.query.order_by(TherapySession.scheduled_at.desc()).first()
+    dental = DentalProcedure.query.order_by(DentalProcedure.performed_at.desc()).first()
+    referral = Referral.query.order_by(Referral.created_at.desc()).first()
+    paid_bill = Bill.query.filter_by(status='Paid').order_by(Bill.issued_at.desc()).first()
+    open_bill = Bill.query.filter(Bill.status.in_(['Unpaid', 'PartiallyPaid'])).order_by(Bill.issued_at.desc()).first()
+    admission = Admission.query.order_by(Admission.admitted_at.desc()).first()
+    portal_patient = Patient.query.filter(Patient.user_id.isnot(None)).order_by(Patient.id.asc()).first()
+    document = PatientDocument.query.order_by(PatientDocument.uploaded_at.desc()).first()
+
+    def step(label, url, role, ok=True, note=None):
+        return {'label': label, 'url': url, 'role': role, 'ok': ok, 'note': note}
+
+    def p360(p):
+        return url_for('clinical.patient_360', patient_id=p.id) if p else None
+
+    scenarios = []
+
+    p = _pat(latest_completed_appt) or _pat(latest_record)
+    scenarios.append({
+        'key': 'outpatient', 'icon': 'fa-user-md',
+        'title': 'Outpatient Visit', 'title_ar': 'زيارة عيادة خارجية',
+        'summary': 'Registration → appointment → check-in → consultation → encounter note → consultation bill.',
+        'patient': p,
+        'steps': [
+            step('Register / find patient', url_for('reception.register'), 'Receptionist'),
+            step('Book appointment', url_for('reception.book_appointment'), 'Receptionist'),
+            step('Check-in queue', url_for('reception.queue'), 'Receptionist'),
+            step('Doctor appointments & start consultation', url_for('doctor.appointments'), 'Doctor'),
+            step('Encounter note (medical record)', url_for('doctor.patient_detail', patient_id=p.id) if p else url_for('doctor.patients'),
+                 'Doctor', ok=bool(latest_record), note=None if latest_record else 'No encounter recorded yet'),
+            step('Consultation bill', url_for('billing.bills', status='Unpaid'), 'Cashier'),
+            step('Patient 360', p360(p) or url_for('clinical.workbench'), 'Any clinician', ok=bool(p)),
+        ]})
+
+    p = _pat(verified_lab) or _pat(critical_lab)
+    scenarios.append({
+        'key': 'lab', 'icon': 'fa-flask',
+        'title': 'Doctor → Laboratory', 'title_ar': 'الطبيب ← المختبر',
+        'summary': 'Order → accept → collect → receive → process → result → verify (critical escalation) → doctor inbox → PDF.',
+        'patient': p,
+        'steps': [
+            step('Order a test', url_for('doctor.lab_order', patient_id=p.id) if p else url_for('lab.new_order'), 'Doctor'),
+            step('Lab work queue', url_for('lab.orders'), 'Lab Technician'),
+            step('Result entry & verification', url_for('lab.enter_result', order_id=verified_lab.id) if verified_lab else url_for('lab.orders'),
+                 'Lab Technician', ok=bool(verified_lab), note=None if verified_lab else 'No verified result yet'),
+            step('Critical value escalation', url_for('lab.enter_result', order_id=critical_lab.id) if critical_lab else url_for('lab.orders', critical=1),
+                 'Lab Technician → Doctor', ok=bool(critical_lab), note=None if critical_lab else 'No critical result yet'),
+            step('Doctor results inbox', url_for('clinical.inbox'), 'Doctor'),
+            step('Lab report PDF', url_for('reports.lab_result', order_id=verified_lab.id) if verified_lab else url_for('reports.dashboard'),
+                 'Doctor / Patient', ok=bool(verified_lab)),
+        ]})
+
+    p = _pat(signed_rad)
+    scenarios.append({
+        'key': 'radiology', 'icon': 'fa-x-ray',
+        'title': 'Doctor → Radiology', 'title_ar': 'الطبيب ← الأشعة',
+        'summary': 'Order → safety screening → schedule → arrive → perform (technician) → report → sign (radiologist) → notify → PDF.',
+        'patient': p,
+        'steps': [
+            step('Order imaging', url_for('doctor.radiology_order', patient_id=p.id) if p else url_for('radiology.new_order'), 'Doctor'),
+            step('Study worklist (technician)', url_for('radiology.orders'), 'Radiology Technician'),
+            step('Safety screening', url_for('radiology.safety_screening', order_id=signed_rad.id) if signed_rad else url_for('radiology.orders'),
+                 'Technician / Nurse', ok=bool(signed_rad)),
+            step('Report & sign', url_for('radiology.enter_report', order_id=signed_rad.id) if signed_rad else url_for('radiology.orders'),
+                 'Radiologist', ok=bool(signed_rad), note=None if signed_rad else 'No signed report yet'),
+            step('Critical findings board', url_for('radiology.critical_findings'), 'Radiologist / Doctor'),
+            step('Radiology report PDF', url_for('reports.radiology_report', order_id=signed_rad.id) if signed_rad else url_for('reports.dashboard'),
+                 'Doctor / Patient', ok=bool(signed_rad)),
+        ]})
+
+    rx = dispensed.prescription if dispensed else rx_pending
+    p = _pat(rx)
+    scenarios.append({
+        'key': 'pharmacy', 'icon': 'fa-pills',
+        'title': 'Doctor → Pharmacy', 'title_ar': 'الطبيب ← الصيدلية',
+        'summary': 'Prescription → safety alerts → pharmacy queue → review / intervention → FEFO dispensing → stock ledger → bill.',
+        'patient': p,
+        'steps': [
+            step('Write prescription', url_for('doctor.prescriptions', patient_id=p.id) if p else url_for('doctor.patients'), 'Doctor'),
+            step('Pharmacy queue', url_for('pharmacy.prescriptions'), 'Pharmacist'),
+            step('Prescription review & dispense', url_for('pharmacy.prescription_detail', rx_id=rx.id) if rx else url_for('pharmacy.prescriptions'),
+                 'Pharmacist', ok=bool(rx), note=None if rx else 'No prescription yet'),
+            step('AI medication review', url_for('ai.medication_review', patient_id=p.id) if p else url_for('pharmacy.ai_workbench'), 'Pharmacist'),
+            step('Stock ledger', url_for('pharmacy.transactions'), 'Pharmacist'),
+            step('Interventions to prescriber', url_for('pharmacy.interventions'), 'Pharmacist ↔ Doctor'),
+        ]})
+
+    p = _pat(mar) or _pat(admission)
+    scenarios.append({
+        'key': 'nursing', 'icon': 'fa-user-nurse',
+        'title': 'Nursing Medication (MAR)', 'title_ar': 'إعطاء الأدوية (التمريض)',
+        'summary': 'Admission → vitals → nursing note → care plan → MAR schedule → Given / Held / Refused / Missed / Discontinued.',
+        'patient': p,
+        'steps': [
+            step('Nurse workspace', url_for('nursing.dashboard'), 'Nurse'),
+            step('Record vitals', url_for('nursing.vitals', patient_id=p.id) if p else url_for('nursing.patients'), 'Nurse', ok=bool(p)),
+            step('MAR for the patient', url_for('nursing.mar', patient_id=p.id) if p else url_for('nursing.medication_schedule'),
+                 'Nurse', ok=bool(mar), note=None if mar else 'No dose scheduled yet'),
+            step('Medication schedule board', url_for('nursing.medication_schedule'), 'Nurse'),
+            step('Admission detail', url_for('admissions.view', id=admission.id) if admission else url_for('admissions.dashboard'),
+                 'Nurse / Doctor', ok=bool(admission)),
+        ]})
+
+    p = _pat(therapy)
+    scenarios.append({
+        'key': 'physio', 'icon': 'fa-person-walking',
+        'title': 'Physiotherapy', 'title_ar': 'العلاج الطبيعي',
+        'summary': 'Referral → assessment → treatment plan → sessions (start / complete / no-show) → progress → session bill.',
+        'patient': p,
+        'steps': [
+            step('Rehab dashboard (incoming referrals)', url_for('physiotherapy.dashboard'), 'Physiotherapist'),
+            step('Assessment', url_for('physiotherapy.assessment', patient_id=p.id) if p else url_for('physiotherapy.patients'), 'Physiotherapist', ok=bool(p)),
+            step('Treatment plan & sessions', url_for('physiotherapy.session', plan_id=therapy.plan_id) if therapy and therapy.plan_id else url_for('physiotherapy.patients'),
+                 'Physiotherapist', ok=bool(therapy), note=None if therapy else 'No session yet'),
+            step('Progress tracking', url_for('physiotherapy.progress', patient_id=p.id) if p else url_for('physiotherapy.patients'), 'Physiotherapist', ok=bool(p)),
+            step('AI rehab insights', url_for('ai.rehab', patient_id=p.id) if p else url_for('physiotherapy.patients'), 'Physiotherapist', ok=bool(p)),
+        ]})
+
+    p = _pat(dental)
+    scenarios.append({
+        'key': 'dentistry', 'icon': 'fa-tooth',
+        'title': 'Dentistry', 'title_ar': 'طب الأسنان',
+        'summary': 'Intake record → odontogram (tooth-level history) → treatment plan → procedures → completion bill.',
+        'patient': p,
+        'steps': [
+            step('Dental dashboard', url_for('dentistry.dashboard'), 'Dentist'),
+            step('Dental intake record', url_for('dentistry.record', patient_id=p.id) if p else url_for('dentistry.patients'), 'Dentist', ok=bool(p)),
+            step('Odontogram', url_for('dentistry.chart', patient_id=p.id) if p else url_for('dentistry.patients'), 'Dentist', ok=bool(p)),
+            step('Treatment plans & procedures', url_for('dentistry.treatment_plans', patient_id=p.id) if p else url_for('dentistry.patients'),
+                 'Dentist', ok=bool(dental), note=None if dental else 'No procedure yet'),
+            step('AI tooth segmentation', url_for('ai.tooth_segmentation'), 'Dentist'),
+        ]})
+
+    p = _pat(referral)
+    scenarios.append({
+        'key': 'referral', 'icon': 'fa-share-nodes',
+        'title': 'Referral', 'title_ar': 'الإحالة',
+        'summary': 'Doctor refers → task + notification to the receiving service → accept / review / complete → referrer notified.',
+        'patient': p,
+        'steps': [
+            step('Referral worklist', url_for('care.referrals'), 'Doctor / Specialist'),
+            step('Care team', url_for('care.team', patient_id=p.id) if p else url_for('clinical.workbench'), 'Doctor', ok=bool(p)),
+            step('Task engine', url_for('tasks.queue', department='Care Coordination'), 'All staff'),
+            step('Patient timeline', p360(p) or url_for('clinical.workbench'), 'Any clinician', ok=bool(referral),
+                 note=None if referral else 'No referral yet'),
+        ]})
+
+    bill = open_bill or paid_bill
+    p = _pat(bill)
+    scenarios.append({
+        'key': 'billing', 'icon': 'fa-file-invoice-dollar',
+        'title': 'Billing & Payment', 'title_ar': 'الفوترة والدفع',
+        'summary': 'Auto-generated bills (consultation / lab / imaging / pharmacy / room) → cashier payment with receipt → idempotent references → reports.',
+        'patient': p,
+        'steps': [
+            step('Cashier desk', url_for('billing.dashboard'), 'Cashier'),
+            step('Open invoice & record payment', url_for('billing.view_bill', bill_id=bill.id) if bill else url_for('billing.bills'),
+                 'Cashier', ok=bool(bill), note=None if bill else 'No bill yet'),
+            step('Paid receipt example', url_for('billing.view_bill', bill_id=paid_bill.id) if paid_bill else url_for('billing.bills', status='Paid'),
+                 'Cashier', ok=bool(paid_bill)),
+            step('Revenue report', url_for('billing.reports'), 'Cashier / Admin'),
+            step('Service catalog', url_for('billing.service_catalog'), 'Admin'),
+        ]})
+
+    p = portal_patient
+    scenarios.append({
+        'key': 'portal', 'icon': 'fa-mobile-screen',
+        'title': 'Patient Portal', 'title_ar': 'بوابة المريض',
+        'summary': 'Patient books, sees results/prescriptions/bills, uploads documents, messages the doctor, reads AI health insights.',
+        'patient': p,
+        'steps': [
+            step('Preview the portal as this patient', url_for('patient.preview_as', patient_id=p.id) if p else url_for('patient.dashboard'),
+                 'SuperAdmin (read-only preview)', ok=bool(p)),
+            step('Lab results', url_for('patient.lab_results'), 'Patient'),
+            step('Documents (upload)', url_for('patient.documents'), 'Patient', ok=bool(document),
+                 note=None if document else 'No document uploaded yet'),
+            step('Bills & receipts', url_for('patient.bills'), 'Patient'),
+            step('AI health insights', url_for('ai.health_insights', pid=p.id) if p else url_for('ai.health_insights'), 'Patient'),
+            step('Role preview: Patient', url_for('super_admin.preview_role', role_name='Patient'), 'SuperAdmin'),
+        ]})
+
+    total_steps = sum(len(sc['steps']) for sc in scenarios)
+    ready_steps = sum(1 for sc in scenarios for st in sc['steps'] if st['ok'])
+    return render_template('super_admin/demo.html', title='Hospital Demo Center',
+                           scenarios=scenarios, total_steps=total_steps,
+                           ready_steps=ready_steps,
+                           patient_count=Patient.query.count())

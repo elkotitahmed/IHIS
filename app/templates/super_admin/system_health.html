@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-heart-pulse" style="color:{{ 'var(--ihis-success)' if overall == 'Operational' else 'var(--ihis-danger)' }}"></i> {{ 'صحة النظام' if g.lang == 'ar' else 'System Health' }}</h1>
+        <p class="page-subtitle">{{ 'فحوصات حية للتشغيل والأمان والنسخ الاحتياطي' if g.lang == 'ar' else 'Live checks of runtime, schema, storage, security and AI providers' }} &middot; {{ now.strftime('%Y-%m-%d %H:%M') }} UTC</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.system_health') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-rotate"></i> {{ 'إعادة الفحص' if g.lang == 'ar' else 'Re-check' }}</a>
+        <a href="{{ url_for('super_admin.backup') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-database"></i> {{ 'النسخ الاحتياطي' if g.lang == 'ar' else 'Backup' }}</a>
+        <a href="{{ url_for('super_admin.audit_logs') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-clock-rotate-left"></i> {{ 'سجل المراجعة' if g.lang == 'ar' else 'Audit Log' }}</a>
+    </div>
+</div>
+
+<div class="stat-row" style="margin-bottom:var(--sp-5)">
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:{{ 'var(--ihis-success-bg)' if overall == 'Operational' else 'var(--ihis-danger-bg)' }};color:{{ 'var(--ihis-success)' if overall == 'Operational' else 'var(--ihis-danger)' }}"><i class="fas fa-server"></i></div>
+        <div><div class="stat-row-value">{{ overall }}</div><div class="stat-row-label">{{ failing }} {{ 'فشل' if g.lang == 'ar' else 'failing' }} &middot; {{ warnings }} {{ 'تحذير' if g.lang == 'ar' else 'warnings' }}</div></div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-warning-bg);color:var(--ihis-warning)"><i class="fas fa-clipboard-list"></i></div>
+        <div><div class="stat-row-value">{{ stats.open_tasks }}</div><div class="stat-row-label">{{ 'مهام مفتوحة' if g.lang == 'ar' else 'Open tasks' }} ({{ stats.overdue_tasks }} {{ 'متأخرة' if g.lang == 'ar' else 'overdue' }})</div></div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-danger-bg);color:var(--ihis-danger)"><i class="fas fa-bell"></i></div>
+        <div><div class="stat-row-value">{{ stats.open_alerts }}</div><div class="stat-row-label">{{ 'تنبيهات مفتوحة' if g.lang == 'ar' else 'Open alerts' }} ({{ stats.critical_alerts }} {{ 'حرجة' if g.lang == 'ar' else 'critical' }})</div></div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-info-bg);color:var(--ihis-info)"><i class="fas fa-shield-halved"></i></div>
+        <div><div class="stat-row-value">{{ stats.failed_logins_7d }}</div><div class="stat-row-label">{{ 'محاولات دخول فاشلة (7 أيام)' if g.lang == 'ar' else 'Failed logins (7d)' }}</div></div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-purple-bg);color:var(--ihis-purple)"><i class="fas fa-robot"></i></div>
+        <div><div class="stat-row-value">{{ stats.ai_calls_7d }}</div><div class="stat-row-label">{{ 'استدعاءات AI (7 أيام)' if g.lang == 'ar' else 'AI calls (7d)' }}</div></div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-primary-bg);color:var(--ihis-primary)"><i class="fas fa-clock-rotate-left"></i></div>
+        <div><div class="stat-row-value">{{ stats.audit_24h }}</div><div class="stat-row-label">{{ 'أحداث مراجعة (24 ساعة)' if g.lang == 'ar' else 'Audit events (24h)' }}</div></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i> {{ 'الفحوصات' if g.lang == 'ar' else 'Checks' }}</div></div>
+            <div class="card-body flush">
+                <div class="table-wrapper"><table class="table-ihs">
+                    <thead><tr><th style="width:40px"></th><th>{{ 'الفحص' if g.lang == 'ar' else 'Check' }}</th><th>{{ 'التفاصيل' if g.lang == 'ar' else 'Detail' }}</th></tr></thead>
+                    <tbody>
+                    {% for c in checks %}
+                    <tr>
+                        <td>{% if c.ok %}<i class="fas fa-circle-check" style="color:var(--ihis-success)"></i>{% elif c.warn %}<i class="fas fa-triangle-exclamation" style="color:var(--ihis-warning)"></i>{% else %}<i class="fas fa-circle-xmark" style="color:var(--ihis-danger)"></i>{% endif %}</td>
+                        <td class="cell-primary">{{ c.name }}</td>
+                        <td class="cell-secondary" style="font-size:0.75rem;word-break:break-all">{{ c.detail }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card-premium mb-4">
+            <div class="card-header"><div class="card-title"><i class="fas fa-microchip" style="color:var(--ihis-info)"></i> {{ 'البيئة' if g.lang == 'ar' else 'Environment' }}</div></div>
+            <div class="card-body">
+                <dl class="row" style="font-size:0.8125rem;margin:0">
+                    <dt class="col-5">Python</dt><dd class="col-7 cell-mono">{{ env.python }}</dd>
+                    <dt class="col-5">{{ 'النظام' if g.lang == 'ar' else 'Platform' }}</dt><dd class="col-7 cell-mono" style="word-break:break-all">{{ env.platform }}</dd>
+                    <dt class="col-5">{{ 'قاعدة البيانات' if g.lang == 'ar' else 'Database' }}</dt><dd class="col-7 cell-mono">{{ env.db_backend }}</dd>
+                    <dt class="col-5">{{ 'الوضع' if g.lang == 'ar' else 'Profile' }}</dt><dd class="col-7 cell-mono">{{ env.config }}</dd>
+                    <dt class="col-5">{{ 'المستخدمون' if g.lang == 'ar' else 'Users' }}</dt><dd class="col-7 t-num">{{ stats.users }}</dd>
+                    <dt class="col-5">{{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</dt><dd class="col-7 t-num">{{ stats.patients }}</dd>
+                    <dt class="col-5">{{ 'إشعارات غير مقروءة' if g.lang == 'ar' else 'Unread notifications' }}</dt><dd class="col-7 t-num">{{ stats.unread_notifications }}</dd>
+                </dl>
+            </div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-link" style="color:var(--ihis-success)"></i> {{ 'نقاط الفحص' if g.lang == 'ar' else 'Probes' }}</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('main.health_live') }}" target="_blank"><i class="fas fa-heart"></i> /health/live</a>
+                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('main.health_ready') }}" target="_blank"><i class="fas fa-database"></i> /health/ready</a>
+                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('api.health') }}" target="_blank"><i class="fas fa-code"></i> /api/health</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

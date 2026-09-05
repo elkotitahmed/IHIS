@@ -6,10 +6,20 @@ documented, legitimate need:
 - A patient may access their own record.
 - Admin/SuperAdmin retain supervisory access (audit, incident response).
 - Otherwise the staff member must have an explicit relationship with the
-  patient: a care-team membership, or an authored clinical document
-  (chart/record/prescription/order/appointment/referral/admission/vital/plan).
+  patient: a care-team membership, an authored clinical document
+  (chart/record/prescription/order/appointment/referral/admission/vital/plan),
+  or a documented *operational* relationship that establishes the first
+  contact - the patient is registered under the staff member's department,
+  is currently admitted (nursing), has an appointment today (nursing), or has
+  been referred to the staff member's specialty (physiotherapy / dentistry).
+
+The two public entry points must stay in sync: :func:`has_need_to_know`
+answers "may this user open this patient" and :func:`accessible_patient_ids`
+answers "which patients may this user list", so a filtered list never yields
+a row that then 403s when opened.
 """
 
+from datetime import timedelta
 from functools import wraps
 
 from flask import abort
@@ -23,6 +33,7 @@ from app.models import (
     CareTeam,
     CareTeamMember,
     DentalProcedure,
+    DentalTreatmentPlan,
     Diagnosis,
     LabOrder,
     LabResult,
@@ -39,6 +50,14 @@ from app.models import (
     TherapySession,
     VitalSign,
 )
+from app.utils import utcnow
+
+# Specialty keywords that route a referral to a discipline-specific role.
+PHYSIO_KEYWORDS = ('physio', 'rehab', 'physical therapy', 'علاج طبيعي')
+DENTAL_KEYWORDS = ('dent', 'oral', 'ortho', 'أسنان')
+
+# Referral states that no longer establish a care relationship.
+CLOSED_REFERRAL_STATES = ('Rejected', 'REJECTED', 'Closed', 'CLOSED', 'Cancelled')
 
 
 def _doctor_id(user):
@@ -56,18 +75,40 @@ def _therapist_id(user):
     return th.id if th else None
 
 
+def _today_window():
+    now = utcnow()
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return start, start + timedelta(days=1)
+
+
+def _referral_specialty_filter(keywords):
+    clauses = [Referral.to_specialty.ilike(f'%{k}%') for k in keywords]
+    return db.or_(*clauses)
+
+
+def _is_supervisor(user):
+    return user.user_type == 'admin' and user.has_any_role('Admin', 'SuperAdmin')
+
+
 def has_need_to_know(patient, user=None):
     """Return True when ``user`` (default: current_user) may access ``patient``
     under a documented need-to-know policy."""
     user = user or current_user
+    if not getattr(user, 'is_authenticated', False):
+        return False
     if user.user_type == 'patient':
         return bool(patient) and patient.user_id == user.id
-    if user.user_type == 'admin' and user.has_any_role('Admin', 'SuperAdmin'):
+    if _is_supervisor(user):
         return True
     if not patient:
         return False
     pid = patient.id
     uid = user.id
+
+    # Department scoping: a patient registered under the staff member's own
+    # department (e.g. Dermatology attachments routed to the dermatologist).
+    if user.department_id and patient.department_id == user.department_id:
+        return True
 
     # Care team membership is an explicit assignment valid for any staff role.
     if db.session.query(CareTeamMember.id).join(CareTeam, CareTeamMember.team_id == CareTeam.id).filter(
@@ -93,50 +134,72 @@ def has_need_to_know(patient, user=None):
     ):
         return True
 
-    # Nurse: documented nursing encounters.
-    if any(
-        db.session.query(Model.id).filter_by(patient_id=pid, nurse_id=uid).first()
-        for Model in (VitalSign, NursingNote, CarePlan)
-    ):
-        return True
+    # Nurse: documented nursing encounters, current inpatients, or patients
+    # attending the clinic today.
+    if user.has_role('Nurse'):
+        if any(
+            db.session.query(Model.id).filter_by(patient_id=pid, nurse_id=uid).first()
+            for Model in (VitalSign, NursingNote, CarePlan)
+        ):
+            return True
+        if db.session.query(Admission.id).filter_by(patient_id=pid, status='Admitted').first():
+            return True
+        start, end = _today_window()
+        if db.session.query(Appointment.id).filter(
+                Appointment.patient_id == pid,
+                Appointment.scheduled_at >= start,
+                Appointment.scheduled_at < end,
+                Appointment.status.notin_(('Cancelled',))).first():
+            return True
 
-    # Dentist: documented dental encounters.
+    # Dentist: documented dental encounters or a referral to dentistry.
     denid = _dentist_id(user)
     if denid and any(
         db.session.query(Model.id).filter_by(patient_id=pid, dentist_id=denid).first()
-        for Model in (DentalProcedure, OrthodonticCase)
+        for Model in (DentalProcedure, OrthodonticCase, DentalTreatmentPlan)
     ):
         return True
+    if user.has_role('Dentist') and db.session.query(Referral.id).filter(
+            Referral.patient_id == pid,
+            Referral.status.notin_(CLOSED_REFERRAL_STATES),
+            _referral_specialty_filter(DENTAL_KEYWORDS)).first():
+        return True
 
-    # Physiotherapist: documented therapy encounters.
+    # Physiotherapist: documented therapy encounters or a referral to physio.
     thid = _therapist_id(user)
     if thid and any(
         db.session.query(Model.id).filter_by(patient_id=pid, therapist_id=thid).first()
         for Model in (TherapyAssessment, TherapyPlan, TherapySession)
     ):
         return True
+    if user.has_role('Physiotherapist') and db.session.query(Referral.id).filter(
+            Referral.patient_id == pid,
+            Referral.status.notin_(CLOSED_REFERRAL_STATES),
+            _referral_specialty_filter(PHYSIO_KEYWORDS)).first():
+        return True
 
-    # Radiologist: authored/signed a report (or the ordering doctor already has
-    # access via the doctor branch above) for one of the patient's studies.
+    # Radiologist / radiology technician: authored/signed/performed a study,
+    # or the patient has an imaging order in the worklist.
     if (db.session.query(RadiologyReport.id).join(
             RadiologyOrder, RadiologyReport.order_id == RadiologyOrder.id).filter(
             RadiologyOrder.patient_id == pid,
             db.or_(RadiologyReport.reported_by == uid,
                    RadiologyReport.signed_by == uid)).first()):
         return True
-    # Radiologists need to open the study before a report exists so they can
-    # review the images and create the report.
-    if user.has_role('Radiologist') and db.session.query(RadiologyOrder.id).filter_by(
-            patient_id=pid).first():
+    if user.has_any_role('Radiologist', 'RadiologyTechnician') and \
+            db.session.query(RadiologyOrder.id).filter_by(patient_id=pid).first():
         return True
 
-    # Lab technician: created or validated a result for one of the patient's
-    # lab orders.
+    # Lab technician: created or validated a result, or the patient has a lab
+    # order in the work queue.
     if (db.session.query(LabResult.id).join(
             LabOrder, LabResult.order_id == LabOrder.id).filter(
             LabOrder.patient_id == pid,
             db.or_(LabResult.created_by == uid,
                    LabResult.validated_by == uid)).first()):
+        return True
+    if user.has_role('LabTechnician') and db.session.query(LabOrder.id).filter_by(
+            patient_id=pid).first():
         return True
 
     # Pharmacist: the pharmacy worklist is the prescription; a pharmacist
@@ -145,18 +208,37 @@ def has_need_to_know(patient, user=None):
             patient_id=pid).first():
         return True
 
+    # Receptionist: an operational relationship - booked/checked-in the
+    # patient, admitted them, or the patient is attending today.
+    if user.has_role('Receptionist'):
+        if db.session.query(Appointment.id).filter_by(patient_id=pid, created_by=uid).first():
+            return True
+        if db.session.query(Admission.id).filter_by(patient_id=pid, admitted_by=uid).first():
+            return True
+        start, end = _today_window()
+        if db.session.query(Appointment.id).filter(
+                Appointment.patient_id == pid,
+                Appointment.scheduled_at >= start,
+                Appointment.scheduled_at < end).first():
+            return True
+
+    # Cashier: the patient has a bill the cashier may need to explain.
+    if user.has_role('Cashier'):
+        from app.models import Bill
+        if db.session.query(Bill.id).filter_by(patient_id=pid).first():
+            return True
+
     return False
 
 
 def accessible_patient_ids(user=None):
     """Return the set of patient ids the current staff member has a documented
-    need-to-know relationship with. For a Doctor this mirrors the doctor branch
-    of :func:`has_need_to_know` so a filtered patient list always yields
-    overview/detail pages the user is actually allowed to open."""
+    need-to-know relationship with. Mirrors :func:`has_need_to_know` so a
+    filtered patient list always yields pages the user may open."""
     user = user or current_user
     if not user.is_authenticated:
         return set()
-    if user.user_type == 'admin' and user.has_any_role('Admin', 'SuperAdmin'):
+    if _is_supervisor(user):
         return {pid for (pid,) in db.session.query(Patient.id).all()}
     if user.user_type == 'patient':
         pat = getattr(user, 'patient_profile', None)
@@ -165,48 +247,80 @@ def accessible_patient_ids(user=None):
     pid_rows = set()
     uid = user.id
 
-    if db.session.query(CareTeamMember.id).join(
-            CareTeam, CareTeamMember.team_id == CareTeam.id).filter(
-            CareTeamMember.user_id == uid).all():
-        for (pid,) in db.session.query(CareTeam.patient_id).join(
-                CareTeamMember, CareTeamMember.team_id == CareTeam.id).filter(
-                CareTeamMember.user_id == uid).all():
-            pid_rows.add(pid)
+    def _ids(query):
+        pid_rows.update(pid for (pid,) in query.all() if pid is not None)
+
+    if user.department_id:
+        _ids(db.session.query(Patient.id).filter_by(department_id=user.department_id))
+
+    _ids(db.session.query(CareTeam.patient_id).join(
+        CareTeamMember, CareTeamMember.team_id == CareTeam.id).filter(
+        CareTeamMember.user_id == uid))
 
     did = _doctor_id(user)
     if did:
-        pid_rows.update(pid for (pid,) in db.session.query(Appointment.patient_id).filter_by(doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(MedicalRecord.patient_id).filter_by(doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(Diagnosis.patient_id).filter_by(doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(Prescription.patient_id).filter_by(doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(LabOrder.patient_id).filter_by(doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(RadiologyOrder.patient_id).filter_by(doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(Admission.patient_id).filter_by(admitting_doctor_id=did).all())
-        pid_rows.update(pid for (pid,) in db.session.query(Referral.patient_id).filter(
-            (Referral.from_doctor_id == did) | (Referral.to_doctor_id == did)).all())
-    else:
-        # Non-doctor staff roles still need their documented encounters.
+        _ids(db.session.query(Appointment.patient_id).filter_by(doctor_id=did))
+        _ids(db.session.query(MedicalRecord.patient_id).filter_by(doctor_id=did))
+        _ids(db.session.query(Diagnosis.patient_id).filter_by(doctor_id=did))
+        _ids(db.session.query(Prescription.patient_id).filter_by(doctor_id=did))
+        _ids(db.session.query(LabOrder.patient_id).filter_by(doctor_id=did))
+        _ids(db.session.query(RadiologyOrder.patient_id).filter_by(doctor_id=did))
+        _ids(db.session.query(Admission.patient_id).filter_by(admitting_doctor_id=did))
+        _ids(db.session.query(Referral.patient_id).filter(
+            (Referral.from_doctor_id == did) | (Referral.to_doctor_id == did)))
+
+    if user.has_role('Nurse'):
         for Model in (VitalSign, NursingNote, CarePlan):
-            pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(nurse_id=uid).all())
-        denid = _dentist_id(user)
-        if denid:
-            for Model in (DentalProcedure, OrthodonticCase):
-                pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(dentist_id=denid).all())
-        thid = _therapist_id(user)
-        if thid:
-            for Model in (TherapyAssessment, TherapyPlan, TherapySession):
-                pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(therapist_id=thid).all())
-        pid_rows.update(pid for (pid,) in db.session.query(RadiologyOrder.patient_id).join(
-            RadiologyReport, RadiologyReport.order_id == RadiologyOrder.id).filter(
-            db.or_(RadiologyReport.reported_by == uid, RadiologyReport.signed_by == uid)).all())
-        if user.has_role('Radiologist'):
-            pid_rows.update(pid for (pid,) in db.session.query(
-                RadiologyOrder.patient_id).distinct().all())
-        pid_rows.update(pid for (pid,) in db.session.query(LabOrder.patient_id).join(
-            LabResult, LabResult.order_id == LabOrder.id).filter(
-            db.or_(LabResult.created_by == uid, LabResult.validated_by == uid)).all())
-        if user.has_role('Pharmacist'):
-            pid_rows.update(pid for (pid,) in db.session.query(Prescription.patient_id).distinct().all())
+            _ids(db.session.query(Model.patient_id).filter_by(nurse_id=uid))
+        _ids(db.session.query(Admission.patient_id).filter_by(status='Admitted'))
+        start, end = _today_window()
+        _ids(db.session.query(Appointment.patient_id).filter(
+            Appointment.scheduled_at >= start, Appointment.scheduled_at < end,
+            Appointment.status.notin_(('Cancelled',))))
+
+    denid = _dentist_id(user)
+    if denid:
+        for Model in (DentalProcedure, OrthodonticCase, DentalTreatmentPlan):
+            _ids(db.session.query(Model.patient_id).filter_by(dentist_id=denid))
+    if user.has_role('Dentist'):
+        _ids(db.session.query(Referral.patient_id).filter(
+            Referral.status.notin_(CLOSED_REFERRAL_STATES),
+            _referral_specialty_filter(DENTAL_KEYWORDS)))
+
+    thid = _therapist_id(user)
+    if thid:
+        for Model in (TherapyAssessment, TherapyPlan, TherapySession):
+            _ids(db.session.query(Model.patient_id).filter_by(therapist_id=thid))
+    if user.has_role('Physiotherapist'):
+        _ids(db.session.query(Referral.patient_id).filter(
+            Referral.status.notin_(CLOSED_REFERRAL_STATES),
+            _referral_specialty_filter(PHYSIO_KEYWORDS)))
+
+    _ids(db.session.query(RadiologyOrder.patient_id).join(
+        RadiologyReport, RadiologyReport.order_id == RadiologyOrder.id).filter(
+        db.or_(RadiologyReport.reported_by == uid, RadiologyReport.signed_by == uid)))
+    if user.has_any_role('Radiologist', 'RadiologyTechnician'):
+        _ids(db.session.query(RadiologyOrder.patient_id).distinct())
+
+    _ids(db.session.query(LabOrder.patient_id).join(
+        LabResult, LabResult.order_id == LabOrder.id).filter(
+        db.or_(LabResult.created_by == uid, LabResult.validated_by == uid)))
+    if user.has_role('LabTechnician'):
+        _ids(db.session.query(LabOrder.patient_id).distinct())
+
+    if user.has_role('Pharmacist'):
+        _ids(db.session.query(Prescription.patient_id).distinct())
+
+    if user.has_role('Receptionist'):
+        _ids(db.session.query(Appointment.patient_id).filter_by(created_by=uid))
+        _ids(db.session.query(Admission.patient_id).filter_by(admitted_by=uid))
+        start, end = _today_window()
+        _ids(db.session.query(Appointment.patient_id).filter(
+            Appointment.scheduled_at >= start, Appointment.scheduled_at < end))
+
+    if user.has_role('Cashier'):
+        from app.models import Bill
+        _ids(db.session.query(Bill.patient_id).distinct())
 
     return pid_rows
 
@@ -229,7 +343,6 @@ def patient_access_required(f):
     def wrapper(*args, **kwargs):
         patient_id = kwargs.get('patient_id')
         if patient_id is not None:
-            from app.models import Patient
             patient = db.session.get(Patient, patient_id)
             if patient is None:
                 abort(404)

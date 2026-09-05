@@ -66,6 +66,30 @@
                     </div>
                 </div>
             </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'تعيين إلى' if g.lang == 'ar' else 'Assign to' }}</label>
+                        <select name="assignee_id" class="form-select">
+                            <option value="">{{ 'غير معين (قائمة الدور)' if g.lang == 'ar' else 'Unassigned (role queue)' }}</option>
+                            {% for u in staff %}
+                            <option value="{{ u.id }}">{{ u.full_name }} — {{ u.roles[0].name if u.roles else u.user_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'دور المسؤول' if g.lang == 'ar' else 'Owning role' }}</label>
+                        <select name="assigned_role" class="form-select">
+                            <option value="">{{ 'أي دور' if g.lang == 'ar' else 'Any' }}</option>
+                            {% for r in ['Doctor','Nurse','LabTechnician','Radiologist','RadiologyTechnician','Pharmacist','Physiotherapist','Dentist','Receptionist','Cashier','Admin'] %}
+                            <option value="{{ r }}">{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
             <button class="btn-ihs btn-ihs-success"><i class="fas fa-check"></i> {{ 'إنشاء مهمة' if g.lang == 'ar' else 'Create Task' }}</button>
         </form>
     </div>

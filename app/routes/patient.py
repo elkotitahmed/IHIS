@@ -17,39 +17,99 @@ ALLOWED = ['Patient', 'Doctor', 'Admin', 'SuperAdmin']
 
 
 def _current_patient():
-    return Patient.query.filter_by(user_id=current_user.id).first()
+    """The patient record behind the portal.
+
+    Patients see their own record. Admin/SuperAdmin (including a SuperAdmin
+    in *Role Preview* as Patient) walk the portal on behalf of a chosen
+    patient - the ``preview_patient_id`` session key, defaulting to the first
+    registered patient - so the portal can be demonstrated without a
+    patient login. Every such access is audited on the download routes and
+    stays read-mostly (profile edits are blocked for supervisors)."""
+    own = Patient.query.filter_by(user_id=current_user.id).first()
+    if own is not None:
+        return own
+    if current_user.has_any_role('Admin', 'SuperAdmin'):
+        from flask import session
+        pid = session.get('preview_patient_id')
+        patient = db.session.get(Patient, pid) if pid else None
+        if patient is None:
+            patient = Patient.query.order_by(Patient.id.asc()).first()
+        return patient
+    return None
+
+
+def _is_own_record(patient):
+    return patient is not None and patient.user_id == current_user.id
+
+
+def _require_patient():
+    """Resolve the portal patient or redirect with a clear message."""
+    patient = _current_patient()
+    if patient is None:
+        if current_user.user_type == 'patient':
+            flash('Please complete your patient profile first.', 'warning')
+            return None, redirect(url_for('patient.profile'))
+        flash('No patient record is available for the portal preview.', 'warning')
+        return None, redirect(url_for('main.dashboard'))
+    return patient, None
+
+
+@patient_bp.route('/preview/<int:patient_id>')
+@login_required
+@roles_required('Admin', 'SuperAdmin')
+def preview_as(patient_id):
+    """Choose which patient's portal a supervisor is walking through."""
+    from flask import session
+    patient = Patient.query.get_or_404(patient_id)
+    session['preview_patient_id'] = patient.id
+    log_activity('PATIENT_PORTAL_PREVIEW', 'patient', patient.id,
+                 f'Supervisor {current_user.id} viewing portal as patient')
+    db.session.commit()
+    return redirect(url_for('patient.dashboard'))
 
 
 @patient_bp.route('/dashboard')
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def dashboard():
-    patient = _current_patient()
-    if not patient:
-        flash('Please complete your patient profile first.', 'warning')
-        return redirect(url_for('patient.profile')) if current_user.user_type == 'patient' \
-            else redirect(url_for('main.dashboard'))
-    upcoming = Appointment.query.filter_by(
-        patient_id=patient.id, status='Scheduled').order_by(Appointment.scheduled_at).all()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
+    upcoming = Appointment.query.filter(
+        Appointment.patient_id == patient.id,
+        Appointment.status.in_(('Scheduled', 'Confirmed', 'CheckedIn'))
+    ).order_by(Appointment.scheduled_at).limit(5).all()
     recent_labs = LabOrder.query.filter_by(patient_id=patient.id).order_by(
         LabOrder.order_date.desc()).limit(5).all()
-    prescriptions = Prescription.query.filter_by(patient_id=patient.id).limit(5).all()
+    prescriptions = (Prescription.query.filter_by(patient_id=patient.id)
+                     .order_by(Prescription.prescribed_date.desc()).limit(5).all())
+    notify_uid = patient.user_id if _is_own_record(patient) else patient.user_id
     notifications = Notification.query.filter_by(
-        user_id=current_user.id).order_by(Notification.created_at.desc()).limit(5).all()
+        user_id=notify_uid).order_by(Notification.created_at.desc()).limit(5).all()
+    open_bills = [b for b in Bill.query.filter_by(patient_id=patient.id).all()
+                  if b.status in ('Unpaid', 'PartiallyPaid')]
+    balance_due = sum(b.balance() for b in open_bills)
+    other_patients = []
+    if not _is_own_record(patient) and current_user.has_any_role('Admin', 'SuperAdmin'):
+        other_patients = Patient.query.order_by(Patient.id.asc()).limit(50).all()
     return render_template('patient/dashboard.html', title='Patient Dashboard',
                            patient=patient, upcoming=upcoming, recent_labs=recent_labs,
-                           prescriptions=prescriptions, notifications=notifications)
+                           prescriptions=prescriptions, notifications=notifications,
+                           open_bills=open_bills, balance_due=balance_due,
+                           is_own=_is_own_record(patient), other_patients=other_patients)
 
 
 @patient_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def profile():
-    patient = _current_patient()
-    if not patient:
-        flash('No patient profile is associated with this account.', 'warning')
-        return redirect(url_for('main.dashboard'))
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     if request.method == 'POST':
+        if not _is_own_record(patient):
+            flash('Profile changes must be made by the patient (or via the reception desk).', 'warning')
+            return redirect(url_for('patient.profile'))
         user = current_user
         user.phone = request.form.get('phone') or user.phone
         user.full_name = request.form.get('full_name') or user.full_name
@@ -65,14 +125,17 @@ def profile():
         db.session.commit()
         flash('Profile updated successfully.', 'success')
         return redirect(url_for('patient.profile'))
-    return render_template('patient/profile.html', title='My Profile', patient=patient)
+    return render_template('patient/profile.html', title='My Profile', patient=patient,
+                           is_own=_is_own_record(patient))
 
 
 @patient_bp.route('/medical-history')
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def medical_history():
-    patient = _current_patient()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     records = MedicalRecord.query.filter_by(patient_id=patient.id).order_by(
         MedicalRecord.visit_date.desc()).all()
     diagnoses = Diagnosis.query.filter_by(patient_id=patient.id).order_by(
@@ -87,7 +150,9 @@ def medical_history():
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def appointments():
-    patient = _current_patient()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     items = Appointment.query.filter_by(patient_id=patient.id).order_by(
         Appointment.scheduled_at.desc()).all()
     return render_template('patient/appointments.html', title='My Appointments', items=items)
@@ -98,17 +163,14 @@ def appointments():
 @roles_required('Patient', 'Receptionist', 'Admin', 'SuperAdmin')
 def book_appointment():
     if request.method == 'POST':
-        doctor = Doctor.query.get(request.form.get('doctor_id'))
+        doctor = db.session.get(Doctor, request.form.get('doctor_id', type=int) or -1)
         if not doctor:
             flash('Please select a valid doctor.', 'danger')
             return redirect(url_for('patient.book_appointment'))
-        patient = _current_patient()
-        if not patient and not current_user.has_any_role('Admin', 'SuperAdmin',
-                                                         'Receptionist'):
-            flash('Please complete your patient profile first.', 'warning')
-            return redirect(url_for('patient.book_appointment'))
-        if not patient:
-            patient = Patient.query.get(request.form.get('patient_id'))
+        patient = Patient.query.filter_by(user_id=current_user.id).first()
+        if not patient and current_user.has_any_role('Admin', 'SuperAdmin', 'Receptionist'):
+            patient = (db.session.get(Patient, request.form.get('patient_id', type=int) or -1)
+                       or _current_patient())
         if not patient:
             flash('A valid patient is required to book an appointment.', 'danger')
             return redirect(url_for('patient.book_appointment'))
@@ -122,20 +184,39 @@ def book_appointment():
         if has_appointment_conflict(doctor.id, scheduled_at, duration):
             flash('This doctor already has an appointment at that time. Please choose another slot.', 'warning')
             return redirect(url_for('patient.book_appointment'))
+        if scheduled_at < datetime.now():
+            flash('Please choose a future date and time.', 'warning')
+            return redirect(url_for('patient.book_appointment'))
         appt = Appointment(
             patient_id=patient.id,
             doctor_id=doctor.id,
             scheduled_at=scheduled_at,
+            duration_minutes=duration,
             reason=request.form.get('reason'),
             priority=request.form.get('priority', 'Normal'),
+            created_by=current_user.id,
         )
         db.session.add(appt)
-        log_activity('BOOK_APPOINTMENT', 'appointment', None, f'doctor={doctor.id}')
+        db.session.flush()
+        log_activity('BOOK_APPOINTMENT', 'appointment', appt.id, f'doctor={doctor.id}')
+        from app.services.timeline import record_event
+        from app.services.notifications import notify
+        record_event(patient.id, 'APPOINTMENT', 'Appointment booked',
+                     f'With Dr. {doctor.user.full_name if doctor.user else "doctor"} on '
+                     f'{scheduled_at.strftime("%d %b %Y %H:%M")}',
+                     source_type='appointment', source_id=appt.id,
+                     department='Patient Portal')
+        if doctor.user_id:
+            notify(doctor.user_id, 'New appointment booked',
+                   f'{patient.user.full_name if patient.user else "A patient"} booked '
+                   f'{scheduled_at.strftime("%d %b %Y %H:%M")}.',
+                   entity_type='appointment', entity_id=appt.id)
         db.session.commit()
         flash('Appointment booked successfully.', 'success')
         return redirect(url_for('patient.appointments'))
 
-    doctors = Doctor.query.all()
+    from app.models import User as UserModel
+    doctors = Doctor.query.join(UserModel, Doctor.user_id == UserModel.id).order_by(UserModel.full_name).all()
     return render_template('patient/book_appointment.html', title='Book Appointment', doctors=doctors)
 
 
@@ -143,7 +224,9 @@ def book_appointment():
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def prescriptions():
-    patient = _current_patient()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     items = Prescription.query.filter_by(patient_id=patient.id).order_by(
         Prescription.prescribed_date.desc()).all()
     return render_template('patient/prescriptions.html', title='My Prescriptions', items=items)
@@ -153,7 +236,9 @@ def prescriptions():
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def lab_results():
-    patient = _current_patient()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     items = LabOrder.query.filter_by(patient_id=patient.id).order_by(
         LabOrder.order_date.desc()).all()
     return render_template('patient/lab_results.html', title='Lab Results', items=items)
@@ -163,7 +248,9 @@ def lab_results():
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def radiology_reports():
-    patient = _current_patient()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     items = RadiologyOrder.query.filter_by(patient_id=patient.id).order_by(
         RadiologyOrder.order_date.desc()).all()
     return render_template('patient/radiology_reports.html', title='Radiology Reports', items=items)
@@ -180,10 +267,9 @@ def my_radiology():
         PatientImagingSafetyProfile, MRIImplantRegistry,
         ImagingDoseRecord, ContrastAdministration,
     )
-    patient = _current_patient()
-    if not patient:
-        flash('No patient profile is associated with this account.', 'warning')
-        return redirect(url_for('patient.profile'))
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     safety_svc = RadiologySafetyService()
     dose_svc = RadiationDoseService()
     profile = PatientImagingSafetyProfile.query.filter_by(
@@ -210,7 +296,9 @@ def my_radiology():
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def bills():
-    patient = _current_patient()
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     items = Bill.query.filter_by(patient_id=patient.id).order_by(
         Bill.issued_at.desc()).all()
     total_billed = sum(b.total() for b in items)
@@ -225,23 +313,31 @@ def bills():
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def documents():
-    patient = _current_patient()
-    if patient is None:
-        flash('Please complete your patient profile first.', 'warning')
-        return redirect(url_for('patient.profile')) if current_user.user_type == 'patient' \
-            else redirect(url_for('main.dashboard'))
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
     if request.method == 'POST':
+        if not _is_own_record(patient):
+            flash('Only the patient can upload to their own document folder.', 'warning')
+            return redirect(url_for('patient.documents'))
         f = request.files.get('document')
         url = save_upload(f, 'medical_documents', {'pdf', 'png', 'jpg', 'jpeg'})
         if url:
-            db.session.add(PatientDocument(
+            doc = PatientDocument(
                 patient_id=patient.id,
                 title=request.form.get('title') or f.filename or 'Document',
                 document_type=request.form.get('document_type') or 'other',
                 category=request.form.get('category') or 'Other',
-                file_url=url,
-            ))
-            log_activity('UPLOAD_DOCUMENT', 'patient_document', patient.id, url)
+                file_url=url, uploaded_by=current_user.id,
+            )
+            db.session.add(doc)
+            db.session.flush()
+            from app.services.timeline import record_event
+            record_event(patient.id, 'DOCUMENT', f'Document uploaded: {doc.title}',
+                         doc.category or doc.document_type,
+                         source_type='patient_document', source_id=doc.id,
+                         department='Patient Portal')
+            log_activity('UPLOAD_DOCUMENT', 'patient_document', doc.id, url)
             db.session.commit()
             flash('Document uploaded successfully.', 'success')
         else:
@@ -297,8 +393,9 @@ def download_document(doc_id):
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def messages():
     items = Message.query.filter_by(receiver_id=current_user.id).order_by(
-        Message.sent_at.desc()).all()
-    doctors = Doctor.query.all()
+        Message.sent_at.desc()).limit(100).all()
+    from app.models import User as UserModel
+    doctors = Doctor.query.join(UserModel, Doctor.user_id == UserModel.id).order_by(UserModel.full_name).all()
     sent = Message.query.filter_by(sender_id=current_user.id).order_by(
         Message.sent_at.desc()).limit(50).all()
     return render_template('patient/messages.html', title='Messages',
@@ -311,9 +408,19 @@ def messages():
 def compose_message(doctor_id):
     doctor = Doctor.query.get_or_404(doctor_id)
     if request.method == 'POST':
-        db.session.add(Message(
-            sender_id=current_user.id, receiver_id=doctor.user_id,
-            subject=request.form.get('subject'), body=request.form.get('body')))
+        body = (request.form.get('body') or '').strip()
+        if not body:
+            flash('Message body is required.', 'warning')
+            return redirect(url_for('patient.compose_message', doctor_id=doctor.id))
+        msg = Message(sender_id=current_user.id, receiver_id=doctor.user_id,
+                      subject=(request.form.get('subject') or 'Message from patient')[:200],
+                      body=body)
+        db.session.add(msg)
+        db.session.flush()
+        from app.services.notifications import notify
+        notify(doctor.user_id, f'New message: {msg.subject}',
+               f'{current_user.full_name}: {body[:140]}',
+               entity_type='message', entity_id=msg.id)
         db.session.commit()
         flash('Message sent.', 'success')
         return redirect(url_for('patient.messages'))

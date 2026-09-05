@@ -7,13 +7,18 @@ from app.routes.decorators import roles_required, permissions_required, log_acti
 from app.access import require_patient_access, accessible_patient_ids
 from app.utils import utcnow, is_clinical_locked
 from app.services.status import assert_transition, StatusTransitionError
-from app.services.notifications import notify_doctor, notify_patient, notify_role
+from app.services.notifications import (notify_doctor, notify_patient, notify_role,
+                                        notify_ordering_clinicians)
 from app.services import tasks as task_svc
 from app.services.timeline import record_event
 from app.services import alerts as alert_svc
 from app.services.radiology.safety_service import RadiologySafetyService
 
 radiology_bp = Blueprint('radiology', __name__)
+
+# Who may *run* a study (technologist duties) vs. who may *report* it.
+RAD_STAFF = ('Radiologist', 'RadiologyTechnician', 'Admin', 'SuperAdmin')
+RAD_VIEWERS = ('Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin')
 
 
 def _order(oid):
@@ -35,7 +40,7 @@ def _status_badge(s):
 
 @radiology_bp.route('/dashboard')
 @login_required
-@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_VIEWERS)
 def dashboard():
     pending = RadiologyOrder.query.filter_by(status='Pending').count()
     scheduled = RadiologyOrder.query.filter_by(status='Scheduled').count()
@@ -53,11 +58,32 @@ def dashboard():
 
 @radiology_bp.route('/orders')
 @login_required
-@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_VIEWERS)
 def orders():
-    all_orders = RadiologyOrder.query.order_by(RadiologyOrder.order_date.desc()).all()
+    q = RadiologyOrder.query
+    f_status = request.args.get('status', '').strip()
+    search = request.args.get('q', '').strip()
+    if f_status:
+        q = q.filter(RadiologyOrder.status == f_status)
+    if search:
+        numeric = int(search) if search.isdigit() else -1
+        q = (q.join(Patient, RadiologyOrder.patient_id == Patient.id)
+              .join(User, Patient.user_id == User.id)
+              .filter(db.or_(RadiologyOrder.id == numeric,
+                             User.full_name.ilike(f'%{search}%'),
+                             Patient.mrn.ilike(f'%{search}%'))))
+    # A referring doctor only sees studies they ordered; radiology staff and
+    # supervisors see the full worklist.
+    if current_user.has_role('Doctor') and not current_user.has_any_role(*RAD_STAFF):
+        doc = current_user.doctor_profile
+        q = q.filter(RadiologyOrder.doctor_id == (doc.id if doc else -1))
+    all_orders = q.order_by(RadiologyOrder.order_date.desc()).limit(300).all()
+    can_report = current_user.has_any_role('Radiologist', 'Admin', 'SuperAdmin')
+    can_perform = current_user.has_any_role(*RAD_STAFF)
     return render_template('radiology/orders.html', title='Radiology Orders',
-                           orders=all_orders, status_badge=_status_badge)
+                           orders=all_orders, status_badge=_status_badge,
+                           f_status=f_status, search=search,
+                           can_report=can_report, can_perform=can_perform)
 
 
 @radiology_bp.route('/order/new', methods=['GET', 'POST'])
@@ -76,15 +102,11 @@ def new_order():
             return redirect(url_for('radiology.new_order'))
         patient = db.session.get(Patient, patient_id)
         require_patient_access(patient)
-        order = RadiologyOrder(
-            patient_id=patient_id,
-            doctor_id=current_user.doctor_profile.id if current_user.doctor_profile else None,
-            imaging_type_id=imaging_type_id,
+        from app.services.clinical_orders import create_radiology_order
+        order = create_radiology_order(
+            patient, current_user.doctor_profile, imaging_type_id,
             priority=request.form.get('priority', 'Normal'),
-            notes=request.form.get('notes'),
-        )
-        db.session.add(order)
-        db.session.flush()
+            notes=request.form.get('notes'))
         log_activity('CREATE_RADIOLOGY_ORDER', 'radiology_order', order.id,
                      f'patient={patient_id}')
         db.session.commit()
@@ -101,24 +123,6 @@ def new_order():
         for sw in safety_warnings:
             if sw.get('severity') in ('Critical', 'Important'):
                 flash(f"Safety: {sw.get('title', '')} — {sw.get('message', '')}", 'warning')
-        task_svc.create_task(
-            title=f'Perform study #{order.id}: {order.imaging_type.name if order.imaging_type else ""}',
-            description='Schedule, capture, and prepare the study for reporting.',
-            task_type='RADIOLOGY', department='Radiology',
-            patient_id=patient_id, assigned_role='Radiologist',
-            priority=order.priority, related_resource_type='radiology_order',
-            related_resource_id=order.id)
-        db.session.commit()
-        notify_role('Radiologist',
-                    f'New radiology order #{order.id}',
-                    f'A new imaging order ({order.imaging_type.name if order.imaging_type else ""}) has been created for patient #{order.patient_id}.',
-                    entity_type='radiology_order', entity_id=order.id)
-        record_event(patient_id, 'RADIOLOGY',
-                     f'Imaging ordered: {order.imaging_type.name if order.imaging_type else "Study"}',
-                     f'Priority {order.priority}',
-                     source_type='radiology_order', source_id=order.id,
-                     department='Radiology')
-        db.session.commit()
         flash('Radiology order created; study workflow started.', 'success')
         return redirect(url_for('radiology.orders'))
 
@@ -132,7 +136,7 @@ def new_order():
 
 @radiology_bp.route('/orders/<int:order_id>/schedule', methods=['POST'])
 @login_required
-@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_STAFF)
 def schedule(order_id):
     order = _order(order_id)
     try:
@@ -156,7 +160,7 @@ def schedule(order_id):
 
 @radiology_bp.route('/orders/<int:order_id>/arrive', methods=['POST'])
 @login_required
-@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_STAFF)
 def arrive(order_id):
     order = _order(order_id)
     try:
@@ -174,7 +178,7 @@ def arrive(order_id):
 
 @radiology_bp.route('/orders/<int:order_id>/perform', methods=['POST'])
 @login_required
-@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_STAFF)
 def perform(order_id):
     order = _order(order_id)
     try:
@@ -189,6 +193,21 @@ def perform(order_id):
     order.technical_notes = request.form.get('technical_notes') or order.technical_notes
     log_activity('RADIOLOGY_PERFORMED', 'radiology_order', order.id,
                  f'by uid={current_user.id}')
+    record_event(order.patient_id, 'RADIOLOGY',
+                 f'Study performed: {order.imaging_type.name if order.imaging_type else "Imaging"}',
+                 f'Acquired by {current_user.full_name}',
+                 source_type='radiology_order', source_id=order.id, department='Radiology')
+    # Hand over to the reporting radiologist.
+    task_svc.complete_for_resource('radiology_order', order.id, 'Study acquired')
+    task_svc.create_task(
+        title=f'Report study #{order.id}: {order.imaging_type.name if order.imaging_type else ""}',
+        description='Review the images and author/sign the diagnostic report.',
+        task_type='RADIOLOGY', department='Radiology', patient_id=order.patient_id,
+        assigned_role='Radiologist', priority=str(order.priority or 'NORMAL').upper(),
+        related_resource_type='radiology_report_task', related_resource_id=order.id)
+    notify_role('Radiologist', f'Study #{order.id} ready for reporting',
+                f'{order.imaging_type.name if order.imaging_type else "Study"} has been performed and awaits a report.',
+                entity_type='radiology_order', entity_id=order.id)
     db.session.commit()
     flash('Study performed; ready for reporting.', 'success')
     return redirect(url_for('radiology.orders'))
@@ -196,7 +215,7 @@ def perform(order_id):
 
 @radiology_bp.route('/orders/<int:order_id>/upload', methods=['POST'])
 @login_required
-@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_STAFF)
 def upload_images(order_id):
     order = _order(order_id)
     files = request.files.getlist('images')
@@ -260,13 +279,23 @@ def enter_report(order_id):
         recommendation = request.form.get('recommendation')
         reason = request.form.get('reason')
 
-        if report and report.status in ('Signed', 'Locked'):
+        if report and report.status in ('Signed', 'Locked', 'Finalized'):
             old_state = {
                 'findings': report.findings,
                 'impression': report.impression,
                 'recommendation': report.recommendation,
                 'status': report.status,
             }
+            # Preserve the signed text verbatim before it is replaced.
+            from app.models import RadiologyReportVersion
+            version_no = (db.session.query(db.func.count(RadiologyReportVersion.id))
+                          .filter_by(report_id=report.id).scalar() or 0) + 1
+            db.session.add(RadiologyReportVersion(
+                report_id=report.id, version_number=version_no,
+                findings=report.findings, impression=report.impression,
+                recommendation=report.recommendation,
+                changed_by=current_user.id, change_reason=reason or 'No reason provided'))
+            report.amended_from_id = report.id
             report.findings = findings
             report.impression = impression
             report.recommendation = recommendation
@@ -314,16 +343,37 @@ def enter_report(order_id):
         except (FileNotFoundError, ImportError, OSError, ValueError) as exc:
             current_app.logger.warning('Radiology critical AI unavailable: %s', exc)
 
-        if ai_result and ai_result.get('critical_finding'):
-            priority = ai_result.get('priority', 'URGENT')
+        manual_critical = bool(request.form.get('critical_finding'))
+        if (ai_result and ai_result.get('critical_finding')) or manual_critical:
+            priority = (ai_result or {}).get('priority', 'CRITICAL' if manual_critical else 'URGENT')
             severity = 'CRITICAL' if priority == 'CRITICAL' else 'HIGH'
+            finding_text = (request.form.get('critical_finding_text') or
+                            (ai_result or {}).get('finding_type') or 'Critical finding')
             alert_svc.ensure_open_alert(
                 order.patient_id, 'CRITICAL_RADIOLOGY', severity=severity,
                 title=f'{priority.title()} finding on {order.imaging_type.name if order.imaging_type else "study"}',
-                message=(f'Order #{order.id} — {ai_result.get("finding_type", "critical finding")}. '
-                        f'AI confidence: {ai_result.get("confidence", 0) * 100:.1f}%. '
-                        f'{ai_result.get("message", "")}'),
+                message=(f'Order #{order.id} — {finding_text}. '
+                         + (f'AI confidence: {ai_result.get("confidence", 0) * 100:.1f}%. '
+                            f'{ai_result.get("message", "")}' if ai_result else 'Flagged by the radiologist.')),
                 source_type='radiology_order', source_id=order.id)
+            # Structured critical-result communication record (escalation trail).
+            existing = CriticalFindingNotification.query.filter_by(
+                order_id=order.id, acknowledged=False).first()
+            if existing is None:
+                responsible = order.doctor.user_id if order.doctor else None
+                db.session.add(CriticalFindingNotification(
+                    order_id=order.id, finding=finding_text,
+                    severity='Critical' if severity == 'CRITICAL' else 'Urgent',
+                    identified_by=current_user.id,
+                    responsible_clinician_id=responsible,
+                    notification_method='EMR Message', notification_time=utcnow(),
+                    recipient_name=(order.doctor.user.full_name
+                                    if order.doctor and order.doctor.user else None)))
+                notify_ordering_clinicians(
+                    order, f'CRITICAL radiology finding — order #{order.id}',
+                    f'{finding_text}. Immediate review and acknowledgement required.',
+                    notification_type='critical', entity_type='radiology_order',
+                    entity_id=order.id)
         db.session.commit()
         return redirect(url_for('radiology.orders'))
 
@@ -349,17 +399,22 @@ def sign_report(order_id):
     log_activity('SIGN_RADIOLOGY_REPORT', 'radiology_report', report.id,
                  f'Signed by {current_user.full_name}')
     if order.status not in ('Signed', 'Finalized'):
-        order.status = 'Reported'
+        order.status = 'Signed'
+    record_event(order.patient_id, 'RADIOLOGY',
+                 f'Report signed: {order.imaging_type.name if order.imaging_type else "Study"}',
+                 f'Impression: {(report.impression or "")[:140]}',
+                 source_type='radiology_order', source_id=order.id, department='Radiology')
     if order.imaging_type and order.imaging_type.price:
         from app.services.billing import ensure_bill_for_radiology
         ensure_bill_for_radiology(order.id)
     notify_patient(order.patient, 'Radiology report ready',
                    f'Your radiology report ({order.imaging_type.name if order.imaging_type else ""}) has been signed and is available.',
                    entity_type='radiology_order', entity_id=order.id)
-    if order.doctor:
-        notify_doctor(order.doctor, f'Radiology report ready — order #{order.id}',
-                      f'The report for "{order.imaging_type.name if order.imaging_type else ""}" has been signed.',
-                      entity_type='radiology_order', entity_id=order.id)
+    notify_ordering_clinicians(order, f'Radiology report ready — order #{order.id}',
+                               f'The report for "{order.imaging_type.name if order.imaging_type else ""}" has been signed.',
+                               entity_type='radiology_order', entity_id=order.id)
+    task_svc.complete_for_resource('radiology_order', order.id, 'Report signed')
+    task_svc.complete_for_resource('radiology_report_task', order.id, 'Report signed')
     db.session.commit()
     flash('Radiology report signed and locked.', 'success')
     return redirect(url_for('radiology.enter_report', order_id=order.id))
@@ -377,6 +432,10 @@ def cancel_order(order_id):
         return redirect(url_for('radiology.orders'))
     order.status = 'Cancelled'
     log_activity('CANCEL_RADIOLOGY_ORDER', 'radiology_order', order.id)
+    task_svc.cancel_for_resource('radiology_order', order.id, 'Imaging order cancelled')
+    record_event(order.patient_id, 'RADIOLOGY', 'Imaging order cancelled',
+                 order.imaging_type.name if order.imaging_type else 'Study',
+                 source_type='radiology_order', source_id=order.id, department='Radiology')
     if order.doctor:
         notify_doctor(order.doctor, f'Radiology order #{order.id} cancelled',
                       f'The study "{order.imaging_type.name if order.imaging_type else ""}" was cancelled.',
@@ -392,7 +451,7 @@ def cancel_order(order_id):
 
 @radiology_bp.route('/dose-dashboard')
 @login_required
-@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_VIEWERS)
 def dose_dashboard():
     """Radiation dose dashboard — annual exposure summary + alerts."""
     from app.services.radiology.dose_service import RadiationDoseService
@@ -419,7 +478,7 @@ def dose_dashboard():
 
 @radiology_bp.route('/safety-profile/<int:patient_id>')
 @login_required
-@roles_required('Radiologist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
+@roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
 def safety_profile(patient_id):
     """Patient imaging safety profile — MRI implants, contrast history, renal, pregnancy."""
     from app.services.radiology.safety_service import RadiologySafetyService
@@ -529,7 +588,7 @@ def verify_implant(implant_id):
 
 @radiology_bp.route('/orders/<int:order_id>/screening', methods=['GET', 'POST'])
 @login_required
-@roles_required('Radiologist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
+@roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
 def safety_screening(order_id):
     """Safety screening for a specific radiology order."""
     from app.services.radiology.safety_service import RadiologySafetyService
@@ -580,7 +639,7 @@ def safety_screening(order_id):
 
 @radiology_bp.route('/orders/<int:order_id>/dose-record', methods=['POST'])
 @login_required
-@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_STAFF)
 def record_dose(order_id):
     """Record radiation dose for a completed study."""
     from app.services.radiology.dose_service import RadiationDoseService
@@ -590,7 +649,7 @@ def record_dose(order_id):
         patient_id=order.patient_id,
         order_id=order_id,
         study_date=order.performed_at or utcnow(),
-        accession_number=order.admission_no if hasattr(order, 'admission_no') else None,
+        accession_number=f'RAD-{order.id:05d}',
         modality=order.imaging_type.name if order.imaging_type else 'Unknown',
         body_region=request.form.get('body_region'),
         study_description=request.form.get('study_description'),
@@ -620,8 +679,13 @@ def record_dose(order_id):
 @roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
 def critical_findings():
     """View and manage critical radiology findings."""
-    findings = CriticalFindingNotification.query.order_by(
-        CriticalFindingNotification.created_at.desc()).limit(50).all()
+    q = CriticalFindingNotification.query
+    if current_user.has_role('Doctor') and not current_user.has_any_role(
+            'Radiologist', 'Admin', 'SuperAdmin'):
+        pids = accessible_patient_ids(current_user)
+        q = (q.join(RadiologyOrder, CriticalFindingNotification.order_id == RadiologyOrder.id)
+              .filter(RadiologyOrder.patient_id.in_(sorted(pids) if pids else [-1])))
+    findings = q.order_by(CriticalFindingNotification.created_at.desc()).limit(50).all()
     return render_template('radiology/critical_findings.html',
                            title='Critical Findings',
                            findings=findings)
@@ -633,7 +697,13 @@ def critical_findings():
 def acknowledge_finding(finding_id):
     """Acknowledge receipt of a critical finding."""
     finding = db.session.get(CriticalFindingNotification, finding_id) or abort(404)
+    require_patient_access(finding.order.patient if finding.order else None)
     finding.acknowledged = True
+    finding.escalation_status = 'Resolved' if finding.escalation_status == 'Escalated' else finding.escalation_status
+    record_event(finding.order.patient_id, 'RADIOLOGY', 'Critical finding acknowledged',
+                 finding.finding[:140] if finding.finding else None,
+                 source_type='radiology_order', source_id=finding.order_id,
+                 department='Radiology')
     finding.acknowledged_by = current_user.id
     finding.acknowledged_at = utcnow()
     log_activity('ACKNOWLEDGE_CRITICAL_FINDING', 'radiology_order', finding.order_id)
@@ -644,7 +714,7 @@ def acknowledge_finding(finding_id):
 
 @radiology_bp.route('/protocols')
 @login_required
-@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+@roles_required(*RAD_STAFF)
 def protocols():
     """View imaging preparation protocols."""
     from app.models import ImagingPreparationProtocol

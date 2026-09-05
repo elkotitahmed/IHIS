@@ -5,7 +5,13 @@
         <h1 class="page-title">{{ 'الجلسات' if g.lang == 'ar' else 'Sessions' }}</h1>
         <p class="page-subtitle">{{ plan.title }} &mdash; {{ 'المريض' if g.lang == 'ar' else 'Patient' }}: {{ plan.patient.user.full_name }}</p>
     </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('physiotherapy.plan', patient_id=plan.patient_id) }}"><i class="fas fa-arrow-left"></i> {{ 'الخطة' if g.lang == 'ar' else 'Plan' }}</a>
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('physiotherapy.progress', patient_id=plan.patient_id) }}"><i class="fas fa-chart-line"></i> {{ 'التقدم' if g.lang == 'ar' else 'Progress' }}</a>
+        <a class="btn-ihs btn-ihs-primary" href="{{ url_for('clinical.patient_360', patient_id=plan.patient_id) }}"><i class="fas fa-circle-nodes"></i> Patient 360</a>
+    </div>
 </div>
+{% include 'clinical/_patient_header.html' %}
 
 <div class="row g-4">
     <div class="col-lg-5">
@@ -31,15 +37,6 @@
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'المدة (دقيقة)' if g.lang == 'ar' else 'Duration (minutes)' }}</label>
                         <input class="form-control" type="number" name="duration_minutes" min="5" value="45">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label-ihs">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</label>
-                        <select class="form-select" name="status">
-                            <option value="Scheduled">{{ 'مجدولة' if g.lang == 'ar' else 'Scheduled' }}</option>
-                            <option value="Completed">{{ 'مكتملة' if g.lang == 'ar' else 'Completed' }}</option>
-                            <option value="Cancelled">{{ 'ملغاة' if g.lang == 'ar' else 'Cancelled' }}</option>
-                            <option value="No Show">No Show</option>
-                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</label>
@@ -78,18 +75,20 @@
                                 <td class="cell-muted">{{ s.scheduled_at.strftime('%d %b %Y %H:%M') if s.scheduled_at else '-' }}</td>
                                 <td><span class="t-num">{{ s.duration_minutes }}</span> min</td>
                                 <td>
-                                    <span class="status-badge {{ 's-completed' if s.status=='Completed' else ('s-in-progress' if s.status=='In Progress' else ('s-cancelled' if s.status in ('Cancelled','No Show') else 's-scheduled')) }}">{{ s.status }}</span>
+                                    <span class="status-badge {{ 's-completed' if s.status=='Completed' else ('s-in-progress' if s.status in ('InProgress','In Progress') else ('s-cancelled' if s.status in ('Cancelled','No Show','NoShow') else 's-scheduled')) }}">{{ s.status }}</span>
+                                    {% if s.status == 'Completed' and s.pain_before is not none and s.pain_after is not none %}<div class="cell-muted" style="font-size:0.6875rem">{{ 'ألم' if g.lang == 'ar' else 'Pain' }} {{ s.pain_before }} → {{ s.pain_after }}</div>{% endif %}
                                 </td>
                                 <td class="cell-muted">{{ s.notes or '-' }}</td>
                                 <td>
                                     <div style="display:flex;gap:0.25rem;flex-wrap:wrap;align-items:center">
                                     {% if s.status == 'Scheduled' %}
-                                    <form method="POST" action="{{ url_for('physiotherapy.session_start', session_id=s.id) }}" class="d-inline">
+                                    <form method="POST" action="{{ url_for('physiotherapy.session_start', session_id=s.id) }}" class="d-inline" style="display:inline-flex;gap:0.25rem;align-items:center">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="number" name="pain_before" min="0" max="10" placeholder="{{ 'ألم' if g.lang == 'ar' else 'Pain' }}" class="form-control form-control-sm" style="width:64px" title="Pain before (0-10)">
                                         <button class="btn-ihs btn-ihs-primary btn-icon-sm" title="{{ 'بدء الجلسة' if g.lang == 'ar' else 'Start session' }}"><i class="fas fa-play"></i></button>
                                     </form>
                                     {% endif %}
-                                    {% if s.status in ('Scheduled', 'In Progress') %}
+                                    {% if s.status in ('Scheduled', 'InProgress', 'In Progress') %}
                                     <details class="d-inline">
                                         <summary class="btn-ihs btn-ihs-success btn-ihs-sm">{{ 'إكمال' if g.lang == 'ar' else 'Complete' }}</summary>
                                         <form method="POST" action="{{ url_for('physiotherapy.session_complete', session_id=s.id) }}" class="mt-1">

@@ -22,8 +22,8 @@
     <div class="kpi-card">
         <div class="kpi-icon success"><i class="fas fa-clipboard-list"></i></div>
         <div class="kpi-body">
-            <div class="kpi-label">{{ t('assessments_due') }}</div>
-            <div class="kpi-value">{{ pending_assessments }}</div>
+            <div class="kpi-label">{{ 'ألم شديد (≥7)' if g.lang == 'ar' else 'High Pain Scores (≥7)' }}</div>
+            <div class="kpi-value">{{ high_risk_count }}</div>
         </div>
     </div>
     <div class="kpi-card">
@@ -57,20 +57,59 @@
     <div class="col-lg-4">
         <div class="card-premium">
             <div class="card-header">
-                <div class="card-title"><i class="fas fa-chart-line" style="color:var(--ihis-success)"></i> {{ 'نظرة عامة' if g.lang == 'ar' else 'Overview' }}</div>
+                <div class="card-title"><i class="fas fa-share-nodes" style="color:var(--ihis-info)"></i> {{ 'إحالات واردة' if g.lang == 'ar' else 'Incoming Referrals' }}</div>
+                <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
             </div>
-            <div class="card-body" style="text-align:center;padding:var(--sp-6)">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)">
-                    <div style="padding:var(--sp-3);background:var(--ihis-surface-inset);border-radius:var(--radius-md)">
-                        <div class="t-num" style="font-size:1.5rem">{{ today_sessions_count }}</div>
-                        <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ 'اليوم' if g.lang == 'ar' else 'Today' }}</div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for r in pending_referrals %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <a class="link-ihs" style="font-size:0.8125rem;font-weight:500" href="{{ url_for('physiotherapy.assessment', patient_id=r.patient_id) }}">{{ r.patient.user.full_name if r.patient and r.patient.user else 'Patient' }}</a>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ r.reason }}</div>
                     </div>
-                    <div style="padding:var(--sp-3);background:var(--ihis-surface-inset);border-radius:var(--radius-md)">
-                        <div class="t-num" style="font-size:1.5rem">{{ active_plans_count }}</div>
-                        <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ 'الخطط النشطة' if g.lang == 'ar' else 'Active' }}</div>
-                    </div>
+                    <span class="status-badge {{ 's-cancelled' if r.urgency == 'Emergency' else 's-pending' }}">{{ r.urgency }}</span>
                 </div>
-            </div>
+                {% else %}
+                <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا إحالات معلقة' if g.lang == 'ar' else 'No pending referrals' }}</div>
+                {% endfor %}
+            </div></div>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mt-1">
+    <div class="col-lg-6">
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-calendar-day" style="color:var(--ihis-primary)"></i> {{ 'جلسات اليوم' if g.lang == 'ar' else "Today's Sessions" }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for s in today_sessions %}
+                <div class="list-item">
+                    <span class="cell-mono" style="font-size:0.75rem">{{ s.scheduled_at.strftime('%H:%M') if s.scheduled_at else '--:--' }}</span>
+                    <span style="flex:1;font-size:0.8125rem">{{ s.patient.user.full_name if s.patient and s.patient.user else 'Patient' }} &middot; {{ s.session_type }}</span>
+                    <span class="status-badge s-{{ s.status|lower }}">{{ s.status }}</span>
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.session', plan_id=s.plan_id) if s.plan_id else url_for('physiotherapy.plan', patient_id=s.patient_id) }}"><i class="fas fa-arrow-right"></i></a>
+                </div>
+                {% else %}
+                <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا جلسات اليوم' if g.lang == 'ar' else 'No sessions today' }}</div>
+                {% endfor %}
+            </div></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-clipboard-check" style="color:var(--ihis-success)"></i> {{ 'خطط العلاج الأخيرة' if g.lang == 'ar' else 'Recent Treatment Plans' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for pl in recent_plans %}
+                <div class="list-item">
+                    <div style="flex:1">
+                        <div style="font-size:0.8125rem;font-weight:500">{{ pl.title or 'Plan' }}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ pl.patient.user.full_name if pl.patient and pl.patient.user else '' }} &middot; {{ pl.status }}</div>
+                    </div>
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.session', plan_id=pl.id) }}">{{ 'الجلسات' if g.lang == 'ar' else 'Sessions' }}</a>
+                </div>
+                {% else %}
+                <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1.5rem">{{ 'لا خطط بعد' if g.lang == 'ar' else 'No treatment plans yet' }}</div>
+                {% endfor %}
+            </div></div>
         </div>
     </div>
 </div>

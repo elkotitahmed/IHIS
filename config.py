@@ -78,6 +78,9 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    # bcrypt work factor is deliberately low in the test profile so the suite
+    # is not dominated by password hashing; production keeps the default (12).
+    BCRYPT_LOG_ROUNDS = 4
     # Rate limiting is normally off for functional tests to keep them hermetic
     # and avoid cross-test interference on shared counter storage. Set the
     # RATELIMIT_ENABLED=1 env var to exercise the limit in a dedicated test.

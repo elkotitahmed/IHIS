@@ -28,7 +28,11 @@
                         {% for appt in items %}
                         <tr>
                             <td class="cell-mono">{{ appt.scheduled_at.strftime('%Y-%m-%d %H:%M') if appt.scheduled_at else 'N/A' }}</td>
-                            <td class="cell-primary">{{ appt.patient.user.full_name if appt.patient and appt.patient.user else 'N/A' }}</td>
+                            <td class="cell-primary">
+                                {% if appt.patient %}<a class="link-ihs" href="{{ url_for('doctor.patient_detail', patient_id=appt.patient_id) }}">{{ appt.patient.user.full_name if appt.patient.user else 'N/A' }}</a>
+                                {% if appt.queue_number %}<span class="tag-ihs" title="Queue">Q{{ appt.queue_number }}</span>{% endif %}
+                                {% else %}N/A{% endif %}
+                            </td>
                             <td class="cell-secondary">{{ appt.reason or '-' }}</td>
                             <td>
                                 {% set s = appt.status|lower %}
@@ -37,8 +41,14 @@
                                 </span>
                             </td>
                             <td>
-                                {% if appt.status == 'CheckedIn' %}
-                                <div style="display:flex;gap:var(--sp-2)">
+                                {% if appt.status in ('CheckedIn', 'InConsultation') %}
+                                <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
+                                    {% if appt.status == 'CheckedIn' %}
+                                    <form method="post" action="{{ url_for('doctor.start_consultation', appt_id=appt.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn-ihs btn-ihs-primary btn-ihs-sm" title="Start consultation and open the chart"><i class="fas fa-play"></i> {{ 'بدء الاستشارة' if g.lang == 'ar' else 'Start' }}</button>
+                                    </form>
+                                    {% endif %}
                                     <form method="post" action="{{ url_for('doctor.complete_appointment', appt_id=appt.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="mode" value="Completed">

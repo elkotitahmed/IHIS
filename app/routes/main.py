@@ -39,31 +39,47 @@ def home():
     return render_template('index.html', title='Home')
 
 
+ROLE_HOME = {
+    'SuperAdmin': 'super_admin.dashboard',
+    'Admin': 'admin.dashboard',
+    'Doctor': 'doctor.dashboard',
+    'Patient': 'patient.dashboard',
+    'Nurse': 'nursing.dashboard',
+    'LabTechnician': 'lab.dashboard',
+    'Radiologist': 'radiology.dashboard',
+    'RadiologyTechnician': 'radiology.dashboard',
+    'Pharmacist': 'pharmacy.dashboard',
+    'Receptionist': 'reception.dashboard',
+    'Cashier': 'billing.dashboard',
+    'Dentist': 'dentistry.dashboard',
+    'Physiotherapist': 'physiotherapy.dashboard',
+}
+
+# Priority order when a user carries several roles.
+_ROLE_PRIORITY = ('SuperAdmin', 'Admin', 'Doctor', 'Patient', 'Nurse',
+                  'LabTechnician', 'Radiologist', 'RadiologyTechnician',
+                  'Pharmacist', 'Receptionist', 'Cashier', 'Dentist',
+                  'Physiotherapist')
+
+_USER_TYPE_HOME = {
+    'doctor': 'doctor.dashboard', 'patient': 'patient.dashboard',
+    'nurse': 'nursing.dashboard',
+}
+
+
 def _role_home():
-    """Route authenticated users to their portal based on role."""
-    if current_user.has_any_role('Admin', 'SuperAdmin'):
-        return 'admin.dashboard'
-    if current_user.has_any_role('Doctor') or current_user.user_type == 'doctor':
-        return 'doctor.dashboard'
-    if current_user.has_any_role('Patient') or current_user.user_type == 'patient':
-        return 'patient.dashboard'
-    if current_user.has_any_role('Nurse') or current_user.user_type == 'nurse':
-        return 'nursing.dashboard'
-    if current_user.has_any_role('LabTechnician'):
-        return 'lab.dashboard'
-    if current_user.has_any_role('Radiologist'):
-        return 'radiology.dashboard'
-    if current_user.has_any_role('Pharmacist'):
-        return 'pharmacy.dashboard'
-    if current_user.has_any_role('Receptionist'):
-        return 'reception.dashboard'
-    if current_user.has_any_role('Cashier'):
-        return 'billing.dashboard'
-    if current_user.has_any_role('Dentist'):
-        return 'dentistry.dashboard'
-    if current_user.has_any_role('Physiotherapist'):
-        return 'physiotherapy.dashboard'
-    return 'main.home'
+    """Route authenticated users to their portal based on role.
+
+    A SuperAdmin previewing another role lands on *that* role's workspace so
+    the preview is faithful end-to-end."""
+    from flask import session
+    preview = session.get('preview_role')
+    if preview and current_user.has_role('SuperAdmin') and preview in ROLE_HOME:
+        return ROLE_HOME[preview]
+    for role in _ROLE_PRIORITY:
+        if current_user.has_role(role):
+            return ROLE_HOME[role]
+    return _USER_TYPE_HOME.get(current_user.user_type, 'main.home')
 
 
 @main_bp.route('/dashboard')

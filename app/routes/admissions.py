@@ -11,10 +11,12 @@ from app.models import (Admission, Ward, Bed, Patient, Doctor, Bill, BillItem,
 from app.routes.decorators import roles_required, permissions_required, log_activity
 from app.utils import utcnow
 from app.services.timeline import record_event
+from app.services.billing import bill_number_for
+from app.access import require_patient_access
 
 admissions_bp = Blueprint('admissions', __name__)
 
-STAFF = ('Receptionist', 'Admin', 'SuperAdmin', 'Nurse')
+STAFF = ('Receptionist', 'Admin', 'SuperAdmin', 'Nurse', 'Doctor')
 
 
 def _next_admission_no():
@@ -91,8 +93,13 @@ def admissions():
     query = Admission.query
     if status:
         query = query.filter(Admission.status == status)
-    items = query.order_by(Admission.admitted_at.desc()).all()
-    patients = Patient.query.all()
+    if current_user.has_role('Doctor') and not current_user.has_any_role('Admin', 'SuperAdmin'):
+        from app.access import accessible_patient_ids
+        pids = accessible_patient_ids(current_user)
+        query = query.filter(Admission.patient_id.in_(sorted(pids) if pids else [-1]))
+    items = query.order_by(Admission.admitted_at.desc()).limit(300).all()
+    from app.models import User
+    patients = Patient.query.join(User, Patient.user_id == User.id).order_by(User.full_name).all()
     wards = Ward.query.all()
     doctors = Doctor.query.all()
     # ward_id -> list of (bed_id, label) for available beds only
@@ -125,6 +132,9 @@ def admit():
     if bed.status != 'Available':
         flash(f'Bed {bed.bed_no} is not available.', 'danger')
         return redirect(url_for('admissions.admissions'))
+    if bed.ward_id != int(ward_id):
+        flash('The selected bed does not belong to the selected ward.', 'danger')
+        return redirect(url_for('admissions.admissions'))
 
     from datetime import datetime
     expected_dt = None
@@ -145,15 +155,24 @@ def admit():
         flash('Patient is already admitted.', 'warning')
         return redirect(url_for('admissions.admissions'))
 
+    # Atomic bed claim: only one concurrent admit can flip Available->Occupied.
+    from sqlalchemy import update as sql_update
+    claimed = db.session.execute(
+        sql_update(Bed).where(Bed.id == bed.id, Bed.status == 'Available')
+        .values(status='Occupied'))
+    if claimed.rowcount != 1:
+        db.session.rollback()
+        flash(f'Bed {bed.bed_no} was just taken by another admission. Choose another bed.', 'danger')
+        return redirect(url_for('admissions.admissions'))
+    db.session.refresh(bed)
     admission = Admission(
-        admission_no=_next_admission_no(),
         patient_id=patient.id, ward_id=int(ward_id), bed_id=bed.id,
         admitting_doctor_id=int(doctor_id) if doctor_id else None,
         admitted_by=current_user.id, reason=reason,
         expected_discharge=expected_dt, status='Admitted')
-    bed.status = 'Occupied'
     db.session.add(admission)
     db.session.flush()
+    admission.admission_no = f'ADM-{1000 + admission.id}'
     log_activity('ADMIT_PATIENT', 'admission', admission.id,
                  f'patient={patient.id} bed={bed.id}')
     record_event(patient.id, 'ADMISSION',
@@ -161,20 +180,66 @@ def admit():
                  f'{admission.admission_no} · {reason or "—"}',
                  source_type='admission', source_id=admission.id,
                  department='Admissions')
-    from app.services.notifications import notify_patient
+    from app.services.notifications import notify_patient, notify_role, notify
     notify_patient(patient, 'Admission confirmed',
-                   f'You have been admitted to {bed.ward.name if bed.ward else "ward"} (bed {bed.bed_no}). Admission: {admission.admission_no}.')
+                   f'You have been admitted to {bed.ward.name if bed.ward else "ward"} (bed {bed.bed_no}). Admission: {admission.admission_no}.',
+                   entity_type='admission', entity_id=admission.id)
+    notify_role('Nurse', f'New admission: {patient.user.full_name if patient.user else "patient"}',
+                f'{bed.ward.name if bed.ward else "Ward"} · bed {bed.bed_no} · {reason or "no reason recorded"}',
+                entity_type='admission', entity_id=admission.id)
+    if admission.admitting_doctor and admission.admitting_doctor.user_id:
+        notify(admission.admitting_doctor.user_id, f'Patient admitted under your care ({admission.admission_no})',
+               f'{patient.user.full_name if patient.user else "Patient"} · {bed.ward.name if bed.ward else "Ward"} bed {bed.bed_no}',
+               entity_type='admission', entity_id=admission.id)
+    from app.services import tasks as task_svc
+    task_svc.create_task(
+        title=f'Admission nursing intake — {patient.user.full_name if patient.user else "patient"}',
+        description=f'{admission.admission_no}: record admission vitals, nursing assessment and care plan.',
+        task_type='NURSING', department='Nursing', patient_id=patient.id,
+        assigned_role='Nurse', priority='HIGH',
+        related_resource_type='admission', related_resource_id=admission.id)
     db.session.commit()
     flash(f'Patient admitted to bed {bed.bed_no} ({admission.admission_no}).', 'success')
     return redirect(url_for('admissions.dashboard'))
 
 
+@admissions_bp.route('/admissions/<int:id>')
+@login_required
+@roles_required(*STAFF)
+@permissions_required('ADMISSION_VIEW')
+def view(id):
+    """Inpatient episode detail: bed, doctor, stay, discharge summary, bills."""
+    admission = Admission.query.get_or_404(id)
+    require_patient_access(admission.patient)
+    from app.models import VitalSign, MedicationAdministration, NursingNote
+    from app.services.patient_safety import patient_safety_context
+    vitals = (VitalSign.query.filter_by(patient_id=admission.patient_id)
+              .filter(VitalSign.recorded_at >= admission.admitted_at)
+              .order_by(VitalSign.recorded_at.desc()).limit(10).all())
+    doses = (MedicationAdministration.query.filter_by(patient_id=admission.patient_id)
+             .filter(MedicationAdministration.created_at >= admission.admitted_at)
+             .order_by(MedicationAdministration.scheduled_time.desc().nulls_last()).limit(15).all())
+    notes = (NursingNote.query.filter_by(patient_id=admission.patient_id)
+             .filter(NursingNote.created_at >= admission.admitted_at)
+             .order_by(NursingNote.created_at.desc()).limit(10).all())
+    bills = Bill.query.filter_by(patient_id=admission.patient_id, source_type='Room',
+                                 source_id=admission.id).all()
+    return render_template('admissions/view.html', title=f'Admission {admission.admission_no}',
+                           admission=admission, patient=admission.patient,
+                           vitals=vitals, doses=doses, notes=notes, bills=bills,
+                           latest_vitals=vitals[0] if vitals else None,
+                           active_admission=admission if admission.status == 'Admitted' else None,
+                           **patient_safety_context(admission.patient_id),
+                           today=utcnow().date())
+
+
 @admissions_bp.route('/admissions/<int:id>/discharge', methods=['GET', 'POST'])
 @login_required
-@roles_required('Admin', 'SuperAdmin')
+@roles_required('Admin', 'SuperAdmin', 'Doctor')
 @permissions_required('ADMISSION_DISCHARGE')
 def discharge(id):
     admission = Admission.query.get_or_404(id)
+    require_patient_access(admission.patient)
     if admission.status != 'Admitted':
         flash('Admission is not active.', 'warning')
         return redirect(url_for('admissions.dashboard'))
@@ -182,6 +247,10 @@ def discharge(id):
         return render_template('admissions/discharge.html', title='Discharge Patient',
                                admission=admission)
     notes = request.form.get('discharge_notes')
+    if not (request.form.get('discharge_diagnosis') or '').strip():
+        flash('A discharge diagnosis is required to close the admission.', 'warning')
+        return render_template('admissions/discharge.html', title='Discharge Patient',
+                               admission=admission)
     admission.status = 'Discharged'
     admission.discharge_notes = notes
     admission.discharge_diagnosis = request.form.get('discharge_diagnosis')
@@ -197,13 +266,16 @@ def discharge(id):
     if admission.ward and admission.ward.room_charge_per_day:
         days = admission.days_stayed() + 1  # count the discharge day
         charge = admission.ward.room_charge_per_day * days
-        bill = Bill(patient_id=admission.patient_id, source_type='Room',
-                    source_id=admission.id)
-        db.session.add(bill)
-        db.session.flush()
-        db.session.add(BillItem(bill_id=bill.id,
-                                description=f'{admission.ward.name} — {days} day(s)',
-                                quantity=1, unit_price=charge))
+        bill = Bill.query.filter_by(source_type='Room', source_id=admission.id).first()
+        if bill is None:
+            bill = Bill(patient_id=admission.patient_id, source_type='Room',
+                        source_id=admission.id, created_by=current_user.id)
+            db.session.add(bill)
+            db.session.flush()
+            bill.bill_no = bill_number_for(bill.id)
+            db.session.add(BillItem(bill_id=bill.id,
+                                    description=f'{admission.ward.name} — {days} day(s)',
+                                    quantity=1, unit_price=charge))
     log_activity('DISCHARGE_PATIENT', 'admission', admission.id,
                  f'notes={"yes" if notes else "no"}')
     record_event(admission.patient_id, 'DISCHARGE',
@@ -214,7 +286,21 @@ def discharge(id):
     from app.services.notifications import notify_patient
     notify_patient(admission.patient, 'Discharged',
                    f'You have been discharged from {admission.ward.name if admission.ward else "the hospital"} '
-                   f'after {admission.days_stayed()} day(s). Thank you for choosing us.')
+                   f'after {admission.days_stayed()} day(s). Thank you for choosing us.',
+                   entity_type='admission', entity_id=admission.id)
+    from app.services import tasks as task_svc
+    task_svc.complete_for_resource('admission', admission.id, 'Patient discharged')
+    # Discharge follow-up becomes a tracked follow-up when instructions say so.
+    follow_days = request.form.get('follow_up_days', type=int)
+    if follow_days:
+        from app.models import FollowUp
+        from datetime import timedelta
+        db.session.add(FollowUp(
+            patient_id=admission.patient_id,
+            provider_id=admission.admitting_doctor_id,
+            scheduled_for=utcnow() + timedelta(days=follow_days),
+            reason=f'Post-discharge review ({admission.admission_no})',
+            status='Scheduled', created_by=current_user.id))
     db.session.commit()
     flash(f'Patient discharged. {admission.days_stayed()} day(s) stayed.', 'success')
     return redirect(url_for('admissions.discharge_summary', id=admission.id))
@@ -227,6 +313,7 @@ def discharge(id):
 def discharge_summary(id):
     """Printable structured discharge summary (medical record lifecycle)."""
     admission = Admission.query.get_or_404(id)
+    require_patient_access(admission.patient)
     if admission.status != 'Discharged':
         flash('This admission has not been discharged yet.', 'warning')
         return redirect(url_for('admissions.dashboard'))

@@ -16,6 +16,7 @@ from app.models import (
 )
 from app.routes.decorators import roles_required, permissions_required, log_activity
 from app.utils import utcnow
+from app.services.billing import bill_number_for, receipt_number_for
 
 billing_bp = Blueprint('billing', __name__)
 
@@ -65,11 +66,6 @@ def bills():
                            status=status, q=q)
 
 
-def _next_bill_no():
-    last = Bill.query.order_by(Bill.id.desc()).first()
-    return f'INV-{1000 + (last.id + 1 if last else 1)}'
-
-
 @billing_bp.route('/bills/new', methods=['GET', 'POST'])
 @login_required
 @roles_required(*STAFF)
@@ -102,9 +98,10 @@ def new_bill():
 
         bill = Bill(patient_id=patient.id, created_by=current_user.id,
                     discount=discount, tax_percent=tax, notes=notes,
-                    bill_no=_next_bill_no(), source_type='Manual')
+                    source_type='Manual')
         db.session.add(bill)
         db.session.flush()
+        bill.bill_no = bill_number_for(bill.id)
         for d, qty, price in lines:
             db.session.add(BillItem(bill_id=bill.id, description=d,
                                     quantity=qty, unit_price=price))
@@ -112,8 +109,13 @@ def new_bill():
         log_activity('CREATE_BILL', 'bill', bill.id,
                      f'patient={patient.id} total={bill.total():.2f}')
         from app.services.notifications import notify_patient
+        from app.services.timeline import record_event
         notify_patient(patient, 'New bill issued',
-                       f'Bill {bill.bill_no} for {bill.total():.2f} has been issued to you.')
+                       f'Bill {bill.bill_no} for {bill.total():.2f} has been issued to you.',
+                       entity_type='bill', entity_id=bill.id)
+        record_event(patient.id, 'BILLING', f'Bill issued — {bill.bill_no}',
+                     f'{len(lines)} line(s) · total {bill.total():.2f}',
+                     source_type='bill', source_id=bill.id, department='Billing')
         db.session.commit()
         flash(f'Bill {bill.bill_no} created. Total {bill.total():.2f}.', 'success')
         return redirect(url_for('billing.view_bill', bill_id=bill.id))
@@ -124,7 +126,7 @@ def new_bill():
     preselected = []
     if sel:
         preselected = _completed_services_for(sel.id)
-    patients = Patient.query.all()
+    patients = Patient.query.join(User, Patient.user_id == User.id).order_by(User.full_name).all()
     return render_template('billing/new_bill.html', title='New Bill',
                            patients=patients, sel=sel, preselected=preselected,
                            today=date.today())
@@ -133,13 +135,13 @@ def new_bill():
 def _completed_services_for(patient_id):
     """Return priced services the patient has consumed but not yet billed."""
     services = []
-    for o in LabOrder.query.filter_by(patient_id=patient_id, status='Completed').all():
-        if o.result and o.result.status in ('Verified', 'Locked'):
+    for o in LabOrder.query.filter_by(patient_id=patient_id).all():
+        if o.result and o.result.status in ('Verified', 'Locked', 'Finalized') and o.test:
             if not _bill_exists('Lab', o.id):
                 services.append({'label': f'Lab — {o.test.test_name}', 'qty': 1,
                                  'price': o.test.price or 0})
-    for o in RadiologyOrder.query.filter_by(patient_id=patient_id, status='Completed').all():
-        if o.report and o.report.status in ('Signed', 'Locked'):
+    for o in RadiologyOrder.query.filter_by(patient_id=patient_id).all():
+        if o.report and o.report.status in ('Signed', 'Locked', 'Finalized') and o.imaging_type:
             if not _bill_exists('Radiology', o.id):
                 services.append({'label': f'Radiology — {o.imaging_type.name}', 'qty': 1,
                                  'price': o.imaging_type.price or 0})
@@ -199,13 +201,12 @@ def record_payment(bill_id):
         flash('A payment with this reference already exists for the bill. '
               'Double submission prevented.', 'danger')
         return redirect(url_for('billing.view_bill', bill_id=bill.id))
-    last_pay = Payment.query.order_by(Payment.id.desc()).first()
-    receipt_no = f'RCT-{10000 + (last_pay.id + 1 if last_pay else 1)}'
-    db.session.add(Payment(bill_id=bill.id, amount=amount, method=method,
-                           reference=reference, received_by=current_user.id,
-                           receipt_no=receipt_no,
-                           notes=request.form.get('notes')))
+    payment = Payment(bill_id=bill.id, amount=amount, method=method,
+                      reference=reference, received_by=current_user.id,
+                      notes=request.form.get('notes'))
+    db.session.add(payment)
     db.session.flush()
+    payment.receipt_no = receipt_no = receipt_number_for(payment.id)
     # Compute the new status from the running total (explicitly includes the
     # newly-added payment) rather than bill.balance(), whose lazy `payments`
     # collection may already be cached from the earlier balance() check.
@@ -214,9 +215,14 @@ def record_payment(bill_id):
     log_activity('RECORD_PAYMENT', 'bill', bill.id,
                  f'amount={amount} method={method}')
     from app.services.notifications import notify_patient
+    from app.services.timeline import record_event
     notify_patient(bill.patient, 'Payment received',
                    f'Payment of {amount:.2f} received on {bill.bill_no}. '
-                   f'Remaining balance: {max(0.0, bill.total() - paid_now):.2f}.')
+                   f'Remaining balance: {max(0.0, bill.total() - paid_now):.2f}.',
+                   entity_type='bill', entity_id=bill.id)
+    record_event(bill.patient_id, 'PAYMENT', f'Payment received — {bill.bill_no}',
+                 f'{amount:.2f} via {method} · receipt {receipt_no}',
+                 source_type='bill', source_id=bill.id, department='Billing')
     try:
         db.session.commit()
     except IntegrityError:
@@ -241,6 +247,10 @@ def void_bill(bill_id):
         return redirect(url_for('billing.view_bill', bill_id=bill.id))
     bill.status = 'Voided'
     log_activity('VOID_BILL', 'bill', bill.id, 'reason=' + (request.form.get('reason') or 'Not given'))
+    from app.services.timeline import record_event
+    record_event(bill.patient_id, 'BILLING', f'Bill voided — {bill.bill_no}',
+                 request.form.get('reason') or 'Not given',
+                 source_type='bill', source_id=bill.id, department='Billing')
     db.session.commit()
     flash(f'Bill {bill.bill_no} voided.', 'success')
     return redirect(url_for('billing.bills'))

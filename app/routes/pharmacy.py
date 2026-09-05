@@ -175,9 +175,13 @@ def dispense(id):
         return redirect(url_for('pharmacy.prescriptions'))
 
     # FEFO: dispense from the batch expiring soonest with sufficient stock.
+    # Expired batches are never dispensable, whatever their quantity.
+    today = date.today()
     inv = PharmacyInventory.query.filter(
         PharmacyInventory.medication_id == item.medication_id,
         PharmacyInventory.quantity > 0,
+        db.or_(PharmacyInventory.expiry_date.is_(None),
+               PharmacyInventory.expiry_date >= today),
     ).order_by(
         PharmacyInventory.expiry_date.asc().nulls_last()
     ).all()
@@ -185,7 +189,11 @@ def dispense(id):
     available = sum(i.quantity for i in inv)
     med_name = item.medication.generic_name if item.medication else 'medication'
     if available <= 0:
-        flash(f'No stock available for {med_name}.', 'danger')
+        expired_only = PharmacyInventory.query.filter(
+            PharmacyInventory.medication_id == item.medication_id,
+            PharmacyInventory.quantity > 0).count() > 0
+        flash(f'No dispensable stock for {med_name}'
+              + (' (only expired batches remain).' if expired_only else '.'), 'danger')
         return redirect(url_for('pharmacy.prescriptions'))
 
     # Partial dispense: give what we have now; the remainder stays pending.
@@ -260,7 +268,10 @@ def dispense(id):
         rx.status = 'Dispensed'
         from app.services.notifications import notify_patient
         notify_patient(rx.patient, 'Prescription dispensed',
-                       f'Your prescription #{rx.id} has been fully dispensed and is ready for pickup.')
+                       f'Your prescription #{rx.id} has been fully dispensed and is ready for pickup.',
+                       entity_type='prescription', entity_id=rx.id)
+        from app.services import tasks as task_svc
+        task_svc.complete_for_resource('prescription', rx.id, 'Fully dispensed')
         record_event(rx.patient_id, 'DISPENSE',
                      f'Prescription dispensed fully (#{rx.id})',
                      f'{med_name} · {dispensed}',
@@ -303,6 +314,10 @@ def reject(rx_id):
     log_change('REJECT_PRESCRIPTION', 'prescription', rx.id,
                old_value={'status': old}, new_value={'status': 'Cancelled'},
                reason=reason, details=f'pharmacist={current_user.id}')
+    from app.services import tasks as task_svc
+    task_svc.cancel_for_resource('prescription', rx.id, f'Rejected by pharmacy: {reason}')
+    record_event(rx.patient_id, 'PRESCRIPTION', f'Prescription #{rx.id} rejected by pharmacy',
+                 reason, source_type='prescription', source_id=rx.id, department='Pharmacy')
     if rx.doctor:
         notify_doctor(rx.doctor, f'Prescription #{rx.id} rejected',
                       f'Your prescription #{rx.id} was rejected by pharmacy: {reason}',
@@ -344,7 +359,9 @@ def adjust_stock(inv_id):
         return redirect(url_for('pharmacy.inventory', _anchor=f'batch-{inv.id}'))
     new_qty = inv.quantity + delta
     if new_qty < 0:
-        new_qty = 0
+        flash(f'Adjustment would make stock negative (current {inv.quantity}). '
+              'Enter a smaller withdrawal.', 'danger')
+        return redirect(url_for('pharmacy.inventory', _anchor=f'batch-{inv.id}'))
     actual_delta = new_qty - inv.quantity
     inv.quantity = new_qty
     db.session.add(StockTransaction(
@@ -582,12 +599,17 @@ def create_intervention(rx_id):
                  department='Pharmacy')
     log_activity('CREATE_INTERVENTION', 'pharmacy_intervention', intervention.id,
                  f'rx={rx.id} severity={intervention.severity}')
+    from app.services.notifications import notify
     if intervention.prescriber_id:
-        notify_role('Doctor',
-                    f'Pharmacy intervention on Rx #{rx.id}',
+        notify(intervention.prescriber_id,
+               f'Pharmacy intervention on Rx #{rx.id}',
+               f'{issue} — please review the recommendation.',
+               notification_type='critical' if intervention.severity in ('Major', 'Contraindicated') else 'in-app',
+               entity_type='pharmacy_intervention', entity_id=intervention.id)
+    else:
+        notify_role('Doctor', f'Pharmacy intervention on Rx #{rx.id}',
                     f'{issue} — please review the recommendation.',
-                    entity_type='pharmacy_intervention',
-                    entity_id=intervention.id)
+                    entity_type='pharmacy_intervention', entity_id=intervention.id)
     db.session.commit()
     flash('Intervention raised with the prescriber.', 'success')
     return redirect(url_for('pharmacy.prescription_detail', rx_id=rx.id))
@@ -610,6 +632,12 @@ def respond_intervention(i_id):
     intervention.response = request.form.get('response') or intervention.response
     log_activity('RESPOND_INTERVENTION', 'pharmacy_intervention', intervention.id,
                  f'{status}')
+    if intervention.pharmacist_id and intervention.pharmacist_id != current_user.id:
+        from app.services.notifications import notify
+        notify(intervention.pharmacist_id,
+               f'Intervention {status.lower()} (Rx #{intervention.prescription_id})',
+               f'{current_user.full_name} responded: {(intervention.response or status)[:160]}',
+               entity_type='pharmacy_intervention', entity_id=intervention.id)
     if status == 'ACCEPTED':
         alert_svc.ensure_open_alert(
             intervention.patient_id, 'DUPLICATE_THERAPY', severity='INFO',

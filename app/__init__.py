@@ -174,6 +174,7 @@ def register_context_processors(app):
         'Nurse': 'Nurse',
         'LabTechnician': 'Lab Technician',
         'Radiologist': 'Radiologist',
+        'RadiologyTechnician': 'Radiology Technician',
         'Pharmacist': 'Pharmacist',
         'Receptionist': 'Receptionist',
         'Dentist': 'Dentist',
@@ -206,10 +207,10 @@ def register_context_processors(app):
                 (_l('AI Command Center', 'مركز أوامر الذكاء'), '/ai/ai-dashboard',
                  'fa-robot', {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'}),
                 (_l('Fracture Detection', 'كشف الكسور'), '/ai/fracture-detection',
-                 'fa-bone', {'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
+                 'fa-bone', {'Radiologist', 'RadiologyTechnician', 'Doctor', 'Nurse', 'Physiotherapist',
                              'Dentist', 'Admin', 'SuperAdmin'}),
                 (_l('Tooth Segmentation', 'تجزئة الأسنان'), '/ai/tooth-segmentation',
-                 'fa-tooth', {'Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin'}),
+                 'fa-tooth', {'Dentist', 'Radiologist', 'RadiologyTechnician', 'Nurse', 'Admin', 'SuperAdmin'}),
                 (_l('Skin Lesion Detection', 'كشف آفات الجلد'), '/ai/skin-lesion-detection',
                  'fa-person-circle-question', {'Doctor', 'Dentist', 'Nurse',
                                                'Admin', 'SuperAdmin'}),
@@ -251,6 +252,8 @@ def register_context_processors(app):
             items += [
                 {'section': _l('COMMAND CENTER', 'مركز الأوامر'), 'items': [
                     {'label': _l('Hospital Overview', 'نظرة عامة على المستشفى'), 'url': '/super-admin/dashboard', 'icon': 'fa-gauge-high'},
+                    {'label': _l('Hospital Demo', 'عرض المستشفى'), 'url': '/super-admin/demo', 'icon': 'fa-play-circle'},
+                    {'label': _l('System Health', 'صحة النظام'), 'url': '/super-admin/system-health', 'icon': 'fa-heart-pulse'},
                     {'label': _l('Platform Capabilities', 'قدرات المنصة'), 'url': '/super-admin/capabilities', 'icon': 'fa-rocket'},
                 ]},
                 {'section': _l('CLINICAL', 'سريري'), 'items': [
@@ -264,8 +267,9 @@ def register_context_processors(app):
                     {'label': _l('Clinical Templates', 'القوالب السريرية'), 'url': '/clinical/templates', 'icon': 'fa-clipboard-list'},
                 ]},
                 {'section': _l('OPERATIONS', 'العمليات'), 'items': [
+                    {'label': _l('Reception', 'الاستقبال'), 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'},
                     {'label': _l('Appointments', 'المواعيد'), 'url': '/reception/appointments', 'icon': 'fa-calendar-check'},
-                    {'label': _l('Tasks', 'المهام'), 'url': '/tasks/my-tasks', 'icon': 'fa-clipboard-list'},
+                    {'label': _l('Task Queue', 'قائمة المهام'), 'url': '/tasks/queue', 'icon': 'fa-clipboard-list'},
                     {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                     {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
                 ]},
@@ -288,8 +292,10 @@ def register_context_processors(app):
                 ]},
                 {'section': _l('ADMINISTRATION', 'الإدارة'), 'items': [
                     {'label': _l('Users', 'المستخدمون'), 'url': '/admin/staff', 'icon': 'fa-users-cog'},
+                    {'label': _l('Departments', 'الأقسام'), 'url': '/admin/departments', 'icon': 'fa-building'},
                     {'label': _l('Roles & Permissions', 'الأدوار والصلاحيات'), 'url': '/super-admin/roles', 'icon': 'fa-shield-halved'},
                     {'label': _l('Audit Logs', 'سجلات المراجعة'), 'url': '/super-admin/audit-logs', 'icon': 'fa-clock-rotate-left'},
+                    {'label': _l('Backup', 'النسخ الاحتياطي'), 'url': '/super-admin/backup', 'icon': 'fa-database'},
                     {'label': _l('Settings', 'الإعدادات'), 'url': '/super-admin/settings', 'icon': 'fa-gear'},
                 ]},
             ]
@@ -300,8 +306,10 @@ def register_context_processors(app):
             if 'Patient' in role_set or current_user.user_type == 'patient':
                 items += [
                     {'section': _l('MY HEALTH', 'صحتي'), 'items': [
+                        {'label': _l('My Profile', 'ملفي'), 'url': '/patient/profile', 'icon': 'fa-id-card'},
                         {'label': _l('Medical History', 'التاريخ الطبي'), 'url': '/patient/medical-history', 'icon': 'fa-history'},
                         {'label': _l('Appointments', 'المواعيد'), 'url': '/patient/appointments', 'icon': 'fa-calendar-check'},
+                        {'label': _l('Book Appointment', 'حجز موعد'), 'url': '/patient/appointments/book', 'icon': 'fa-calendar-plus'},
                         {'label': _l('Prescriptions', 'الروشتات'), 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
                         {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/patient/lab-results', 'icon': 'fa-flask'},
                         {'label': _l('My Radiology', 'أشعتي'), 'url': '/patient/my-radiology', 'icon': 'fa-radiation'},
@@ -318,12 +326,16 @@ def register_context_processors(app):
                         {'label': _l('Patients', 'المرضى'), 'url': '/doctor/patients', 'icon': 'fa-user-injured'},
                         {'label': _l('Appointments', 'المواعيد'), 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
                         {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
+                        {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
+                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+                        {'label': _l('Attachments', 'المرفقات'), 'url': '/doctor/attachments', 'icon': 'fa-paperclip'},
                     ]},
                 ]
 
             if 'LabTechnician' in role_set:
                 items += [
                     {'section': _l('LABORATORY', 'المختبر'), 'items': [
+                        {'label': _l('Lab Dashboard', 'لوحة المختبر'), 'url': '/lab/dashboard', 'icon': 'fa-flask'},
                         {'label': _l('Work Queue', 'قائمة العمل'), 'url': '/lab/orders', 'icon': 'fa-layer-group'},
                         {'label': _l('Test Catalog', 'دليل الفحوصات'), 'url': '/lab/catalog', 'icon': 'fa-book'},
                     ]},
@@ -332,9 +344,20 @@ def register_context_processors(app):
             if 'Radiologist' in role_set:
                 items += [
                     {'section': _l('RADIOLOGY', 'الأشعة'), 'items': [
-                        {'label': _l('Worklist', 'قائمة العمل'), 'url': '/radiology/orders', 'icon': 'fa-x-ray'},
+                        {'label': _l('Radiology Dashboard', 'لوحة الأشعة'), 'url': '/radiology/dashboard', 'icon': 'fa-x-ray'},
+                        {'label': _l('Worklist', 'قائمة العمل'), 'url': '/radiology/orders', 'icon': 'fa-list-check'},
                         {'label': _l('Dose Dashboard', 'لوحة الجرعة'), 'url': '/radiology/dose-dashboard', 'icon': 'fa-radiation'},
                         {'label': _l('Critical Findings', 'النتائج الحرجة'), 'url': '/radiology/critical-findings', 'icon': 'fa-exclamation-circle'},
+                        {'label': _l('Protocols', 'البروتوكولات'), 'url': '/radiology/protocols', 'icon': 'fa-clipboard-list'},
+                    ]},
+                ]
+
+            if 'RadiologyTechnician' in role_set:
+                items += [
+                    {'section': _l('RADIOLOGY', 'الأشعة'), 'items': [
+                        {'label': _l('Radiology Dashboard', 'لوحة الأشعة'), 'url': '/radiology/dashboard', 'icon': 'fa-x-ray'},
+                        {'label': _l('Study Worklist', 'قائمة الدراسات'), 'url': '/radiology/orders', 'icon': 'fa-list-check'},
+                        {'label': _l('Dose Dashboard', 'لوحة الجرعة'), 'url': '/radiology/dose-dashboard', 'icon': 'fa-radiation'},
                         {'label': _l('Protocols', 'البروتوكولات'), 'url': '/radiology/protocols', 'icon': 'fa-clipboard-list'},
                     ]},
                 ]
@@ -355,16 +378,20 @@ def register_context_processors(app):
                 items += [
                     {'section': _l('NURSING', 'التمريض'), 'items': [
                         {'label': _l('My Patients', 'مرضاي'), 'url': '/nursing/dashboard', 'icon': 'fa-user-nurse'},
-                        {'label': _l('Vitals', 'العلامات الحيوية'), 'url': '/nursing/patients', 'icon': 'fa-heartbeat'},
+                        {'label': _l('Patient Registry', 'سجل المرضى'), 'url': '/nursing/patients', 'icon': 'fa-heartbeat'},
+                        {'label': _l('Medication Schedule', 'جدول الأدوية'), 'url': '/nursing/medication-schedule', 'icon': 'fa-pills'},
+                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                     ]},
                 ]
 
             if 'Receptionist' in role_set:
                 items += [
                     {'section': _l('RECEPTION', 'الاستقبال'), 'items': [
-                        {'label': _l('Patients', 'المرضى'), 'url': '/reception/dashboard', 'icon': 'fa-users'},
+                        {'label': _l('Front Desk', 'مكتب الاستقبال'), 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'},
+                        {'label': _l('Register Patient', 'تسجيل مريض'), 'url': '/reception/register', 'icon': 'fa-user-plus'},
+                        {'label': _l('Book Appointment', 'حجز موعد'), 'url': '/reception/appointments/book', 'icon': 'fa-calendar-plus'},
                         {'label': _l('Appointments', 'المواعيد'), 'url': '/reception/appointments', 'icon': 'fa-calendar-check'},
-                        {'label': _l('Check-in', 'تسجيل الحضور'), 'url': '/reception/queue', 'icon': 'fa-clipboard-check'},
+                        {'label': _l('Waiting Queue', 'قائمة الانتظار'), 'url': '/reception/queue', 'icon': 'fa-clipboard-check'},
                         {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                         {'label': _l('Billing', 'الفواتير'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
                     ]},
@@ -372,22 +399,31 @@ def register_context_processors(app):
 
             if 'Cashier' in role_set:
                 items += [
-                    {'section': _l('FINANCE', 'FINANCE'), 'items': [
-                        {'label': _l('Billing', 'الفوترة'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                    {'section': _l('FINANCE', 'المالية'), 'items': [
+                        {'label': _l('Cashier Desk', 'مكتب الصندوق'), 'url': '/billing/dashboard', 'icon': 'fa-cash-register'},
                         {'label': _l('Invoices', 'الفواتير'), 'url': '/billing/bills', 'icon': 'fa-file-invoice'},
-                        {'label': _l('Payments', 'المدفوعات'), 'url': '/billing/reports', 'icon': 'fa-cash-register'},
+                        {'label': _l('Revenue Report', 'تقرير الإيرادات'), 'url': '/billing/reports', 'icon': 'fa-chart-line'},
                     ]},
                 ]
 
             if 'Admin' in role_set and 'SuperAdmin' not in role_set:
                 items += [
+                    {'section': _l('CLINICAL', 'سريري'), 'items': [
+                        {'label': _l('Patients', 'المرضى'), 'url': '/doctor/patients', 'icon': 'fa-user-injured'},
+                        {'label': _l('Clinical Workbench', 'منصة سريرية'), 'url': '/clinical', 'icon': 'fa-stethoscope'},
+                        {'label': _l('Clinical Alerts', 'التنبيهات السريرية'), 'url': '/clinical/alerts', 'icon': 'fa-bell'},
+                    ]},
+                    {'section': _l('OPERATIONS', 'العمليات'), 'items': [
+                        {'label': _l('Appointments', 'المواعيد'), 'url': '/reception/appointments', 'icon': 'fa-calendar-check'},
+                        {'label': _l('Task Queue', 'قائمة المهام'), 'url': '/tasks/queue', 'icon': 'fa-clipboard-list'},
+                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+                        {'label': _l('Billing', 'الفواتير'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                    ]},
                     {'section': _l('ADMINISTRATION', 'الإدارة'), 'items': [
                         {'label': _l('Users', 'المستخدمون'), 'url': '/admin/staff', 'icon': 'fa-users-cog'},
                         {'label': _l('Departments', 'الأقسام'), 'url': '/admin/departments', 'icon': 'fa-building'},
                         {'label': _l('Doctors', 'الأطباء'), 'url': '/admin/doctors', 'icon': 'fa-user-md'},
                         {'label': _l('Statistics', 'الإحصائيات'), 'url': '/admin/statistics', 'icon': 'fa-chart-bar'},
-                        {'label': _l('Billing', 'الفواتير'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
-                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                         {'label': _l('Reports', 'التقارير'), 'url': '/reports/', 'icon': 'fa-chart-pie'},
                         {'label': _l('Dose Reference Levels', 'عتبات الجرعة المرجعية'), 'url': '/radiology/reference-levels', 'icon': 'fa-ruler'},
                     ]},
@@ -396,22 +432,30 @@ def register_context_processors(app):
             if 'Dentist' in role_set:
                 items += [
                     {'section': _l('DENTISTRY', 'الأسنان'), 'items': [
-                        {'label': _l('Patients', 'المرضى'), 'url': '/dentistry/patients', 'icon': 'fa-tooth'},
+                        {'label': _l('Dental Dashboard', 'لوحة الأسنان'), 'url': '/dentistry/dashboard', 'icon': 'fa-tooth'},
+                        {'label': _l('Patients', 'المرضى'), 'url': '/dentistry/patients', 'icon': 'fa-user-injured'},
+                        {'label': _l('Orthodontic Cases', 'حالات التقويم'), 'url': '/dentistry/ortho', 'icon': 'fa-teeth'},
+                        {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
                     ]},
                 ]
 
             if 'Physiotherapist' in role_set:
                 items += [
                     {'section': _l('PHYSIOTHERAPY', 'العلاج الطبيعي'), 'items': [
-                        {'label': _l('Patients', 'المرضى'), 'url': '/physiotherapy/patients', 'icon': 'fa-person-walking'},
+                        {'label': _l('Rehab Dashboard', 'لوحة التأهيل'), 'url': '/physiotherapy/dashboard', 'icon': 'fa-person-walking'},
+                        {'label': _l('Patients', 'المرضى'), 'url': '/physiotherapy/patients', 'icon': 'fa-user-injured'},
+                        {'label': _l('Exercise Library', 'مكتبة التمارين'), 'url': '/physiotherapy/exercise-library', 'icon': 'fa-dumbbell'},
+                        {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
                     ]},
                 ]
 
             # Shared items for clinical staff are filtered by the same
             # permissions that protect their destinations.
-            if role_set & {'Doctor', 'Nurse', 'LabTechnician', 'Radiologist', 'Pharmacist', 'Dentist', 'Physiotherapist'}:
+            if role_set & {'Doctor', 'Nurse', 'LabTechnician', 'Radiologist', 'RadiologyTechnician',
+                           'Pharmacist', 'Dentist', 'Physiotherapist', 'Receptionist', 'Cashier'}:
                 work_items = [
                     {'label': _l('My Tasks', 'مهامي'), 'url': '/tasks/my-tasks', 'icon': 'fa-clipboard-list'},
+                    {'label': _l('Department Queue', 'قائمة القسم'), 'url': '/tasks/queue', 'icon': 'fa-layer-group'},
                 ]
                 permissioned_links = [
                     ('TIMELINE_VIEW', 'Clinical Workbench',

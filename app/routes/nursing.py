@@ -7,7 +7,7 @@ from app.models import (
     Patient, Prescription, Medication, User, PrescriptionItem, IntakeOutput,
 )
 from app.routes.decorators import roles_required, permissions_required, log_activity
-from app.access import patient_access_required
+from app.access import patient_access_required, accessible_patient_ids, require_patient_access
 from app.services.timeline import record_event
 from app.services import alerts as alert_svc
 from app.services.patient_safety import patient_safety_context
@@ -59,18 +59,46 @@ def _is_abnormal(vital):
 @login_required
 @roles_required('Nurse', 'Admin', 'SuperAdmin')
 def dashboard():
-    patients = Patient.query.all()
-    assigned_patients = len(patients)
-    med_count = MedicationAdministration.query.count()
-    critical = 0
-    for patient in patients:
-        latest = VitalSign.query.filter_by(patient_id=patient.id).order_by(
-            VitalSign.recorded_at.desc()).first()
-        if latest and _is_abnormal(latest):
-            critical += 1
+    """Nurse workspace: the patients this nurse is responsible for today
+    (inpatients, today's clinic attendances, care-team assignments), doses
+    that are due, and abnormal observations."""
+    from app.models import Admission, Appointment
+    pids = accessible_patient_ids(current_user)
+    id_list = sorted(pids) if pids else [-1]
+    patients = (Patient.query.filter(Patient.id.in_(id_list))
+                .order_by(Patient.id.desc()).limit(100).all())
+    admitted = {a.patient_id: a for a in Admission.query.filter(
+        Admission.status == 'Admitted', Admission.patient_id.in_(id_list)).all()}
+    now = datetime.now()
+    due_doses = (MedicationAdministration.query
+                 .filter(MedicationAdministration.patient_id.in_(id_list),
+                         MedicationAdministration.status.in_(['Scheduled', 'Due']))
+                 .order_by(MedicationAdministration.scheduled_time.asc().nulls_last())
+                 .limit(20).all())
+    overdue_doses = [d for d in due_doses if d.scheduled_time and d.scheduled_time < now]
+    # Latest vital per patient in a single pass.
+    latest_by_pid = {}
+    for v in (VitalSign.query.filter(VitalSign.patient_id.in_(id_list))
+              .order_by(VitalSign.recorded_at.desc()).all()):
+        latest_by_pid.setdefault(v.patient_id, v)
+    abnormal = [latest_by_pid[pid] for pid in latest_by_pid if _is_abnormal(latest_by_pid[pid])]
+    vitals_due = [p for p in patients if p.id in admitted and (
+        p.id not in latest_by_pid or
+        (now - latest_by_pid[p.id].recorded_at).total_seconds() > 8 * 3600)]
+    my_tasks = []
+    from app.models import Task
+    my_tasks = (Task.query.filter(
+        db.or_(Task.assigned_to == current_user.id,
+               db.and_(Task.assigned_role == 'Nurse', Task.assigned_to.is_(None))),
+        Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS']))
+        .order_by(Task.due_at.asc().nulls_last(), Task.created_at.desc()).limit(10).all())
     return render_template('nursing/dashboard.html', title='Nursing Dashboard',
-                           assigned_patients=assigned_patients, med_count=med_count,
-                           critical_alerts=critical, patients=patients)
+                           assigned_patients=len(patients), med_count=len(due_doses),
+                           critical_alerts=len(abnormal), patients=patients,
+                           admitted=admitted, due_doses=due_doses,
+                           overdue_doses=overdue_doses, abnormal=abnormal,
+                           vitals_due=vitals_due, latest_by_pid=latest_by_pid,
+                           my_tasks=my_tasks, now=now)
 
 
 @nursing_bp.route('/patients')
@@ -78,12 +106,14 @@ def dashboard():
 @roles_required('Nurse', 'Admin', 'SuperAdmin')
 def patients():
     search = request.args.get('q', '')
-    query = Patient.query
+    pids = accessible_patient_ids(current_user)
+    query = Patient.query.filter(Patient.id.in_(sorted(pids) if pids else [-1]))
     if search:
         query = query.join(Patient.user).filter(
             db.or_(User.full_name.ilike(f'%{search}%'),
-                   User.email.ilike(f'%{search}%')))
-    results = query.limit(100).all()
+                   User.email.ilike(f'%{search}%'),
+                   Patient.mrn.ilike(f'%{search}%')))
+    results = query.order_by(Patient.id.desc()).limit(100).all()
     return render_template('nursing/patients.html', title='Nursing - Patients',
                            patients=results, search=search)
 
@@ -107,6 +137,8 @@ def vitals(patient_id):
             oxygen_saturation=_as_int(request.form.get('oxygen_saturation')),
             height_cm=_as_float(request.form.get('height_cm')),
             weight_kg=_as_float(request.form.get('weight_kg')),
+            pain_score=_as_int(request.form.get('pain_score')),
+            blood_glucose=_as_float(request.form.get('blood_glucose')),
         )
         db.session.add(vital)
         db.session.flush()
@@ -159,7 +191,14 @@ def notes(patient_id):
             note=request.form.get('note'),
             shift=request.form.get('shift'),
         )
+        if not (note.note or '').strip():
+            flash('Nursing note text is required.', 'warning')
+            return redirect(url_for('nursing.notes', patient_id=patient.id))
         db.session.add(note)
+        db.session.flush()
+        record_event(patient.id, 'NURSING', 'Nursing note',
+                     (note.note or '')[:160] + (f' · {note.shift} shift' if note.shift else ''),
+                     source_type='nursing_note', source_id=note.id, department='Nursing')
         log_activity('CREATE_NURSING_NOTE', 'patient', patient.id,
                      f'Nurse {current_user.id} added a nursing note')
         db.session.commit()
@@ -189,6 +228,10 @@ def care_plan(patient_id):
             end_date=_as_date(request.form.get('end_date')),
         )
         db.session.add(plan)
+        db.session.flush()
+        record_event(patient.id, 'NURSING', f'Care plan: {plan.title or "Nursing care plan"}',
+                     (plan.goals or '')[:160], source_type='care_plan', source_id=plan.id,
+                     department='Nursing')
         log_activity('CREATE_CARE_PLAN', 'patient', patient.id,
                      f'Nurse {current_user.id} created a care plan')
         db.session.commit()
@@ -206,23 +249,27 @@ def care_plan(patient_id):
 def medication_schedule():
     # Eager-load patient, prescription and its items/medications in one query
     # to avoid the N+1 pattern of per-record lookups.
+    pids = accessible_patient_ids(current_user)
     recs = (MedicationAdministration.query
+            .filter(MedicationAdministration.patient_id.in_(sorted(pids) if pids else [-1]))
             .options(
                 db.joinedload(MedicationAdministration.patient)
                 .joinedload(Patient.user),
                 db.joinedload(MedicationAdministration.prescription)
                 .joinedload(Prescription.items),
             )
-            .order_by(MedicationAdministration.administered_at.desc())
-            .all())
+            .order_by(MedicationAdministration.status.asc(),
+                      MedicationAdministration.scheduled_time.desc().nulls_last())
+            .limit(300).all())
     lang = getattr(current_user, 'lang', 'en') or 'en'
     items = []
     nurse_map = {u.id: u for u in
                  User.query.filter(User.id.in_(
                      {r.nurse_id for r in recs if r.nurse_id})).all()}
     for rec in recs:
-        line = rec.prescription.items[0] if rec.prescription and rec.prescription.items else None
-        medication = line.medication if line else None
+        line = rec.prescription_item or (
+            rec.prescription.items[0] if rec.prescription and rec.prescription.items else None)
+        medication = rec.medication or (line.medication if line else None)
         nurse = nurse_map.get(rec.nurse_id)
         items.append({
             'record': rec,
@@ -247,7 +294,7 @@ def _parse_dt(value):
     return None
 
 
-MED_OUTCOMES = ('Administered', 'Refused', 'Held', 'Missed')
+MED_OUTCOMES = ('Administered', 'Refused', 'Held', 'Missed', 'Discontinued')
 
 
 @nursing_bp.route('/patients/<int:patient_id>/mar', methods=['GET', 'POST'])
@@ -264,6 +311,9 @@ def mar(patient_id):
             item = db.session.get(PrescriptionItem, item_id)
         if item is None or item.prescription.patient_id != patient.id:
             flash('Invalid prescription item.', 'danger')
+            return redirect(url_for('nursing.mar', patient_id=patient.id))
+        if item.prescription.status == 'Cancelled' or item.status == 'Cancelled':
+            flash('This prescription item has been cancelled; no doses can be scheduled.', 'danger')
             return redirect(url_for('nursing.mar', patient_id=patient.id))
         due = _parse_dt(request.form.get('scheduled_time'))
         admin = MedicationAdministration(
@@ -313,15 +363,27 @@ def administration_outcome(admin_id):
     admin = db.session.get(MedicationAdministration, admin_id)
     if admin is None:
         abort(404)
+    require_patient_access(admin.patient)
     outcome = request.form.get('status')
     if outcome not in MED_OUTCOMES:
         flash('Invalid outcome.', 'danger')
+        return redirect(url_for('nursing.mar', patient_id=admin.patient_id))
+    if admin.status not in ('Scheduled', 'Due', 'Held'):
+        flash(f'This dose is already recorded as {admin.status}.', 'info')
+        return redirect(url_for('nursing.mar', patient_id=admin.patient_id))
+    if outcome == 'Administered' and admin.prescription and admin.prescription.status == 'Cancelled':
+        flash('The prescription was cancelled by the physician; the dose cannot be given.', 'danger')
         return redirect(url_for('nursing.mar', patient_id=admin.patient_id))
     admin.status = outcome
     admin.nurse_id = current_user.id
     admin.administered_at = datetime.now()
     admin.reason = request.form.get('reason') if outcome != 'Administered' else None
     admin.notes = request.form.get('notes') or None
+    med_label = (admin.medication.generic_name if admin.medication else admin.dose_given) or 'medication'
+    record_event(admin.patient_id, 'NURSING', f'Medication {outcome.lower()}: {med_label}',
+                 (admin.dose_given or '') + (f' · {admin.reason}' if admin.reason else ''),
+                 source_type='medication_administration', source_id=admin.id,
+                 department='Nursing')
     log_activity('MED_ADMIN_OUTCOME', 'patient', admin.patient_id,
                  f'admin={admin.id} -> {outcome}')
     from app.services.notifications import notify_doctor, notify_patient

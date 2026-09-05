@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from app import db
 from app.models import (
     PhysicalTherapist, TherapyAssessment, TherapyPlan, TherapySession,
@@ -8,7 +8,10 @@ from app.models import (
     FunctionalOutcome, Patient, User,
 )
 from app.routes.decorators import roles_required, log_activity
-from app.access import patient_access_required, require_patient_access
+from app.access import patient_access_required, require_patient_access, accessible_patient_ids
+from app.services.timeline import record_event
+from app.services.patient_safety import patient_safety_context
+from app.utils import utcnow
 
 physiotherapy_bp = Blueprint('physiotherapy', __name__)
 
@@ -22,26 +25,39 @@ def get_current_therapist():
 @roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
 def dashboard():
     today = date.today()
-    today_sessions_count = TherapySession.query.filter(
-        db.func.date(TherapySession.scheduled_at) == today
-    ).count()
-    active_plans_count = TherapyPlan.query.filter_by(status='Active').count()
+    pids = accessible_patient_ids(current_user)
+    id_list = sorted(pids) if pids else [-1]
+    day_start = datetime.combine(today, datetime.min.time())
+    today_sessions = (TherapySession.query
+                      .filter(TherapySession.patient_id.in_(id_list),
+                              TherapySession.scheduled_at >= day_start,
+                              TherapySession.scheduled_at < day_start + timedelta(days=1))
+                      .order_by(TherapySession.scheduled_at).all())
+    active_plans_count = TherapyPlan.query.filter(
+        TherapyPlan.patient_id.in_(id_list), TherapyPlan.status == 'Active').count()
     high_risk_count = TherapyAssessment.query.filter(
-        TherapyAssessment.pain_assessment >= 7
-    ).count()
-    recent_sessions = TherapySession.query.order_by(
-        TherapySession.scheduled_at.desc()
-    ).limit(8).all()
-    recent_plans = TherapyPlan.query.order_by(
-        TherapyPlan.id.desc()
-    ).limit(8).all()
+        TherapyAssessment.patient_id.in_(id_list),
+        TherapyAssessment.pain_assessment >= 7).count()
+    recent_sessions = (TherapySession.query.filter(TherapySession.patient_id.in_(id_list))
+                       .order_by(TherapySession.scheduled_at.desc()).limit(8).all())
+    recent_plans = (TherapyPlan.query.filter(TherapyPlan.patient_id.in_(id_list))
+                    .order_by(TherapyPlan.id.desc()).limit(8).all())
+    # Referrals waiting for the rehab service.
+    from app.models import Referral
+    from app.access import PHYSIO_KEYWORDS
+    pending_referrals = (Referral.query
+                         .filter(db.or_(*[Referral.to_specialty.ilike(f'%{k}%') for k in PHYSIO_KEYWORDS]),
+                                 Referral.status.in_(('Pending', 'SENT', 'ACCEPTED', 'IN_REVIEW')))
+                         .order_by(Referral.created_at.desc()).limit(10).all())
     return render_template(
-        'physiotherapy/dashboard.html',
-        today_sessions_count=today_sessions_count,
+        'physiotherapy/dashboard.html', title='Physiotherapy Dashboard',
+        today_sessions_count=len(today_sessions),
+        today_sessions=today_sessions,
         active_plans_count=active_plans_count,
         high_risk_count=high_risk_count,
         recent_sessions=recent_sessions,
         recent_plans=recent_plans,
+        pending_referrals=pending_referrals,
         today=today,
     )
 
@@ -51,7 +67,8 @@ def dashboard():
 @roles_required('Physiotherapist', 'Admin', 'SuperAdmin')
 def patients():
     search = request.args.get('q', '').strip()
-    query = Patient.query.join(User)
+    pids = accessible_patient_ids(current_user)
+    query = Patient.query.join(User).filter(Patient.id.in_(sorted(pids) if pids else [-1]))
     if search:
         query = query.filter(
             db.or_(
@@ -89,8 +106,14 @@ def assessment(patient_id):
             gait_analysis=request.form.get('gait_analysis', ''),
             notes=request.form.get('notes', ''),
         )
+        assessment.assessment_type = request.form.get('assessment_type') or 'Initial'
         db.session.add(assessment)
         db.session.flush()
+        record_event(patient_id, 'PHYSIOTHERAPY',
+                     f'{assessment.assessment_type} physiotherapy assessment',
+                     f'Pain {assessment.pain_assessment}/10 · {(assessment.functional_assessment or "")[:100]}',
+                     source_type='therapy_assessment', source_id=assessment.id,
+                     department='Rehabilitation')
         log_activity('CREATE_THERAPY_ASSESSMENT', 'therapy_assessment',
                       assessment.id, f'patient_id={patient_id}')
         db.session.commit()
@@ -101,9 +124,10 @@ def assessment(patient_id):
         patient_id=patient_id
     ).order_by(TherapyAssessment.assessed_at.desc()).all()
     return render_template(
-        'physiotherapy/assessment.html',
+        'physiotherapy/assessment.html', title='Physiotherapy Assessment',
         patient=patient,
         assessments=assessments,
+        **patient_safety_context(patient.id), today=utcnow().date(),
     )
 
 
@@ -138,8 +162,12 @@ def plan(patient_id):
             end_date=end_date,
             status=request.form.get('status', 'Active'),
         )
+        plan.precautions = request.form.get('precautions', '')
         db.session.add(plan)
         db.session.flush()
+        record_event(patient_id, 'PHYSIOTHERAPY', f'Treatment plan: {plan.title or "Rehabilitation"}',
+                     (plan.goals or '')[:140], source_type='therapy_plan', source_id=plan.id,
+                     department='Rehabilitation')
         log_activity('CREATE_THERAPY_PLAN', 'therapy_plan', plan.id,
                       f'patient_id={patient_id} title={plan.title}')
         db.session.commit()
@@ -150,10 +178,11 @@ def plan(patient_id):
         TherapyPlan.id.desc()
     ).all()
     return render_template(
-        'physiotherapy/plan.html',
+        'physiotherapy/plan.html', title='Treatment Plan',
         patient=patient,
         plans=plans,
-        today=date.today().strftime('%Y-%m-%d'),
+        today_str=date.today().strftime('%Y-%m-%d'),
+        **patient_safety_context(patient.id), today=utcnow().date(),
     )
 
 
@@ -181,11 +210,15 @@ def session(plan_id):
             session_type=request.form.get('session_type', 'Individual'),
             scheduled_at=scheduled_at,
             duration_minutes=int(request.form.get('duration_minutes', 45)),
-            status=request.form.get('status', 'Scheduled'),
+            status='Scheduled',
             notes=request.form.get('notes', ''),
         )
         db.session.add(session)
         db.session.flush()
+        record_event(plan.patient_id, 'PHYSIOTHERAPY', 'Therapy session scheduled',
+                     f'{session.session_type} · {scheduled_at.strftime("%d %b %Y %H:%M") if scheduled_at else "unscheduled"}',
+                     source_type='therapy_session', source_id=session.id,
+                     department='Rehabilitation')
         log_activity('CREATE_THERAPY_SESSION', 'therapy_session', session.id,
                       f'plan_id={plan_id} patient_id={plan.patient_id}')
         db.session.commit()
@@ -196,9 +229,10 @@ def session(plan_id):
         TherapySession.scheduled_at.desc()
     ).all()
     return render_template(
-        'physiotherapy/sessions.html',
-        plan=plan,
+        'physiotherapy/sessions.html', title='Therapy Sessions',
+        plan=plan, patient=plan.patient,
         sessions=sessions,
+        **patient_safety_context(plan.patient_id), today=utcnow().date(),
     )
 
 
@@ -225,6 +259,11 @@ def progress(patient_id):
         )
         db.session.add(progress)
         db.session.flush()
+        record_event(patient_id, 'PHYSIOTHERAPY', 'Rehabilitation progress recorded',
+                     f'Pain {progress.pain_score}/10 · mobility {progress.mobility_score} · '
+                     f'strength {progress.strength_score} · function {progress.functional_outcome}',
+                     source_type='rehabilitation_progress', source_id=progress.id,
+                     department='Rehabilitation')
         log_activity('CREATE_REHAB_PROGRESS', 'rehabilitation_progress', progress.id,
                       f'patient_id={patient_id}')
         db.session.commit()
@@ -237,11 +276,12 @@ def progress(patient_id):
     plans = TherapyPlan.query.filter_by(patient_id=patient_id).all()
     sessions = TherapySession.query.filter_by(patient_id=patient_id).all()
     return render_template(
-        'physiotherapy/progress.html',
+        'physiotherapy/progress.html', title='Rehabilitation Progress',
         patient=patient,
         progress_entries=progress_entries,
         plans=plans,
         sessions=sessions,
+        **patient_safety_context(patient.id), today=utcnow().date(),
     )
 
 
@@ -301,17 +341,17 @@ def add_exercise():
 def session_start(session_id):
     session = TherapySession.query.get_or_404(session_id)
     require_patient_access(session.patient)
-    if session.status not in ('Scheduled',):
+    if session.status not in ('Scheduled', 'CheckedIn'):
         flash('Only a scheduled session can be started.', 'warning')
-        return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
-    session.status = 'In Progress'
+        return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
+    session.status = 'InProgress'
     session.started_at = datetime.now()
     session.pain_before = request.form.get('pain_before', type=int)
     log_activity('START_THERAPY_SESSION', 'therapy_session', session.id,
                  f'patient_id={session.patient_id}')
     db.session.commit()
     flash('Session started.', 'success')
-    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+    return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
 
 
 @physiotherapy_bp.route('/sessions/<int:session_id>/complete', methods=['POST'])
@@ -320,9 +360,9 @@ def session_start(session_id):
 def session_complete(session_id):
     session = TherapySession.query.get_or_404(session_id)
     require_patient_access(session.patient)
-    if session.status not in ('In Progress', 'Scheduled'):
+    if session.status not in ('InProgress', 'In Progress', 'Scheduled', 'CheckedIn'):
         flash('Only an in-progress session can be completed.', 'warning')
-        return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+        return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
     session.status = 'Completed'
     session.settled_at = datetime.now()
     session.pain_after = request.form.get('pain_after', type=int)
@@ -330,8 +370,14 @@ def session_complete(session_id):
     session.modalities = request.form.get('modalities')
     session.patient_response = request.form.get('patient_response')
     session.followup_required = bool(request.form.get('followup_required'))
-    session.adherence = request.form.get('adherence')
+    session.adherence = request.form.get('adherence', type=int)
     session.notes = request.form.get('notes') or session.notes
+    record_event(session.patient_id, 'PHYSIOTHERAPY', 'Therapy session completed',
+                 f'Pain {session.pain_before if session.pain_before is not None else "-"} -> '
+                 f'{session.pain_after if session.pain_after is not None else "-"} · '
+                 f'{(session.exercises_performed or "")[:100]}',
+                 source_type='therapy_session', source_id=session.id,
+                 department='Rehabilitation')
     if not session.started_at:
         session.started_at = datetime.now()
     log_activity('COMPLETE_THERAPY_SESSION', 'therapy_session', session.id,
@@ -344,7 +390,7 @@ def session_complete(session_id):
                    entity_type='therapy_session', entity_id=session.id)
     db.session.commit()
     flash('Session completed and billed.', 'success')
-    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+    return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
 
 
 @physiotherapy_bp.route('/sessions/<int:session_id>/cancel', methods=['POST'])
@@ -353,12 +399,15 @@ def session_complete(session_id):
 def session_cancel(session_id):
     session = TherapySession.query.get_or_404(session_id)
     require_patient_access(session.patient)
+    if session.status in ('Completed', 'Cancelled'):
+        flash('This session is already closed.', 'info')
+        return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
     session.status = 'Cancelled'
     log_activity('CANCEL_THERAPY_SESSION', 'therapy_session', session.id,
                  f'patient_id={session.patient_id}')
     db.session.commit()
     flash('Session cancelled.', 'success')
-    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+    return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
 
 
 @physiotherapy_bp.route('/sessions/<int:session_id>/no-show', methods=['POST'])
@@ -367,9 +416,12 @@ def session_cancel(session_id):
 def session_no_show(session_id):
     session = TherapySession.query.get_or_404(session_id)
     require_patient_access(session.patient)
-    session.status = 'No Show'
+    if session.status != 'Scheduled':
+        flash('Only a scheduled session can be marked as no-show.', 'warning')
+        return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
+    session.status = 'NoShow'
     log_activity('NO_SHOW_THERAPY_SESSION', 'therapy_session', session.id,
                  f'patient_id={session.patient_id}')
     db.session.commit()
     flash('Session marked as no show.', 'info')
-    return redirect(url_for('physiotherapy.plan', plan_id=session.plan_id))
+    return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))

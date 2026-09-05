@@ -75,6 +75,7 @@ def _doctor_of(user):
 def _patient_json(p):
     return {
         'id': p.id,
+        'mrn': p.mrn,
         'user_id': p.user_id,
         'full_name': p.user.full_name if p.user else None,
         'email': p.user.email if p.user else None,
@@ -277,16 +278,29 @@ def create_appointment():
     if has_appointment_conflict(int(doctor_id), scheduled,
                                 int(data.get('duration_minutes', 30))):
         return jsonify({'error': 'Doctor already has an appointment at that time'}), 409
+    patient = db.session.get(Patient, int(patient_id))
+    doctor = db.session.get(Doctor, int(doctor_id))
+    if patient is None or doctor is None:
+        return jsonify({'error': 'patient or doctor not found'}), 404
+    if current_user.user_type != 'patient' and not _require_patient_access(patient):
+        return jsonify({'error': 'No documented access to this patient'}), 403
     a = Appointment(
-        patient_id=int(patient_id),
-        doctor_id=int(doctor_id),
+        patient_id=patient.id,
+        doctor_id=doctor.id,
         scheduled_at=scheduled,
+        duration_minutes=int(data.get('duration_minutes', 30) or 30),
         status='Scheduled',
-        priority=data.get('priority', 'Normal'),
-        reason=data.get('reason', ''),
+        priority=data.get('priority', 'Normal') if data.get('priority') in ('Normal', 'Urgent', 'Emergency') else 'Normal',
+        reason=(data.get('reason') or '')[:500],
         created_by=current_user.id,
     )
     db.session.add(a)
+    db.session.flush()
+    from app.services.timeline import record_event
+    record_event(patient.id, 'APPOINTMENT', 'Appointment booked',
+                 f'With Dr. {doctor.user.full_name if doctor.user else "doctor"} on '
+                 f'{scheduled.strftime("%d %b %Y %H:%M")}',
+                 source_type='appointment', source_id=a.id, department='API')
     db.session.commit()
     return jsonify({'id': a.id, 'status': a.status}), 201
 
@@ -299,10 +313,19 @@ def patients():
     query = Patient.query
     if current_user.user_type == 'patient':
         query = query.filter_by(user_id=current_user.id)
-    result = []
-    for p in query.limit(200).all():
-        result.append(_patient_json(p))
-    return jsonify({'patients': result})
+    elif not current_user.has_any_role('Receptionist', 'Admin', 'SuperAdmin'):
+        from app.access import accessible_patient_ids
+        pids = accessible_patient_ids(current_user)
+        query = query.filter(Patient.id.in_(sorted(pids) if pids else [-1]))
+    q = (request.args.get('q') or '').strip()
+    if q:
+        query = query.join(User, Patient.user_id == User.id).filter(
+            db.or_(User.full_name.ilike(f'%{q}%'), Patient.mrn.ilike(f'%{q}%')))
+    page = max(1, request.args.get('page', 1, type=int))
+    per_page = min(100, max(1, request.args.get('per_page', 50, type=int)))
+    pagination = query.order_by(Patient.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return jsonify({'patients': [_patient_json(p) for p in pagination.items],
+                    'page': page, 'per_page': per_page, 'total': pagination.total})
 
 
 @api_bp.route('/patients/<int:patient_id>')
@@ -433,33 +456,17 @@ def create_prescription():
     if not isinstance(items_data, list) or not items_data:
         return jsonify({'error': 'items must be a non-empty list'}), 400
 
-    rx = Prescription(
-        patient_id=int(patient_id),
-        doctor_id=doctor.id,
-        refills=int(data.get('refills', 0) or 0),
-        status='Active',
-    )
-    db.session.add(rx)
-    db.session.flush()
-    for it in items_data:
-        mid = it.get('medication_id')
-        if not mid:
-            continue
-        try:
-            qty = max(1, int(it.get('quantity') or 1))
-        except (TypeError, ValueError):
-            qty = 1
-        db.session.add(PrescriptionItem(
-            prescription_id=rx.id,
-            medication_id=int(mid),
-            dosage=it.get('dosage', ''),
-            frequency=it.get('frequency', ''),
-            duration=it.get('duration', ''),
-            instructions=it.get('instructions', ''),
-            quantity=qty,
-        ))
+    from app.services.clinical_orders import create_prescription
+    try:
+        rx = create_prescription(patient, doctor,
+                                 [it for it in items_data if isinstance(it, dict)],
+                                 refills=data.get('refills', 0) or 0, origin='API')
+    except (ValueError, TypeError) as exc:
+        db.session.rollback()
+        return jsonify({'error': str(exc)}), 400
     db.session.commit()
-    return jsonify({'id': rx.id, 'status': rx.status}), 201
+    return jsonify({'id': rx.id, 'status': rx.status,
+                    'items': len(rx.items)}), 201
 
 
 @api_bp.route('/lab-orders/<int:order_id>')
@@ -528,15 +535,13 @@ def create_referral():
         return jsonify({'error': 'patient not found'}), 404
     if not _require_patient_access(patient):
         return jsonify({'error': 'No documented access to this patient so far'}), 403
-    r = Referral(
-        patient_id=int(patient_id),
-        from_doctor_id=doctor.id,
-        to_doctor_id=int(data['to_doctor_id']) if data.get('to_doctor_id') else None,
-        to_specialty=to_specialty,
-        reason=data.get('reason', ''),
-        status='Pending',
-    )
-    db.session.add(r)
+    to_doctor = db.session.get(Doctor, int(data['to_doctor_id'])) if data.get('to_doctor_id') else None
+    from app.services.clinical_orders import create_referral
+    r = create_referral(patient, doctor, data.get('reason', '') or 'Referral',
+                        to_specialty=to_specialty, to_doctor=to_doctor,
+                        urgency=data.get('urgency', 'Routine'), origin='API')
+    # The API contract keeps the initial state server-controlled.
+    r.status = 'Pending'
     db.session.commit()
     return jsonify({'id': r.id, 'status': r.status}), 201
 

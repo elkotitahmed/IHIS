@@ -118,3 +118,48 @@ def notify_task_activity(task):
         notify(task.assigned_to, f'Task assigned: {task.title}',
                f'A task has been assigned to you ({task.status}).',
                entity_type='task', entity_id=task.id)
+
+
+def open_tasks_for_resource(resource_type, resource_id):
+    """Open work items generated for a clinical resource (order, prescription,
+    referral, ...)."""
+    return Task.query.filter(
+        Task.related_resource_type == resource_type,
+        Task.related_resource_id == resource_id,
+        Task.status.in_(('NEW', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'REJECTED')),
+    ).all()
+
+
+def complete_for_resource(resource_type, resource_id, note=None):
+    """Close every open task generated for a resource once the underlying
+    clinical work is done (result verified, report signed, prescription
+    dispensed, referral completed). Idempotent: already-closed tasks are left
+    untouched. Runs inside the caller's transaction."""
+    closed = []
+    for task in open_tasks_for_resource(resource_type, resource_id):
+        # Walk the state machine so the audit trail stays legal.
+        if task.status in ('NEW', 'ASSIGNED', 'ON_HOLD', 'REJECTED'):
+            transition(task, 'IN_PROGRESS', note='Auto: work started on the linked record')
+        if task.status == 'IN_PROGRESS':
+            transition(task, 'COMPLETED', note=note or 'Auto-completed: linked record finished')
+            closed.append(task)
+    return closed
+
+
+def cancel_for_resource(resource_type, resource_id, note=None):
+    """Cancel open tasks when their source record is cancelled/rejected."""
+    cancelled = []
+    for task in open_tasks_for_resource(resource_type, resource_id):
+        if task.status == 'REJECTED':
+            transition(task, 'NEW', note='Auto: reopened to cancel')
+        if allowed_transition(task.status, 'CANCELLED'):
+            transition(task, 'CANCELLED', note=note or 'Auto-cancelled: source record cancelled')
+            cancelled.append(task)
+    return cancelled
+
+
+def distinct_departments():
+    """Sorted list of departments that currently own tasks (single query)."""
+    rows = db.session.query(Task.department).filter(
+        Task.department.isnot(None)).distinct().all()
+    return sorted(d for (d,) in rows if d)
