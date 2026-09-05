@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-robot" style="color:var(--ihis-primary)"></i> {{ 'لوحة أوامر الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Command Center' }}</h1>
+        <p class="page-subtitle">{{ 'مركز جميع ميزات الذكاء الاصطناعي في المستشفى' if g.lang == 'ar' else 'Central hub for all hospital AI capabilities' }}</p>
+    </div>
+</div>
+
+<!-- Status Row -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-primary)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-primary)">{{ total_recs }}</div>
+                <div class="cell-muted small">{{ 'إجمالي التوصيات' if g.lang == 'ar' else 'Total AI Recommendations' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-success)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-success)">{{ applied_recs }}</div>
+                <div class="cell-muted small">{{ 'تم تطبيقها' if g.lang == 'ar' else 'Applied' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-danger)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-danger)">{{ unread_alerts }}</div>
+                <div class="cell-muted small">{{ 'تنبيهات غير مقروءة' if g.lang == 'ar' else 'Unread Alerts' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid {% if gemini_available %}var(--ihis-success){% else %}var(--ihis-warning){% endif %}">
+            <div class="card-body">
+                <div class="h4 fw-bold mb-0" style="color:{% if gemini_available %}var(--ihis-success){% else %}var(--ihis-warning){% endif %}">
+                    {% if gemini_available %}<i class="fas fa-check-circle"></i> Active{% else %}<i class="fas fa-exclamation-triangle"></i> Offline{% endif %}
+                </div>
+                <div class="cell-muted small">Gemini LLM</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feature Cards -->
+<h5 class="fw-bold mb-3"><i class="fas fa-th-large"></i> {{ 'ميزات الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Capabilities' }}</h5>
+<div class="row g-3 mb-4">
+    <!-- Diagnosis Support -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(59,130,246,0.1)">
+                        <i class="fas fa-stethoscope" style="color:#3b82f6"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'التشخيص بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Diagnosis' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'قائمة تفريقية ذكية بالـ LLM' if g.lang == 'ar' else 'LLM-powered differential diagnosis' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Lab Interpretation -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(16,185,129,0.1)">
+                        <i class="fas fa-flask" style="color:#10b981"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'تفسير المختبر' if g.lang == 'ar' else 'Lab Interpretation' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'تفسير سريري ذكي لنتائج المختبر' if g.lang == 'ar' else 'Smart clinical interpretation of lab results' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Risk Prediction -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(245,158,11,0.1)">
+                        <i class="fas fa-chart-line" style="color:#f59e0b"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'تنبؤ المخاطر' if g.lang == 'ar' else 'Risk Prediction' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'تقييم شامل للمخاطر بالـ LLM' if g.lang == 'ar' else 'LLM-powered comprehensive risk assessment' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- SOAP Notes -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(139,92,246,0.1)">
+                        <i class="fas fa-file-medical" style="color:#8b5cf6"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'ملاحظات SOAP' if g.lang == 'ar' else 'SOAP Notes' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'توليد ملاحظات سريرية منظمة' if g.lang == 'ar' else 'Generate structured clinical notes' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Smart Orders -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(59,130,246,0.1)">
+                        <i class="fas fa-list-check" style="color:#3b82f6"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'مجموعات الطلبات' if g.lang == 'ar' else 'Smart Order Sets' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'طلبات مختبر + أشعة + وصفات مقترحة' if g.lang == 'ar' else 'AI-recommended lab, imaging, Rx orders' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Medical Coding -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(16,185,129,0.1)">
+                        <i class="fas fa-code-medical" style="color:#10b981"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'الترميز الطبي' if g.lang == 'ar' else 'Medical Coding' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'أكواد ICD-10 من النص السريري' if g.lang == 'ar' else 'ICD-10 codes from clinical text' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Patient Communication -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(245,158,11,0.1)">
+                        <i class="fas fa-comments" style="color:#f59e0b"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'تواصل المريض' if g.lang == 'ar' else 'Patient Communication' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'ملخصات المرض بلغة بسيطة' if g.lang == 'ar' else 'Patient-friendly condition summaries' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Medication Review -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(139,92,246,0.1)">
+                        <i class="fas fa-pills" style="color:#8b5cf6"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'مراجعة الأدوية' if g.lang == 'ar' else 'Medication Review' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'مراجعة شاملة للعلاج الدوائي' if g.lang == 'ar' else 'Comprehensive medication therapy review' }}</p>
+                <span class="badge bg-success">Gemini</span>
+            </div>
+        </div>
+    </div>
+    <!-- Fracture Detection -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(239,68,68,0.1)">
+                        <i class="fas fa-bone" style="color:#ef4444"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'اكتشاف الكسور' if g.lang == 'ar' else 'Fracture Detection' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'YOLOv8 — كشف الكسور من الأشعة السينية' if g.lang == 'ar' else 'YOLOv8 — detect fractures from X-rays' }}</p>
+                <span class="badge bg-primary">YOLOv8</span>
+            </div>
+        </div>
+    </div>
+    <!-- Tooth Segmentation -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(59,130,246,0.1)">
+                        <i class="fas fa-tooth" style="color:#3b82f6"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'تقسيم الأسنان' if g.lang == 'ar' else 'Tooth Segmentation' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'U-Net — تقسيم الأسنان من البانوراما' if g.lang == 'ar' else 'U-Net — segment teeth from panoramic X-rays' }}</p>
+                <span class="badge bg-primary">U-Net</span>
+            </div>
+        </div>
+    </div>
+    <!-- Skin Lesion Detection -->
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('ai.skin_lesion_detection') }}" class="text-decoration-none">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(168,85,247,0.1)">
+                        <i class="fas fa-person-circle-question" style="color:#a855f7"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'كشف آفات الجلد' if g.lang == 'ar' else 'Skin Lesion Detection' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'ResNet-50 + EfficientNet — نيوس مقابل ميلانوما' if g.lang == 'ar' else 'ResNet-50 + EfficientNet — Nevus vs Melanoma' }}</p>
+                <span class="badge bg-primary">CNN</span>
+            </div>
+        </div>
+        </a>
+    </div>
+    <!-- Clinical Alerts -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;background:rgba(239,68,68,0.1)">
+                        <i class="fas fa-bell" style="color:#ef4444"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">{{ 'تنبيهات سريرية' if g.lang == 'ar' else 'Clinical Alerts' }}</h6>
+                </div>
+                <p class="cell-muted small mb-2">{{ 'تنبيهات استباقية للحالات الحرجة' if g.lang == 'ar' else 'Proactive critical event alerts' }}</p>
+                <span class="badge bg-danger">{{ unread_alerts }} {{ 'جديد' if g.lang == 'ar' else 'new' }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Recommendations -->
+{% if recent_recs %}
+<h5 class="fw-bold mb-3"><i class="fas fa-history"></i> {{ 'آخر التوصيات' if g.lang == 'ar' else 'Recent AI Recommendations' }}</h5>
+<div class="card-premium">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr>
+                <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                <th>{{ 'المحتوى' if g.lang == 'ar' else 'Content' }}</th>
+                <th>{{ 'الثقة' if g.lang == 'ar' else 'Confidence' }}</th>
+                <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+            </tr></thead>
+            <tbody>
+            {% for rec in recent_recs %}
+            <tr>
+                <td><span class="badge bg-primary">{{ rec.recommendation_type|replace('_', ' ')|title }}</span></td>
+                <td class="small">{{ rec.patient.user.full_name if rec.patient and rec.patient.user else '—' }}</td>
+                <td class="cell-muted small" style="max-width:300px">{{ rec.content[:100] }}{{ '...' if rec.content|length > 100 }}</td>
+                <td>
+                    {% if rec.confidence_score %}
+                    <span class="badge {% if rec.confidence_score >= 0.8 %}bg-success{% elif rec.confidence_score >= 0.5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                        {{ (rec.confidence_score * 100)|int }}%
+                    </span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if rec.is_applied %}
+                    <span class="badge bg-success"><i class="fas fa-check"></i> {{ 'مطبّق' if g.lang == 'ar' else 'Applied' }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ 'في الانتظار' if g.lang == 'ar' else 'Pending' }}</span>
+                    {% endif %}
+                </td>
+                <td class="cell-muted small">{{ rec.created_at.strftime('%m-%d %H:%M') if rec.created_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recommendation Stats by Type -->
+{% if rec_types %}
+<h5 class="fw-bold mb-3 mt-4"><i class="fas fa-chart-bar"></i> {{ 'إحصائيات التوصيات' if g.lang == 'ar' else 'Recommendation Statistics' }}</h5>
+<div class="row g-3">
+    {% for rtype, count in rec_types %}
+    <div class="col-lg-3 col-md-4 col-6">
+        <div class="card-premium text-center">
+            <div class="card-body py-3">
+                <div class="h4 fw-bold mb-0" style="color:var(--ihis-primary)">{{ count }}</div>
+                <div class="cell-muted small">{{ rtype|replace('_', ' ')|title }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

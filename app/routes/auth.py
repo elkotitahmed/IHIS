@@ -1,13 +1,32 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import timedelta
-from app import db
-from app.models import User, Role, Patient, Doctor, Specialty, LoginAttempt
+from app import db, limiter
+from app.models import User, Role, Patient, LoginAttempt
 from app.forms import LoginForm, RegistrationForm
 from app.routes.decorators import log_activity
 from app.utils import utcnow
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def _safe_next(value):
+    """Return True only for a local, single-slash-relative redirect target.
+
+    Guards the login ``?next=`` parameter against open redirects: a bare
+    ``/path`` is allowed, but protocol-relative (``//host``) and absolute
+    (``https://host``) URLs are rejected.""" 
+    if not value or not isinstance(value, str):
+        return False
+    if not value.startswith('/'):
+        return False
+    # //host and ///host are protocol/network-relative — treat as unsafe.
+    if value.startswith('//'):
+        return False
+    # Absolute URI with a scheme (e.g. https:...) is not local.
+    if '://' in value or '\\' in value:
+        return False
+    return True
 
 ROLE_BY_USER_TYPE = {
     'patient': 'Patient',
@@ -24,6 +43,7 @@ ROLE_BY_USER_TYPE = {
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
@@ -63,7 +83,7 @@ def login():
             db.session.commit()
             flash(f'Welcome back, {user.full_name}!', 'success')
             next_page = request.args.get('next')
-            if next_page and next_page.startswith('/'):
+            if _safe_next(next_page):
                 return redirect(next_page)
             return redirect(url_for('main.dashboard'))
         else:
@@ -90,6 +110,7 @@ def login():
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per hour")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
@@ -119,17 +140,22 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        if user_type == 'patient':
-            db.session.add(Patient(
-                user_id=user.id,
-                phone=form.phone.data or None,
-                gender=form.gender.data or None,
-            ))
-            db.session.commit()
-        elif form.user_type.data == 'doctor':
-            specialty = Specialty.query.get(form.specialty_id.data) if form.specialty_id.data else None
-            db.session.add(Doctor(user_id=user.id, specialty_id=specialty.id if specialty else None))
-            db.session.commit()
+        # Public self-registration is PATIENT-only (see the guard above); a
+        # patient profile is always created at registration. Staff/clinical
+        # profiles (Doctor, Nurse, ...) are provisioned by administrators only.
+        # The chosen department (e.g. Dermatology) routes patient-uploaded
+        # attachments to the right specialist portal.
+        from app.models import Department
+        dept_id = form.department_id.data
+        if dept_id and not Department.query.get(int(dept_id)):
+            dept_id = None
+        db.session.add(Patient(
+            user_id=user.id,
+            phone=form.phone.data or None,
+            gender=form.gender.data or None,
+            department_id=int(dept_id) if dept_id else None,
+        ))
+        db.session.commit()
 
         log_activity('REGISTER', 'user', user.id)
         db.session.commit()

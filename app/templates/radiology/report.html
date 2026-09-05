@@ -1,92 +1,98 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-file-medical me-2"></i>Enter Radiology Report</h3>
-    <a href="{{ url_for('radiology.orders') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Orders</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'إدخال تقرير الأشعة' if g.lang == 'ar' else 'Enter Radiology Report' }}</h1>
+        <p class="page-subtitle">{{ 'إعداد تقرير التشخيص الشعاعي للدراسة' if g.lang == 'ar' else 'Draft the diagnostic report for the study' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('radiology.orders') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-arrow-left"></i> {{ 'رجوع للطلبات' if g.lang == 'ar' else 'Back to Orders' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-white">
-        <h5 class="mb-0">Order Context</h5>
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-info-circle" style="color:var(--ihis-info)"></i> {{ 'سياق الطلب' if g.lang == 'ar' else 'Order Context' }}</div>
     </div>
     <div class="card-body">
-        <div class="row">
+        <div class="row g-4">
             <div class="col-md-4">
-                <h6 class="text-muted mb-1">Patient</h6>
-                <p class="mb-0 fw-semibold">{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</p>
+                <div class="form-label-ihs" style="margin:0;color:var(--ihis-text-muted)">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</div>
+                <p class="mb-0" style="font-weight:600;color:var(--ihis-text)">{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</p>
             </div>
             <div class="col-md-4">
-                <h6 class="text-muted mb-1">Imaging Type</h6>
-                <p class="mb-0 fw-semibold">{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</p>
+                <div class="form-label-ihs" style="margin:0;color:var(--ihis-text-muted)">{{ 'نوع التصوير' if g.lang == 'ar' else 'Imaging Type' }}</div>
+                <p class="mb-0" style="font-weight:600;color:var(--ihis-text)">{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</p>
             </div>
             <div class="col-md-4">
-                <h6 class="text-muted mb-1">Order Date</h6>
-                <p class="mb-0 fw-semibold">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '-' }}</p>
+                <div class="form-label-ihs" style="margin:0;color:var(--ihis-text-muted)">{{ 'تاريخ الطلب' if g.lang == 'ar' else 'Order Date' }}</div>
+                <p class="mb-0 cell-mono" style="font-weight:600;color:var(--ihis-text)">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '-' }}</p>
             </div>
         </div>
         {% if order.notes %}
-        <hr>
-        <div>
-            <h6 class="text-muted">Notes</h6>
-            <p class="mb-0">{{ order.notes }}</p>
+        <div class="border-ihs-top" style="margin-top:var(--sp-4);padding-top:var(--sp-4)">
+            <div class="form-label-ihs" style="color:var(--ihis-text-muted)">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</div>
+            <p class="mb-0" style="color:var(--ihis-text-secondary)">{{ order.notes }}</p>
         </div>
         {% endif %}
     </div>
 </div>
 
-<div class="col-lg-8 px-0">
-    <div class="card card-shadow">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Report</h5>
-        {% if report %}
-        <span class="badge {% if report.status == 'Signed' %}bg-success{% elif report.status == 'Draft' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-            {{ report.status }}{% if report.status == 'Signed' %} 🔒{% endif %}
-        </span>
-        {% endif %}
-    </div>
-    <div class="card-body">
-        {% if report and report.status == 'Signed' %}
-        <div class="alert alert-warning d-flex align-items-center" role="alert">
-            <i class="fas fa-lock me-2"></i>
-            <div>This report is <strong>signed and locked</strong>. Direct edits are disabled — use the amendment form below with a reason.</div>
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'التقرير' if g.lang == 'ar' else 'Report' }}</div>
+                {% if report %}
+                <span class="status-badge {% if report.status == 'Signed' %}s-signed{% elif report.status == 'Draft' %}s-draft{% else %}s-in-progress{% endif %}">
+                    {{ report.status }}{% if report.status == 'Signed' %}<i class="fas fa-lock" style="font-size:0.6rem"></i>{% endif %}
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if report and report.status == 'Signed' %}
+                <div class="record-status-bar status-signed" role="alert">
+                    <span><i class="fas fa-lock"></i> {{ 'هذا التقرير موقّع ومقفل' if g.lang == 'ar' else 'This report is signed and locked' }}</span>
+                    <span>{{ 'التعديل المباشر معطَّل — استخدم نموذج التعديل أدناه مع ذكر السبب' if g.lang == 'ar' else 'Direct edits are disabled — use the amendment form below with a reason' }}</span>
+                </div>
+                {% endif %}
+                <form method="POST" action="{{ url_for('radiology.enter_report', order_id=order.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if report and report.status == 'Signed' %}
+                    <input type="hidden" name="amend" value="1">
+                    <div class="form-group">
+                        <label for="reason" class="form-label-ihs">{{ 'سبب التعديل' if g.lang == 'ar' else 'Amendment Reason' }} <span class="required">*</span></label>
+                        <textarea class="form-control" id="reason" name="reason" rows="2" required
+                                  placeholder="{{ 'لماذا يتم إجراء هذا التعديل؟' if g.lang == 'ar' else 'Why is this amendment being made?' }}"></textarea>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label for="findings" class="form-label-ihs">{{ 'النتائج' if g.lang == 'ar' else 'Findings' }}</label>
+                        <textarea class="form-control" id="findings" name="findings" rows="6" placeholder="{{ 'صف نتائج التصوير...' if g.lang == 'ar' else 'Describe the imaging findings...' }}">{{ report.findings if report else '' }}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="impression" class="form-label-ihs">{{ 'الانطباع' if g.lang == 'ar' else 'Impression' }}</label>
+                        <textarea class="form-control" id="impression" name="impression" rows="4" placeholder="{{ 'الانطباع العام / التشخيص...' if g.lang == 'ar' else 'Overall impression / diagnosis...' }}">{{ report.impression if report else '' }}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recommendation" class="form-label-ihs">{{ 'التوصية' if g.lang == 'ar' else 'Recommendation' }}</label>
+                        <textarea class="form-control" id="recommendation" name="recommendation" rows="4" placeholder="{{ 'المتابعة المقترحة أو الخطوات التالية...' if g.lang == 'ar' else 'Suggested follow-up or next steps...' }}">{{ report.recommendation if report else '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-lg w-100"><i class="fas fa-save"></i>{% if report and report.status == 'Signed' %}{{ 'حفظ التعديل' if g.lang == 'ar' else 'Save Amendment' }}{% else %}{{ 'حفظ التقرير' if g.lang == 'ar' else 'Save Report' }}{% endif %}</button>
+                </form>
+
+                {% if report and report.status != 'Signed' %}
+                <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" style="margin-top:var(--sp-4)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-lg w-100"><i class="fas fa-signature"></i> {{ 'توقيع وقفل التقرير' if g.lang == 'ar' else 'Sign &amp; Lock Report' }}</button>
+                </form>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
-        <form method="POST" action="{{ url_for('radiology.enter_report', order_id=order.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            {% if report and report.status == 'Signed' %}
-            <input type="hidden" name="amend" value="1">
-            <div class="mb-3">
-                <label for="reason" class="form-label">Amendment Reason <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="reason" name="reason" rows="2" required
-                          placeholder="Why is this amendment being made?"></textarea>
-            </div>
-            {% endif %}
-
-            <div class="mb-3">
-                <label for="findings" class="form-label">Findings</label>
-                <textarea class="form-control" id="findings" name="findings" rows="6" placeholder="Describe the imaging findings...">{{ report.findings if report else '' }}</textarea>
-            </div>
-
-            <div class="mb-3">
-                <label for="impression" class="form-label">Impression</label>
-                <textarea class="form-control" id="impression" name="impression" rows="4" placeholder="Overall impression / diagnosis...">{{ report.impression if report else '' }}</textarea>
-            </div>
-
-            <div class="mb-3">
-                <label for="recommendation" class="form-label">Recommendation</label>
-                <textarea class="form-control" id="recommendation" name="recommendation" rows="4" placeholder="Suggested follow-up or next steps...">{{ report.recommendation if report else '' }}</textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>{% if report and report.status == 'Signed' %}Save Amendment{% else %}Save Report{% endif %}</button>
-        </form>
-
-        {% if report and report.status != 'Signed' %}
-        <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="mt-3">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-success w-100"><i class="fas fa-signature me-1"></i>Sign &amp; Lock Report</button>
-        </form>
-        {% endif %}
-    </div>
     </div>
 </div>
 {% endblock %}

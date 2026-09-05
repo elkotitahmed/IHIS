@@ -1,56 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-plus me-2"></i>Add Exercise to Library</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'إضافة تمرين للمكتبة' if g.lang == 'ar' else 'Add Exercise to Library' }}</h1>
+        <p class="page-subtitle">{{ 'تفاصيل تمرين جديد للعلاج الطبيعي' if g.lang == 'ar' else 'New physiotherapy exercise details' }}</p>
+    </div>
+</div>
 
 <div class="row">
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fas fa-dumbbell text-primary me-2"></i>Exercise Details</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-dumbbell" style="color:var(--ihis-primary)"></i> {{ 'تفاصيل التمرين' if g.lang == 'ar' else 'Exercise Details' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('physiotherapy.add_exercise') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الاسم' if g.lang == 'ar' else 'Name' }} <span class="required">*</span></label>
                         <input class="form-control" name="name" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التصنيف' if g.lang == 'ar' else 'Category' }}</label>
                         <input class="form-control" name="category" placeholder="e.g. Strength, Balance, Mobility">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
                         <textarea class="form-control" name="description" rows="2"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Instructions</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التعليمات' if g.lang == 'ar' else 'Instructions' }}</label>
                         <textarea class="form-control" name="instructions" rows="3"></textarea>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Repetitions</label>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label-ihs">{{ 'التكرارات' if g.lang == 'ar' else 'Repetitions' }}</label>
                             <input class="form-control" type="number" name="repetitions" min="0">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Duration (seconds)</label>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label-ihs">{{ 'المدة (ثانية)' if g.lang == 'ar' else 'Duration (seconds)' }}</label>
                             <input class="form-control" type="number" name="duration_seconds" min="0">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Image URL</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'رابط الصورة' if g.lang == 'ar' else 'Image URL' }}</label>
                         <input class="form-control" name="image_url" placeholder="https://...">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Video URL</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'رابط الفيديو' if g.lang == 'ar' else 'Video URL' }}</label>
                         <input class="form-control" name="video_url" placeholder="https://...">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Progression Plan</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'خطة التدرج' if g.lang == 'ar' else 'Progression Plan' }}</label>
                         <textarea class="form-control" name="progression_plan" rows="2"></textarea>
                     </div>
-                    <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>Add Exercise</button>
-                    <a class="btn btn-outline-secondary" href="{{ url_for('physiotherapy.exercise_library') }}">Back to Library</a>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                        <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-save"></i>{{ 'إضافة تمرين' if g.lang == 'ar' else 'Add Exercise' }}</button>
+                        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('physiotherapy.exercise_library') }}">{{ 'رجوع للمكتبة' if g.lang == 'ar' else 'Back to Library' }}</a>
+                    </div>
                 </form>
             </div>
         </div>

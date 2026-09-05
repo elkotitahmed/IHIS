@@ -1,81 +1,81 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-user-gear" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ t('profile') }}</h1>
+        <p class="page-subtitle">{{ 'إدارة الحساب وكلمة المرور' if g.lang == 'ar' else 'Manage your account and password' }}</p>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-lg-5">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-primary bg-opacity-10">
-                <h5 class="mb-0"><i class="fas fa-user-circle me-2 text-primary"></i>Account Information</h5>
-            </div>
+        <div class="card-premium h-100">
             <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">Full Name</span>
-                        <strong>{{ current_user.full_name }}</strong>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">Email</span>
-                        <strong>{{ current_user.email }}</strong>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">Username</span>
-                        <strong>{{ current_user.username }}</strong>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">User Type</span>
-                        <span class="badge bg-primary">{{ current_user.user_type }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">Roles</span>
-                        <span>
+                <div style="display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4)">
+                    <div style="width:64px;height:64px;border-radius:50%;background:var(--ihis-primary-light);color:var(--ihis-primary);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700">
+                        {{ current_user.full_name[:1]|upper }}
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:1rem;color:var(--ihis-text)">{{ current_user.full_name }}</div>
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ current_user.email }}</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.25rem;font-size:0.8125rem">
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-muted)">{{ 'اسم المستخدم' if g.lang == 'ar' else 'Username' }}</span><strong>{{ current_user.username }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-muted)">{{ 'نوع المستخدم' if g.lang == 'ar' else 'User Type' }}</span>
+                        <span class="status-badge s-active">{{ current_user.user_type }}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-muted)">{{ t('roles') }}</span>
+                        <span style="display:flex;gap:var(--sp-1);flex-wrap:wrap;justify-content:flex-end">
                             {% for role in current_user.roles %}
-                            <span class="badge bg-secondary me-1">{{ role.name }}</span>
+                            <span class="tag-ihs">{{ role.name }}</span>
                             {% endfor %}
                         </span>
-                    </li>
+                    </div>
                     {% if current_user.last_login %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">Last Login</span>
-                        <strong>{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') }}</strong>
-                    </li>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-muted)">{{ 'آخر تسجيل دخول' if g.lang == 'ar' else 'Last Login' }}</span><strong>{{ current_user.last_login.strftime('%d %b %Y %H:%M') }}</strong>
+                    </div>
                     {% endif %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">Member Since</span>
-                        <strong>{{ current_user.created_at.strftime('%Y-%m-%d') }}</strong>
-                    </li>
-                </ul>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0">
+                        <span style="color:var(--ihis-text-muted)">{{ 'عضو منذ' if g.lang == 'ar' else 'Member Since' }}</span><strong>{{ current_user.created_at.strftime('%d %b %Y') }}</strong>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-warning bg-opacity-10">
-                <h5 class="mb-0"><i class="fas fa-key me-2 text-warning"></i>Change Password</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-key" style="color:var(--ihis-warning)"></i> {{ 'تغيير كلمة المرور' if g.lang == 'ar' else 'Change Password' }}</div>
             </div>
             <div class="card-body">
                 {% if password_changed %}
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle me-2"></i>Your password has been updated. For security, you will be
-                    logged out on your next session.
+                <div style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);background:var(--ihis-success-light);color:var(--ihis-success);border-radius:var(--radius-sm);font-size:0.8125rem;margin-bottom:var(--sp-4)">
+                    <i class="fas fa-check-circle"></i> {{ 'تم تحديث كلمة المرور. سجل الدخول مرة أخرى في الجلسة القادمة' if g.lang == 'ar' else 'Your password has been updated. Please log in again on your next session.' }}
                 </div>
                 {% endif %}
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label class="form-label">Current Password</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'كلمة المرور الحالية' if g.lang == 'ar' else 'Current Password' }} <span class="required">*</span></label>
                         <input type="password" class="form-control" name="current_password" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">New Password <span class="text-muted small">(min 8 characters)</span></label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'كلمة المرور الجديدة' if g.lang == 'ar' else 'New Password' }} <span class="required">*</span></label>
                         <input type="password" class="form-control" name="new_password" minlength="8" required>
+                        <div class="form-hint">{{ '8 أحرف على الأقل' if g.lang == 'ar' else 'Minimum 8 characters' }}</div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Confirm New Password</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'تأكيد كلمة المرور الجديدة' if g.lang == 'ar' else 'Confirm New Password' }} <span class="required">*</span></label>
                         <input type="password" class="form-control" name="confirm_password" minlength="8" required>
                     </div>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-sync-alt me-1"></i>Update Password
-                    </button>
+                    <button type="submit" class="btn-ihs btn-ihs-warning"><i class="fas fa-sync-alt"></i> {{ 'تحديث كلمة المرور' if g.lang == 'ar' else 'Update Password' }}</button>
                 </form>
             </div>
         </div>

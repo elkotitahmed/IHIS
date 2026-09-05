@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-primary)"></i> {{ 'بروتوكولات التحضير' if g.lang == 'ar' else 'Imaging Preparation Protocols' }}</h1>
+        <p class="page-subtitle">{{ 'بروتوكولات الإعداد القابلة للتكوين لكل نوع فحص' if g.lang == 'ar' else 'Configurable preparation protocols per examination type' }}</p>
+    </div>
+</div>
+
+{% if protocols %}
+<div class="row g-3">
+    {% for p in protocols %}
+    <div class="col-lg-6">
+        <div class="card-premium h-100" style="border-left:4px solid {% if p.is_with_contrast %}var(--ihis-warning){% else %}var(--ihis-primary){% endif %}">
+            <div class="card-header">
+                <div class="card-title">{{ p.protocol_name }}</div>
+                <span class="badge {% if p.is_with_contrast %}bg-warning text-dark{% else %}bg-primary{% endif %}" style="font-size:0.65rem">{{ 'مع تعقيد' if g.lang == 'ar' else 'With Contrast' if p.is_with_contrast else 'بدون تعقيد' if g.lang == 'ar' else 'Without Contrast' }}</span>
+            </div>
+            <div class="card-body small">
+                {% if p.body_region %}<div><strong>{{ 'المنطقة' if g.lang == 'ar' else 'Region' }}:</strong> {{ p.body_region }}</div>{% endif %}
+                {% if p.fasting_required %}<div class="text-warning"><i class="fas fa-utensils-slash"></i> {{ 'صائم' if g.lang == 'ar' else 'Fasting' }}: {{ p.fasting_hours or '' }}h — {{ p.fasting_instructions or '' }}</div>{% endif %}
+                {% if p.hydration_required %}<div><i class="fas fa-tint"></i> {{ 'شرب' if g.lang == 'ar' else 'Hydration' }}: {{ p.hydration_instructions or '' }}</div>{% endif %}
+                {% if p.required_lab_tests %}<div><strong>{{ 'فحوصات مختبرية' if g.lang == 'ar' else 'Required Labs' }}:</strong> {{ p.required_lab_tests }}</div>{% endif %}
+                {% if p.arrival_time_minutes %}<div><strong>{{ 'وقت الوصول' if g.lang == 'ar' else 'Arrival' }}:</strong> {{ p.arrival_time_minutes }} {{ 'دقيقة قبل' if g.lang == 'ar' else 'min before' }}</div>{% endif %}
+                {% if p.expected_duration_minutes %}<div><strong>{{ 'المدة' if g.lang == 'ar' else 'Duration' }}:</strong> ~{{ p.expected_duration_minutes }} min</div>{% endif %}
+                {% if p.patient_instructions %}<div class="mt-1 p-2 rounded" style="background:var(--ihis-surface)">{{ p.patient_instructions }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card-premium">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-clipboard-list fa-3x mb-3" style="color:var(--ihis-info)"></i>
+        <h5>{{ 'لا توجد بروتوكولات' if g.lang == 'ar' else 'No Protocols Configured' }}</h5>
+        <p class="cell-muted">{{ 'لم يتم بعد تكوين بروتوكولات الإعداد. يرجى التواصل مع مسؤول الإدارة.' if g.lang == 'ar' else 'No preparation protocols have been configured yet. Contact an administrator.' }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-dna" style="color:var(--ihis-warning);margin-right:var(--sp-2)"></i>{{ 'فحص التفاعلات الدوائية' if g.lang == 'ar' else 'Drug-Drug Interaction Checker' }}</h1>
+        <p class="page-subtitle">{{ 'كشف التفاعلات الدوائية المحتملة من دليل الأدوية' if g.lang == 'ar' else 'Detect potential interactions across the formulary' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.ai_workbench') }}"><i class="fas fa-user-doctor"></i> {{ 'منصة الصيدلاني' if g.lang == 'ar' else 'AI Workbench' }}</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-premium" style="border-top:3px solid var(--ihis-warning)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'اختر أدوية (2 على الأقل)' if g.lang == 'ar' else 'Select Medications (min 2)' }}</div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('pharmacy.drug_check') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div style="display:flex;flex-direction:column;gap:0.4rem;max-height:420px;overflow:auto;padding-inline-end:0.25rem">
+                        {% for m in medications %}
+                        <label class="form-check d-flex align-items-center gap-2" style="padding-inline-start:1.75rem;border:1px solid var(--ihis-border);border-radius:var(--radius-sm);padding-block:0.45rem;padding-inline-end:0.75rem">
+                            <input class="form-check-input" type="checkbox" name="medications" value="{{ m.id }}">
+                            <span>{{ m.generic_name }}{% if m.brand_name %} <small class="cell-muted">({{ m.brand_name }})</small>{% endif %}</span>
+                            {% if m.category %}<span class="tag-ihs" style="margin-inline-start:auto">{{ m.category }}</span>{% endif %}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if not medications %}
+                    <div class="form-hint mt-3">{{ 'لا توجد أدوية في الدليل بعد.' if g.lang == 'ar' else 'No medications in the catalog yet.' }}</div>
+                    {% endif %}
+                    <button class="btn-ihs btn-ihs-primary w-100 mt-3" type="submit">
+                        <i class="fas fa-magnifying-glass"></i> {{ 'فحص التفاعلات' if g.lang == 'ar' else 'Check Interactions' }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card-premium" style="border-top:3px solid var(--ihis-success)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clipboard-check" style="color:var(--ihis-info)"></i> {{ 'نتيجة الفحص' if g.lang == 'ar' else 'Check Result' }}</div>
+                {% if result and result.count is defined and result.count > 0 %}
+                <span class="status-badge s-cancelled"><i class="fas fa-triangle-exclamation"></i> {{ result.count }} {{ 'تفاعل' if g.lang == 'ar' else 'interactions' }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body flush">
+                {% if result is not none %}
+                    {% if result.interactions %}
+                    <div class="table-wrapper">
+                        <table class="table-ihs">
+                            <thead><tr>
+                                <th>#</th>
+                                <th>{{ 'الدواء أ' if g.lang == 'ar' else 'Medication A' }}</th>
+                                <th>{{ 'الدواء ب' if g.lang == 'ar' else 'Medication B' }}</th>
+                                <th>{{ 'الخطورة' if g.lang == 'ar' else 'Severity' }}</th>
+                                <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                            </tr></thead>
+                            <tbody>
+                            {% for i in result.interactions %}
+                                <tr>
+                                    <td class="cell-mono">{{ loop.index }}</td>
+                                    <td class="cell-primary">{{ i.a }}</td>
+                                    <td class="cell-primary">{{ i.b }}</td>
+                                    <td>
+                                        {% if i.severity in ('Major', 'Contraindicated', 'high') %}
+                                        <span class="status-badge s-cancelled">{{ i.severity }}</span>
+                                        {% elif i.severity in ('Moderate', 'medium') %}
+                                        <span class="status-badge s-pending">{{ i.severity }}</span>
+                                        {% else %}
+                                        <span class="status-badge s-completed">{{ i.severity }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="cell-secondary">{{ i.description }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% elif result.note %}
+                    <div class="empty-state">
+                        <div class="empty-icon" style="color:var(--ihis-warning)"><i class="fas fa-circle-exclamation"></i></div>
+                        <div class="empty-title">{{ result.note[:80] }}</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon" style="color:var(--ihis-success)"><i class="fas fa-circle-check"></i></div>
+                        <div class="empty-title">{{ 'لم يُكتشف أي تفاعل بين الأدوية المختارة' if g.lang == 'ar' else 'No interactions detected for the selected medications' }}</div>
+                        <div class="empty-desc">{{ 'تم التحقق من الأزواج المحددة في قاعدة التفاعلات الدوائية.' if g.lang == 'ar' else 'All selected pairs were checked against the interaction database.' }}</div>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-pills"></i></div>
+                        <div class="empty-title">{{ 'اختر أدوية للفحص' if g.lang == 'ar' else 'Select medications to check' }}</div>
+                        <div class="empty-desc">{{ 'سيُظهر النظام التداخلات الخطيرة والخطيرة جداً وأهميتها السريرية.' if g.lang == 'ar' else 'The system surfaces major, moderate and minor interactions with clinical significance.' }}</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

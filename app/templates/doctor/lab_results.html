@@ -1,20 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-flask me-2"></i>Lab Results</h3>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'نتائج المختبر' if g.lang == 'ar' else 'Lab Results' }}</h1>
+        <p class="page-subtitle">{{ 'عرض نتائج الفحوصات المختبرية' if g.lang == 'ar' else 'View laboratory test results and AI interpretations' }}</p>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-flask" style="color:var(--ihis-warning)"></i> {{ 'نتائج المختبر' if g.lang == 'ar' else 'Lab Orders & Results' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
                     <tr>
-                        <th>Patient</th>
-                        <th>Test Name</th>
-                        <th>Status</th>
-                        <th>Result</th>
-                        <th>Ordered</th>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'اسم الفحص' if g.lang == 'ar' else 'Test Name' }}</th>
+                        <th>{{ 'المدى المرجعي' if g.lang == 'ar' else 'Reference Range' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'النتيجة' if g.lang == 'ar' else 'Result' }}</th>
+                        <th>{{ 'تاريخ الطلب' if g.lang == 'ar' else 'Ordered' }}</th>
                         <th>AI</th>
                     </tr>
                 </thead>
@@ -22,27 +29,41 @@
                     {% if orders %}
                         {% for order in orders %}
                         <tr>
-                            <td>{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</td>
-                            <td>{{ order.test.name if order.test else 'N/A' }}</td>
+                            <td class="cell-primary">{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</td>
+                            <td>{{ order.test.test_name if order.test else 'N/A' }}</td>
+                            <td class="cell-muted">{{ order.test.normal_range if order.test and order.test.normal_range else '—' }}</td>
                             <td>
-                                <span class="badge bg-{% if order.status == 'completed' %}success{% elif order.status == 'pending' %}warning{% elif order.status == 'in_progress' %}info{% else %}secondary{% endif %}">
-                                    {{ order.status|replace('_', ' ')|capitalize }}
+                                <span class="status-badge s-{{ 'completed' if order.status in ('Finalized', 'Completed') else 'in-progress' if order.status in ('Resulted', 'Verified', 'Processing') else 'pending' }}">
+                                    {{ order.status }}
                                 </span>
                             </td>
-                            <td>{{ order.result_value if order.result_value else '-' }}</td>
-                            <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else 'N/A' }}</td>
                             <td>
-                                {% if order.status == 'completed' %}
-                                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI</a>
+                                {% if order.result and order.result.result_value %}
+                                <span class="t-num">{{ order.result.result_value }}{{ ' ' ~ order.result.result_unit if order.result.result_unit }}</span>
+                                {% if order.result.is_critical %}<span class="status-badge s-rejected" style="font-size:0.625rem;padding:1px 6px">CRITICAL</span>{% elif order.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem;padding:1px 6px">Abn</span>{% endif %}
                                 {% else %}
-                                <span class="text-muted">-</span>
+                                <span class="cell-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="cell-muted">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else 'N/A' }}</td>
+                            <td>
+                                {% if order.result and order.result.result_value %}
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain"></i> AI</a>
+                                {% else %}
+                                <span class="cell-muted">-</span>
                                 {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No lab orders found.</td>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="fas fa-flask-vial"></i></div>
+                                    <div class="empty-title">{{ 'لا توجد طلبات مختبر' if g.lang == 'ar' else 'No Lab Orders Found' }}</div>
+                                    <div class="empty-desc">{{ 'لم يتم العثور على أي طلبات فحوصات مختبرية' if g.lang == 'ar' else 'No laboratory orders have been placed yet' }}</div>
+                                </div>
+                            </td>
                         </tr>
                     {% endif %}
                 </tbody>

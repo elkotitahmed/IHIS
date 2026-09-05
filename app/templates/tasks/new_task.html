@@ -1,57 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-plus-circle text-primary"></i> New Task</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-plus-circle" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ 'مهمة جديدة' if g.lang == 'ar' else 'New Task' }}</h1>
+        <p class="page-subtitle">{{ 'أنشئ مهمة جديدة' if g.lang == 'ar' else 'Create a new task' }}</p>
+    </div>
+</div>
 
-<div class="card card-shadow" style="max-width: 640px;">
+<div class="card-premium" style="max-width:640px">
     <div class="card-body">
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-3">
-                <label class="form-label">Title *</label>
+            <div class="form-group">
+                <label class="form-label-ihs">{{ t('title') }} <span class="required">*</span></label>
                 <input type="text" name="title" class="form-control" required>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Description</label>
+            <div class="form-group">
+                <label class="form-label-ihs">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
                 <textarea name="description" class="form-control" rows="3"></textarea>
             </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Type</label>
-                    <select name="task_type" class="form-select">
-                        {% for t in ['GENERAL','LAB','RADIOLOGY','PHARMACY','NURSING','REFERRAL','PHYSIOTHERAPY','DENTISTRY','DOCUMENT_REVIEW','RESULT_VERIFICATION','ADMISSION'] %}
-                        <option value="{{ t }}">{{ t }}</option>
-                        {% endfor %}
-                    </select>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نوع' if g.lang == 'ar' else 'Type' }}</label>
+                        <select name="task_type" class="form-select">
+                            {% for t in ['GENERAL','LAB','RADIOLOGY','PHARMACY','NURSING','REFERRAL','PHYSIOTHERAPY','DENTISTRY','DOCUMENT_REVIEW','RESULT_VERIFICATION','ADMISSION'] %}
+                            <option value="{{ t }}">{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Department</label>
-                    <input type="text" name="department" class="form-control" placeholder="e.g. Laboratory">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'القسم' if g.lang == 'ar' else 'Department' }}</label>
+                        <input type="text" name="department" class="form-control" placeholder="e.g. Laboratory">
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Priority</label>
-                    <select name="priority" class="form-select">
-                        {% for p in ['LOW','NORMAL','HIGH','URGENT','CRITICAL'] %}
-                        <option value="{{ p }}" {{ 'selected' if p=='NORMAL' }}>{{ p }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Patient</label>
-                    <select name="patient_id" class="form-select">
-                        <option value="">-- None --</option>
-                        {% for p in patients %}
-                        <option value="{{ p.id }}">{{ p.id }} - {{ p.user.full_name if p.user else '' }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Due</label>
-                    <input type="datetime-local" name="due_at" class="form-control">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'أولوية' if g.lang == 'ar' else 'Priority' }}</label>
+                        <select name="priority" class="form-select">
+                            {% for p in ['LOW','NORMAL','HIGH','URGENT','CRITICAL'] %}
+                            <option value="{{ p }}" {{ 'selected' if p=='NORMAL' }}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
             </div>
-            <button class="btn btn-success"><i class="fas fa-check"></i> Create Task</button>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ t('patient') }}</label>
+                        <select name="patient_id" class="form-select">
+                            <option value="">-- None --</option>
+                            {% for p in patients %}
+                            <option value="{{ p.id }}">{{ p.id }} - {{ p.user.full_name if p.user else '' }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الموعد' if g.lang == 'ar' else 'Due' }}</label>
+                        <input type="datetime-local" name="due_at" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <button class="btn-ihs btn-ihs-success"><i class="fas fa-check"></i> {{ 'إنشاء مهمة' if g.lang == 'ar' else 'Create Task' }}</button>
         </form>
     </div>
 </div>

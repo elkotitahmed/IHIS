@@ -6,7 +6,8 @@ from app import db
 from app.models import (
     Patient, Doctor, Specialty, Appointment, MedicalRecord, Prescription,
     LabOrder, RadiologyOrder, Notification, Message, Diagnosis, VitalSign,
-    PatientDocument, Bill,
+    PatientDocument, Bill, PatientImagingSafetyProfile, MRIImplantRegistry,
+    ImagingDoseRecord, ContrastAdministration,
 )
 from app.routes.decorators import roles_required, log_activity, save_upload
 from app.utils import has_appointment_conflict
@@ -102,6 +103,10 @@ def book_appointment():
             flash('Please select a valid doctor.', 'danger')
             return redirect(url_for('patient.book_appointment'))
         patient = _current_patient()
+        if not patient and not current_user.has_any_role('Admin', 'SuperAdmin',
+                                                         'Receptionist'):
+            flash('Please complete your patient profile first.', 'warning')
+            return redirect(url_for('patient.book_appointment'))
         if not patient:
             patient = Patient.query.get(request.form.get('patient_id'))
         if not patient:
@@ -164,6 +169,43 @@ def radiology_reports():
     return render_template('patient/radiology_reports.html', title='Radiology Reports', items=items)
 
 
+@patient_bp.route('/my-radiology')
+@login_required
+@roles_required('Patient', 'Admin', 'SuperAdmin')
+def my_radiology():
+    """Patient portal — My Radiology: safety profile, dose summary, order history."""
+    from app.services.radiology.dose_service import RadiationDoseService
+    from app.services.radiology.safety_service import RadiologySafetyService
+    from app.models import (
+        PatientImagingSafetyProfile, MRIImplantRegistry,
+        ImagingDoseRecord, ContrastAdministration,
+    )
+    patient = _current_patient()
+    if not patient:
+        flash('No patient profile is associated with this account.', 'warning')
+        return redirect(url_for('patient.profile'))
+    safety_svc = RadiologySafetyService()
+    dose_svc = RadiationDoseService()
+    profile = PatientImagingSafetyProfile.query.filter_by(
+        patient_id=patient.id).first()
+    implants = MRIImplantRegistry.query.filter_by(
+        patient_id=patient.id, is_active=True).all()
+    ct_eval = safety_svc.evaluate_ct_safety(patient.id)
+    mri_eval = safety_svc.evaluate_mri_safety(patient.id)
+    annual = dose_svc.get_patient_annual_summary(patient.id)
+    orders = RadiologyOrder.query.filter_by(patient_id=patient.id).order_by(
+        RadiologyOrder.order_date.desc()).all()
+    contrast_history = ContrastAdministration.query.filter_by(
+        patient_id=patient.id).order_by(
+        ContrastAdministration.administration_time.desc()).limit(5).all()
+    return render_template('patient/my_radiology.html',
+                           title='My Radiology',
+                           patient=patient, profile=profile,
+                           implants=implants, ct_eval=ct_eval,
+                           mri_eval=mri_eval, annual=annual,
+                           orders=orders, contrast_history=contrast_history)
+
+
 @patient_bp.route('/bills')
 @login_required
 @roles_required('Patient', 'Admin', 'SuperAdmin')
@@ -184,6 +226,10 @@ def bills():
 @roles_required('Patient', 'Admin', 'SuperAdmin')
 def documents():
     patient = _current_patient()
+    if patient is None:
+        flash('Please complete your patient profile first.', 'warning')
+        return redirect(url_for('patient.profile')) if current_user.user_type == 'patient' \
+            else redirect(url_for('main.dashboard'))
     if request.method == 'POST':
         f = request.files.get('document')
         url = save_upload(f, 'medical_documents', {'pdf', 'png', 'jpg', 'jpeg'})
@@ -192,6 +238,7 @@ def documents():
                 patient_id=patient.id,
                 title=request.form.get('title') or f.filename or 'Document',
                 document_type=request.form.get('document_type') or 'other',
+                category=request.form.get('category') or 'Other',
                 file_url=url,
             ))
             log_activity('UPLOAD_DOCUMENT', 'patient_document', patient.id, url)
@@ -202,7 +249,8 @@ def documents():
         return redirect(url_for('patient.documents'))
     files = PatientDocument.query.filter_by(patient_id=patient.id).order_by(
         PatientDocument.uploaded_at.desc()).all()
-    return render_template('patient/documents.html', title='Medical Documents', files=files)
+    return render_template('patient/documents.html', title='Medical Documents',
+                           files=files, patient=patient)
 
 
 def _document_path(doc):
@@ -222,7 +270,11 @@ def _document_path(doc):
 @login_required
 def download_document(doc_id):
     """Stream a medical document only to authorized users (owner or staff with
-    documented need-to-know access). Direct static URLs are never exposed."""
+    documented need-to-know access). Direct static URLs are never exposed.
+
+    ``?inline=1`` serves the file for inline viewing (image previews) instead
+    of forcing a download; access control is identical.
+    """
     doc = PatientDocument.query.get_or_404(doc_id)
     patient = doc.patient
     is_owner = bool(current_user.patient_profile and patient and
@@ -235,12 +287,14 @@ def download_document(doc_id):
         abort(404)
     log_activity('DOWNLOAD_DOCUMENT', 'patient_document', doc.id, doc.title)
     db.session.commit()
-    return send_file(path, as_attachment=True,
+    inline = request.args.get('inline') == '1'
+    return send_file(path, as_attachment=not inline,
                      download_name=os.path.basename(path))
 
 
 @patient_bp.route('/messages')
 @login_required
+@roles_required('Patient', 'Admin', 'SuperAdmin')
 def messages():
     items = Message.query.filter_by(receiver_id=current_user.id).order_by(
         Message.sent_at.desc()).all()

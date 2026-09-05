@@ -1,54 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-calendar-plus text-primary"></i> Book Appointment</h4>
-    <a href="{{ url_for('patient.appointments') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left"></i> Back
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'حجز موعد' if g.lang == 'ar' else 'Book Appointment' }}</h1>
+        <p class="page-subtitle">{{ 'احجز موعدك الطبي' if g.lang == 'ar' else 'Schedule your medical appointment' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('patient.appointments') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+        </a>
+    </div>
 </div>
 
 <div class="row">
     <div class="col-md-8">
-        <div class="card card-shadow">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-calendar-plus" style="color:var(--ihis-primary)"></i> {{ 'تفاصيل الموعد' if g.lang == 'ar' else 'Appointment Details' }}</div>
+            </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('patient.book_appointment') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label">Doctor</label>
-                            <select name="doctor_id" class="form-select" required>
-                                <option value="">-- Select Doctor --</option>
-                                {% for doc in doctors %}
-                                <option value="{{ doc.id }}">
-                                    {{ doc.user.full_name if doc.user else 'Doctor #' + doc.id|string }}
-                                    {% if doc.specialty %}({{ doc.specialty.name }}){% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }} [<span class="required">*</span>]</label>
+                                <select name="doctor_id" class="form-control" required>
+                                    <option value="">{{ '-- اختر الطبيب --' if g.lang == 'ar' else '-- Select Doctor --' }}</option>
+                                    {% for doc in doctors %}
+                                    <option value="{{ doc.id }}">
+                                        {{ doc.user.full_name if doc.user else 'Doctor #' + doc.id|string }}
+                                        {% if doc.specialty %}({{ doc.specialty.name }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Priority</label>
-                            <select name="priority" class="form-select">
-                                <option value="Normal">Normal</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</label>
+                                <select name="priority" class="form-control">
+                                    <option value="Normal">{{ 'عادية' if g.lang == 'ar' else 'Normal' }}</option>
+                                    <option value="Medium">{{ 'متوسطة' if g.lang == 'ar' else 'Medium' }}</option>
+                                    <option value="High">{{ 'عالية' if g.lang == 'ar' else 'High' }}</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Date</label>
-                            <input type="date" name="date" class="form-control" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'التاريخ' if g.lang == 'ar' else 'Date' }} [<span class="required">*</span>]</label>
+                                <input type="date" name="date" class="form-control" required>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Time</label>
-                            <input type="time" name="time" class="form-control" value="09:00" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الوقت' if g.lang == 'ar' else 'Time' }} [<span class="required">*</span>]</label>
+                                <input type="time" name="time" class="form-control" value="09:00" required>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Reason</label>
-                            <textarea name="reason" class="form-control" rows="3" placeholder="Reason for the visit"></textarea>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'سبب الزيارة' if g.lang == 'ar' else 'Reason' }}</label>
+                                <textarea name="reason" class="form-control" rows="3" placeholder="{{ 'سبب الزيارة' if g.lang == 'ar' else 'Reason for the visit' }}"></textarea>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check"></i> Book Appointment
+                            <button type="submit" class="btn-ihs btn-ihs-primary">
+                                <i class="fas fa-check"></i> {{ 'تأكيد الحجز' if g.lang == 'ar' else 'Book Appointment' }}
                             </button>
                         </div>
                     </div>

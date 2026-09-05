@@ -4,7 +4,8 @@ import unittest
 
 from app import create_app, db
 from app.models import (User, Role, Patient, Specialty, Doctor, ImagingType,
-                        RadiologyOrder, RadiologyReport, Task, Notification)
+                        RadiologyOrder, RadiologyReport, Task, Notification,
+                        Appointment)
 
 
 def _csrf(html):
@@ -76,6 +77,15 @@ class RadiologyWorkflowTestCase(unittest.TestCase):
 
     def _create_order(self):
         self._login(self.doc_u.email)
+        from datetime import datetime
+        # A doctor must have a documented relationship (appointment) with the
+        # patient to satisfy need-to-know before ordering a study.
+        if not Appointment.query.filter_by(patient_id=self.patient_id,
+                                           doctor_id=self.doc_u.doctor_profile.id).first():
+            db.session.add(Appointment(patient_id=self.patient_id,
+                                       doctor_id=self.doc_u.doctor_profile.id,
+                                       scheduled_at=datetime.now()))
+            db.session.commit()
         page = self.client.get('/radiology/order/new')
         tok = _csrf(page.data)
         self.client.post('/radiology/order/new', data={

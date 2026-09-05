@@ -1,137 +1,174 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Enter Lab Result</h4>
+<div class="page-header">
     <div>
+        <h1 class="page-title"><i class="fas fa-edit" style="color:var(--ihis-primary);margin-inline-end:var(--sp-2)"></i>{{ 'إدخال نتيجة المختبر' if g.lang == 'ar' else 'Enter Lab Result' }}</h1>
+        <p class="page-subtitle">{{ 'تقديم وحفظ نتائج الفحص المخبري' if g.lang == 'ar' else 'Submit and save laboratory test results' }}</p>
+    </div>
+    <div class="page-actions">
         {% if order.status in ('Resulted','Verified','Finalized') and order.result %}
-        <a class="btn btn-outline-primary me-2" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI Interpret</a>
-        <a class="btn btn-outline-primary me-2" target="_blank" href="{{ url_for('reports.lab_result', order_id=order.id) }}"><i class="fas fa-file-pdf me-1"></i>Download PDF</a>
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain"></i> AI {{ 'تفسير' if g.lang == 'ar' else 'Interpret' }}</a>
+        <a class="btn-ihs btn-ihs-outline" target="_blank" href="{{ url_for('reports.lab_result', order_id=order.id) }}"><i class="fas fa-file-pdf"></i> PDF</a>
         {% endif %}
-        <a href="{{ url_for('lab.orders') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Orders</a>
+        <a href="{{ url_for('lab.orders') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'العودة للطلبات' if g.lang == 'ar' else 'Back to Orders' }}</a>
     </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-4">
     <div class="col-lg-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fas fa-file-medical text-primary me-2"></i>Order Context</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-info)"></i> {{ 'بيانات الطلب' if g.lang == 'ar' else 'Order Context' }}</div>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4 text-muted">Order #</dt>
-                    <dd class="col-sm-8">{{ order.id }}</dd>
-                    <dt class="col-sm-4 text-muted">Patient</dt>
-                    <dd class="col-sm-8">{{ order.patient.user.full_name if order.patient and order.patient.user else 'Unknown' }}</dd>
-                    <dt class="col-sm-4 text-muted">Test</dt>
-                    <dd class="col-sm-8">{{ order.test.test_name if order.test else 'Unknown' }}</dd>
-                    <dt class="col-sm-4 text-muted">Category</dt>
-                    <dd class="col-sm-8">{{ order.test.category if order.test and order.test.category else '-' }}</dd>
-                    <dt class="col-sm-4 text-muted">Normal Range</dt>
-                    <dd class="col-sm-8">{{ order.test.normal_range if order.test and order.test.normal_range else '-' }}</dd>
-                    <dt class="col-sm-4 text-muted">Unit</dt>
-                    <dd class="col-sm-8">{{ order.test.unit if order.test and order.test.unit else '-' }}</dd>
-                    <dt class="col-sm-4 text-muted">Priority</dt>
-                    <dd class="col-sm-8"><span class="badge bg-secondary">{{ order.priority or 'Normal' }}</span></dd>
-                    <dt class="col-sm-4 text-muted">Order Date</dt>
-                    <dd class="col-sm-8">{{ order.order_date.strftime('%d %b %Y %H:%M') if order.order_date else '-' }}</dd>
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-4);font-size:0.8125rem">
+                    <span class="cell-muted" style="font-weight:500">{{ 'رقم الطلب' if g.lang == 'ar' else 'Order #' }}</span>
+                    <span class="cell-mono">{{ order.id }}</span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</span>
+                    <span class="cell-primary">{{ order.patient.user.full_name if order.patient and order.patient.user else 'Unknown' }}</span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'الفحص' if g.lang == 'ar' else 'Test' }}</span>
+                    <span>{{ order.test.test_name if order.test else 'Unknown' }}</span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</span>
+                    <span class="cell-secondary">{{ order.test.category if order.test and order.test.category else '-' }}</span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'المجال الطبيعي' if g.lang == 'ar' else 'Normal Range' }}</span>
+                    <span class="cell-secondary">{{ order.test.normal_range if order.test and order.test.normal_range else '-' }}</span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'عتبة القيمة الحرجة' if g.lang == 'ar' else 'Critical Threshold' }}</span>
+                    <span class="cell-secondary">
+                        {% if order.test and (order.test.critical_low is not none or order.test.critical_high is not none) %}
+                            {{ '< ' ~ order.test.critical_low ~ ' أو > ' ~ order.test.critical_high if order.test.critical_low is not none and order.test.critical_high is not none else ('< ' ~ order.test.critical_low if order.test.critical_low is not none else '> ' ~ order.test.critical_high) }}
+                            {% if order.test.unit %} {{ order.test.unit }}{% endif %}
+                            {% if order.test.critical_notes %}<span class="cell-muted" style="display:block;font-size:.75rem">{{ order.test.critical_notes }}</span>{% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'الوحدة' if g.lang == 'ar' else 'Unit' }}</span>
+                    <span class="cell-secondary">{{ order.test.unit if order.test and order.test.unit else '-' }}</span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</span>
+                    <span><span class="priority-badge p-{{ (order.priority or 'normal')|lower }}">{{ order.priority or 'Normal' }}</span></span>
+
+                    <span class="cell-muted" style="font-weight:500">{{ 'تاريخ الطلب' if g.lang == 'ar' else 'Order Date' }}</span>
+                    <span class="cell-secondary">{{ order.order_date.strftime('%d %b %Y %H:%M') if order.order_date else '-' }}</span>
+
                     {% if order.notes %}
-                    <dt class="col-sm-4 text-muted">Notes</dt>
-                    <dd class="col-sm-8">{{ order.notes }}</dd>
+                    <span class="cell-muted" style="font-weight:500">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</span>
+                    <span class="cell-secondary">{{ order.notes }}</span>
                     {% endif %}
-                </dl>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="fas fa-clipboard-check text-success me-2"></i>Result Details</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clipboard-check" style="color:var(--ihis-success)"></i> {{ 'تفاصيل النتيجة' if g.lang == 'ar' else 'Result Details' }}</div>
                 {% if result %}
-                <span class="badge {% if result.status == 'Verified' %}bg-success{% elif result.status == 'Draft' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                    {{ result.status }}{% if result.status == 'Verified' %} 🔒{% endif %}
+                <span class="status-badge {% if result.status == 'Verified' %}s-verified{% elif result.status == 'Draft' %}s-draft{% else %}s-pending{% endif %}">
+                    {{ result.status }}{% if result.status == 'Verified' %} <i class="fas fa-lock" style="font-size:0.6rem"></i>{% endif %}
                 </span>
                 {% endif %}
             </div>
             <div class="card-body">
                 {% if result and result.status == 'Verified' %}
-                <div class="alert alert-warning d-flex align-items-center" role="alert">
-                    <i class="fas fa-lock me-2"></i>
-                    <div>This result is <strong>verified and locked</strong>. Direct edits are disabled — use the correction form below with a reason.</div>
+                <div style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-4);background:var(--ihis-warning-light);border:1px solid rgba(198,125,26,.2);border-radius:var(--radius-md);margin-bottom:var(--sp-5);font-size:0.8125rem;color:var(--ihis-warning)">
+                    <i class="fas fa-lock" style="margin-top:2px"></i>
+                    <div>{{ 'هذه النتيجة <strong>محققة ومغلقة</strong>. التعديلات المباشرة معطلة — استخدم نموذج التصحيح أدناه مع سبب.' if g.lang == 'ar' else 'This result is <strong>verified and locked</strong>. Direct edits are disabled — use the correction form below with a reason.' }}</div>
                 </div>
                 {% endif %}
                 <form method="POST" action="{{ url_for('lab.enter_result', order_id=order.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     {% if result and result.status == 'Verified' %}
                     <input type="hidden" name="amend" value="1">
-                    <div class="mb-3">
-                        <label for="reason" class="form-label">Correction Reason <span class="text-danger">*</span></label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="reason">{{ 'سبب التصحيح' if g.lang == 'ar' else 'Correction Reason' }} <span class="required">*</span></label>
                         <textarea class="form-control" id="reason" name="reason" rows="2" required
-                                  placeholder="Why is this correction being made?"></textarea>
+                                  placeholder="{{ 'لماذا يتم هذا التصحيح؟' if g.lang == 'ar' else 'Why is this correction being made?' }}"></textarea>
                     </div>
                     {% endif %}
 
-                    <div class="mb-3">
-                        <label for="result_value" class="form-label">Result Value</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="result_value">{{ 'قيمة النتيجة' if g.lang == 'ar' else 'Result Value' }} <span class="required">*</span></label>
                         <input type="text" class="form-control" id="result_value" name="result_value"
                                 value="{{ result.result_value if result and result.result_value else '' }}"
                                 oninput="evaluateAbnormality()"
-                                placeholder="e.g. 12.5" required>
-                        <div class="form-text" id="range_hint">
-                            Reference range
-                            {% if order.test and order.test.normal_range %}<strong>{{ order.test.normal_range }}{% if order.test.unit %} {{ order.test.unit }}{% endif %}</strong>{% else %}not defined for this test{% endif %}.
-                            Abnormality is flagged automatically when a numeric range is available.
+                                placeholder="{{ 'مثال: 12.5' if g.lang == 'ar' else 'e.g. 12.5' }}" required>
+                        <div class="form-hint" id="range_hint" style="margin-top:var(--sp-1)">
+                            {{ 'المجال المرجعي' if g.lang == 'ar' else 'Reference range' }}
+                            {% if order.test and order.test.normal_range %}<strong>{{ order.test.normal_range }}{% if order.test.unit %} {{ order.test.unit }}{% endif %}</strong>{% else %}{{ 'غير محدد لهذا الفحص' if g.lang == 'ar' else 'not defined for this test' }}{% endif %}.
+                            {{ 'يتم تحديد حالة القيمة تلقائيًا عند توفر مجال رقمي أو عتبة حرجة' if g.lang == 'ar' else 'Abnormality and criticality are flagged automatically when a numeric range / critical threshold is available' }}.
+                            {% if order.test and (order.test.critical_low is not none or order.test.critical_high is not none) %}
+                            <span id="crit_hint" style="color:var(--ihis-danger);font-weight:600"></span>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="result_notes" class="form-label">Result Notes</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="result_notes">{{ 'ملاحظات النتيجة' if g.lang == 'ar' else 'Result Notes' }}</label>
                         <textarea class="form-control" id="result_notes" name="result_notes" rows="4"
-                                  placeholder="Interpretation or additional comments...">{{ result.result_notes if result and result.result_notes else '' }}</textarea>
+                                  placeholder="{{ 'التفسير أو التعليقات الإضافية...' if g.lang == 'ar' else 'Interpretation or additional comments...' }}">{{ result.result_notes if result and result.result_notes else '' }}</textarea>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="result_unit" class="form-label">Unit</label>
-                            <input type="text" class="form-control" id="result_unit" name="result_unit"
-                                   value="{{ result.result_unit if result and result.result_unit else (order.test.unit if order.test and order.test.unit else '') }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="result_unit">{{ 'الوحدة' if g.lang == 'ar' else 'Unit' }}</label>
+                                <input type="text" class="form-control" id="result_unit" name="result_unit"
+                                       value="{{ result.result_unit if result and result.result_unit else (order.test.unit if order.test and order.test.unit else '') }}">
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="qualitative" class="form-label">Qualitative Result</label>
-                            <select class="form-select" id="qualitative" name="qualitative">
-                                <option value="">-- Not applicable --</option>
-                                {% for q in ['Positive','Negative','Reactive','Non-reactive','Detected','Not detected','Indeterminate'] %}
-                                <option value="{{ q }}" {{ 'selected' if result and result.qualitative == q }}>{{ q }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="qualitative">{{ 'النتيجة النوعية' if g.lang == 'ar' else 'Qualitative Result' }}</label>
+                                <select class="form-select" id="qualitative" name="qualitative">
+                                    <option value="">-- {{ 'غير مطبق' if g.lang == 'ar' else 'Not applicable' }} --</option>
+                                    {% for q in ['Positive','Negative','Reactive','Non-reactive','Detected','Not detected','Indeterminate'] %}
+                                    <option value="{{ q }}" {{ 'selected' if result and result.qualitative == q }}>{{ q }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-check mb-1">
-                        <input class="form-check-input" type="checkbox" id="is_critical" name="is_critical"
-                                {% if result and result.is_critical %}checked{% endif %}>
-                        <label class="form-check-label" for="is_critical">
-                            Mark as <strong>Critical (panic value)</strong> — escalates immediately to doctors
-                        </label>
+                    <div class="form-group">
+                        <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);background:var(--ihis-danger-light);border:1px solid rgba(192,57,43,.15);border-radius:var(--radius-sm)">
+                            <input class="form-check-input" type="checkbox" id="is_critical" name="is_critical"
+                                    {% if result and result.is_critical %}checked{% endif %} style="width:18px;height:18px;margin:0;flex-shrink:0">
+                            <label class="form-check-label" for="is_critical" style="font-size:0.8125rem;color:var(--ihis-danger);font-weight:500;margin:0">
+                                {{ 'تحديد كـ <strong>حرج (قيمة ذعر)</strong> — يصعد فورًا للأطباء' if g.lang == 'ar' else 'Mark as <strong>Critical (panic value)</strong> — escalates immediately to doctors' }}
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="form-check mb-1">
-                        <input class="form-check-input" type="checkbox" id="is_abnormal" name="is_abnormal"
-                                {% if result and result.is_abnormal %}checked{% endif %}>
-                        <label class="form-check-label" for="is_abnormal">
-                            Mark as Abnormal
-                        </label>
+                    <div class="form-group">
+                        <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);background:var(--ihis-surface-inset);border:1px solid var(--ihis-border-light);border-radius:var(--radius-sm)">
+                            <input class="form-check-input" type="checkbox" id="is_abnormal" name="is_abnormal"
+                                    {% if result and result.is_abnormal %}checked{% endif %} style="width:18px;height:18px;margin:0;flex-shrink:0">
+                            <label class="form-check-label" for="is_abnormal" style="font-size:0.8125rem;color:var(--ihis-text-secondary);font-weight:500;margin:0">
+                                {{ 'تحديد كغير طبيعي' if g.lang == 'ar' else 'Mark as Abnormal' }}
+                            </label>
+                        </div>
+                        <div class="form-hint" id="abn_hint" style="margin-top:var(--sp-2)"></div>
                     </div>
-                    <div class="form-text mb-4" id="abn_hint"></div>
 
-                    <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>{% if result and result.status == 'Verified' %}Save Correction{% else %}Save Result{% endif %}</button>
+                    <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-4)">
+                        <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-lg"><i class="fas fa-check"></i> {% if result and result.status == 'Verified' %}{{ 'حفظ التصحيح' if g.lang == 'ar' else 'Save Correction' }}{% else %}{{ 'حفظ النتيجة' if g.lang == 'ar' else 'Save Result' }}{% endif %}</button>
+                    </div>
                 </form>
 
                 <script>
                 (function () {
                     const rangeText = {{ (order.test.normal_range if order.test and order.test.normal_range else '')|tojson }};
                     const unit = {{ (order.test.unit if order.test and order.test.unit else '')|tojson }};
+                    const critLow = {{ (order.test.critical_low if order.test and order.test.critical_low is not none else '')|tojson }};
+                    const critHigh = {{ (order.test.critical_high if order.test and order.test.critical_high is not none else '')|tojson }};
                     function parseRange(t) {
                         const pair = /^\s*([\d.]+)\s*[-–]\s*([\d.]+)\s*$/.exec(t);
                         if (pair) return {lo: parseFloat(pair[1]), hi: parseFloat(pair[2])};
@@ -149,6 +186,15 @@
                         if (r.op === '<') return v >= r.val;
                         return null;
                     }
+                    function isCritical(val) {
+                        if (val === '' || isNaN(parseFloat(val))) return null;
+                        const v = parseFloat(val);
+                        if (critLow === null && critHigh === null) return null;
+                        if (critLow !== null && critLow !== '' && v < parseFloat(critLow)) return true;
+                        if (critHigh !== null && critHigh !== '' && v > parseFloat(critHigh)) return true;
+                        if (critLow !== null && critLow !== '' || critHigh !== null && critHigh !== '') return false;
+                        return null;
+                    }
                     window.evaluateAbnormality = function () {
                         const val = document.getElementById('result_value').value;
                         const r = parseRange(rangeText);
@@ -157,26 +203,43 @@
                         const hint = document.getElementById('abn_hint');
                         if (res === null) {
                             hint.textContent = 'Auto-evaluation not possible — leave unchecked or review manually.';
-                            hint.className = 'form-text text-muted mb-4';
+                            hint.className = 'form-hint';
+                            hint.style.color = 'var(--ihis-text-muted)';
                         } else if (res) {
                             chk.checked = true;
                             hint.textContent = 'Auto-flagged abnormal against reference range.';
-                            hint.className = 'form-text text-danger mb-4';
+                            hint.className = 'form-hint';
+                            hint.style.color = 'var(--ihis-danger)';
                         } else {
                             hint.textContent = 'Within reference range.';
-                            hint.className = 'form-text text-success mb-4';
+                            hint.className = 'form-hint';
+                            hint.style.color = 'var(--ihis-success)';
+                        }
+                        const crit = isCritical(val);
+                        const critChk = document.getElementById('is_critical');
+                        const critHint = document.getElementById('crit_hint');
+                        if (critHint) {
+                            if (crit === true) {
+                                critChk.checked = true;
+                                critHint.textContent = 'PANIC VALUE - auto-flagged critical; escalates to doctors immediately.';
+                            } else if (crit === false) {
+                                critHint.textContent = 'Within critical thresholds.';
+                            } else {
+                                critHint.textContent = '';
+                            }
                         }
                     };
-                    // Run once with the initially saved value if present.
                     if (document.getElementById('result_value').value) evaluateAbnormality();
                 })();
                 </script>
 
                 {% if result and result.status != 'Verified' %}
-                <form method="POST" action="{{ url_for('lab.verify_result', order_id=order.id) }}" class="mt-3">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-lock me-1"></i>Verify &amp; Lock Result</button>
-                </form>
+                <div style="border-top:1px solid var(--ihis-border-light);padding-top:var(--sp-5);margin-top:var(--sp-5)">
+                    <form method="POST" action="{{ url_for('lab.verify_result', order_id=order.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-lock"></i> {{ 'تحقق وقفل النتيجة' if g.lang == 'ar' else 'Verify & Lock Result' }}</button>
+                    </form>
+                </div>
                 {% endif %}
             </div>
         </div>

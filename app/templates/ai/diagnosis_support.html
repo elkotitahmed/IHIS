@@ -1,23 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-stethoscope me-2 text-primary"></i>AI Diagnosis Support</h4>
-    <a class="btn btn-outline-secondary btn-sm"
-       href="{{ url_for('ai.summary', patient_id=patient.id) }}">
-        <i class="fas fa-arrow-left me-1"></i>Back to Summary</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'دعم التشخيص بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Diagnosis Support' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.summary', patient_id=patient.id) }}">
+            <i class="fas fa-arrow-left"></i>{{ 'رجوع للملخص' if g.lang == 'ar' else 'Back to Summary' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-white fw-bold">{{ patient.user.full_name }}</div>
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-stethoscope" style="color:var(--ihis-primary)"></i> {{ patient.user.full_name }} <span class="tag-ihs">AI</span></div>
+    </div>
     <div class="card-body">
         <form method="post" class="row g-2">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="col-md-9">
                 <input class="form-control" name="symptoms" required
-                       placeholder="Enter symptoms, e.g. chest pain, shortness of breath">
+                       placeholder="{{ 'أدخل الأعراض، مثال: ألم صدر، ضيق تنفس' if g.lang == 'ar' else 'Enter symptoms, e.g. chest pain, shortness of breath' }}">
             </div>
             <div class="col-md-3">
-                <button class="btn btn-primary w-100">Suggest</button>
+                <button class="btn-ihs btn-ihs-primary w-100">{{ 'اقترح' if g.lang == 'ar' else 'Suggest' }}</button>
             </div>
         </form>
     </div>
@@ -26,29 +34,33 @@
 {% if result %}
 <div class="row g-4 mt-1">
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white fw-bold text-primary">Suggested Considerations</div>
+        <div class="card-premium" style="border-top:3px solid var(--ihis-primary)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-lightbulb" style="color:var(--ihis-warning)"></i> {{ 'اعتبارات مقترحة' if g.lang == 'ar' else 'Suggested Considerations' }} <span class="tag-ihs">AI</span></div>
+            </div>
             <div class="card-body">
                 {% for s in result.suggestions %}
-                <span class="badge bg-light text-dark border d-inline-block mb-1 me-1 py-2 px-3">
-                    <i class="fas fa-lightbulb text-warning me-1"></i>{{ s }}</span>
+                <span class="tag-ihs d-inline-block mb-1 me-1" style="padding:0.4rem 0.75rem;font-size:0.75rem">
+                    <i class="fas fa-lightbulb" style="color:var(--ihis-warning)"></i> {{ s }}</span>
                 {% else %}
-                <p class="text-muted mb-0">Enter symptoms to get suggestions.</p>
+                <p class="cell-muted mb-0">{{ 'أدخل الأعراض للحصول على اقتراحات.' if g.lang == 'ar' else 'Enter symptoms to get suggestions.' }}</p>
                 {% endfor %}
                 <hr>
-                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>{{ result.disclaimer }}</p>
+                <p class="cell-muted small mb-0"><i class="fas fa-info-circle" style="color:var(--ihis-info)"></i> {{ result.disclaimer }}</p>
             </div>
         </div>
     </div>
     <div class="col-lg-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-white fw-bold">Prior Diagnoses (context)</div>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-history" style="color:var(--ihis-info)"></i> {{ 'تشخيصات سابقة (سياق)' if g.lang == 'ar' else 'Prior Diagnoses (context)' }}</div>
+            </div>
             <div class="card-body">
                 <ul class="mb-0 ps-3">
                 {% for d in result.prior_diagnoses %}
                     <li>{{ d }}</li>
                 {% else %}
-                    <li class="text-muted">No prior diagnoses.</li>
+                    <li class="cell-muted">{{ 'لا توجد تشخيصات سابقة.' if g.lang == 'ar' else 'No prior diagnoses.' }}</li>
                 {% endfor %}
                 </ul>
             </div>

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-clipboard-list" style="color:var(--ihis-primary)"></i>
+            {{ tpl.title if tpl else 'قالب جديد' if g.lang == 'ar' else 'New Template' }}</h1>
+    </div>
+    <a href="{{ url_for('clinical.templates') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+        <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+    </a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card-premium mb-4">
+        <div class="card-header"><div class="card-title"><i class="fas fa-tag"></i> {{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</div></div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label">{{ 'العنوان' if g.lang == 'ar' else 'Title' }} *</label>
+                    <input class="form-control" name="title" required value="{{ tpl.title if tpl else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'النوع' if g.lang == 'ar' else 'Type' }}</label>
+                    <select class="form-control" name="template_type">
+                        {% for tt in template_types %}<option value="{{ tt }}" {{ 'selected' if tpl and tpl.template_type == tt }}>{{ tt }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'التخصص' if g.lang == 'ar' else 'Specialty' }}</label>
+                    <select class="form-control" name="specialty_id"><option value="">—</option>
+                        {% for sp in specialties %}<option value="{{ sp.id }}" {{ 'selected' if tpl and tpl.specialty_id == sp.id }}>{{ sp.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'الأدوار المسموح بها (مفصولة بفواصل، فارغ = الجميع)' if g.lang == 'ar' else 'Allowed roles (comma separated; empty = all)' }}</label>
+                    <input class="form-control" name="allowed_roles" value="{{ tpl.allowed_roles or '' }}" placeholder="Doctor, Nurse">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
+                    <textarea class="form-control" name="description" rows="2">{{ tpl.description or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-premium mb-4">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <div class="card-title"><i class="fas fa-list"></i> {{ 'الأقسام' if g.lang == 'ar' else 'Sections' }}</div>
+            <button type="button" class="btn-ihs btn-ihs-primary btn-ihs-sm" id="add-sec"><i class="fas fa-plus"></i> {{ 'قسم' if g.lang == 'ar' else 'Section' }}</button>
+        </div>
+        <div class="card-body">
+            <p style="font-size:0.75rem;color:var(--ihis-text-muted);margin-bottom:var(--sp-2)">
+                <i class="fas fa-cube"></i> {{ 'النوع: textarea (افتراضي) · text · number · date · select/radio/checkbox (تحتاج خيارات مفصولة بفواصل)' if g.lang == 'ar' else 'Type: textarea (default) · text · number · date · select/radio/checkbox (need comma-separated options)' }}
+            </p>
+            <div id="secs">
+                {% set sections = tpl.section_list if tpl else [] %}
+                {% if not sections %}{% set sections = [{'key':'s','label':'Subjective','type':'textarea','placeholder':''}, {'key':'o','label':'Objective','type':'textarea','placeholder':''}, {'key':'a','label':'Assessment','type':'textarea','placeholder':''}, {'key':'p','label':'Plan','type':'textarea','placeholder':''}] %}{% endif %}
+                {% for s in sections %}
+                <div class="sec-row row g-2" style="align-items:center;margin-bottom:var(--sp-2)">
+                    <div class="col-md-2"><input class="form-control" name="section_key" placeholder="Key" value="{{ s.key }}"></div>
+                    <div class="col-md-3"><input class="form-control" name="section_label" placeholder="Label" value="{{ s.label }}"></div>
+                    <div class="col-md-2">
+                        <select class="form-control" name="section_type">
+                            {% for ft in ['textarea','text','select','number','date','radio','checkbox'] %}<option value="{{ ft }}" {{ 'selected' if s.get('type','textarea') == ft }}>{{ ft }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3"><input class="form-control" name="section_options" placeholder="{{ 'خيارات (فاصلة)' if g.lang == 'ar' else 'Options (comma)' }}" value="{{ s.options|join(', ') if s.options else '' }}"></div>
+                    <div class="col-md-1"><input class="form-control" name="section_placeholder" placeholder="{{ 'نص' if g.lang == 'ar' else 'Hint' }}" value="{{ s.placeholder or '' }}"></div>
+                    <div class="col-md-1"><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm sec-remove">&times;</button></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-lg"><i class="fas fa-save"></i> {{ 'حفظ' if g.lang == 'ar' else 'Save' }}</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const secs = document.getElementById('secs');
+    function addSec(key, label, placeholder) {
+        const row = document.createElement('div');
+        row.className = 'sec-row row g-2';
+        row.style.cssText = 'align-items:center;margin-bottom:var(--sp-2)';
+        row.innerHTML =
+            '<div class="col-md-2"><input class="form-control" name="section_key" placeholder="Key" value="' + (key || '') + '"></div>' +
+            '<div class="col-md-4"><input class="form-control" name="section_label" placeholder="Label" value="' + (label || '') + '"></div>' +
+            '<div class="col-md-5"><input class="form-control" name="section_placeholder" placeholder="Placeholder" value="' + (placeholder || '') + '"></div>' +
+            '<div class="col-md-1"><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm sec-remove">&times;</button></div>';
+        row.querySelector('.sec-remove').addEventListener('click', function () { row.remove(); });
+        secs.appendChild(row);
+    }
+    document.getElementById('add-sec').addEventListener('click', function () { addSec('', '', ''); });
+    document.querySelectorAll('.sec-remove').forEach(function (b) {
+        b.addEventListener('click', function () { b.closest('.sec-row').remove(); });
+    });
+})();
+</script>
+{% endblock %}

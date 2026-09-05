@@ -1,30 +1,46 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-database text-danger"></i> Database Backup</h4>
-    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-database" style="color:var(--ihis-danger)"></i> {{ 'نسخ احتياطي لقاعدة البيانات' if g.lang == 'ar' else 'Database Backup' }}</h1>
+        <p class="page-subtitle">{{ 'إنشاء نسخ احتياطي من قاعدة البيانات' if g.lang == 'ar' else 'Create timestamped copies of your database' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.dashboard') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+    </div>
 </div>
 
-<div class="row">
+<div class="row g-4">
     <div class="col-md-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-hdd"></i> Backup Information</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-hdd" style="color:var(--ihis-danger)"></i> {{ 'معلومات النسخ الاحتياطي' if g.lang == 'ar' else 'Backup Information' }}</div>
             </div>
             <div class="card-body">
-                <p><strong>Database file:</strong> <code>{{ db_name }}</code></p>
-                <p><strong>Backup directory:</strong> <code>{{ backup_folder }}</code></p>
-                <p class="text-muted">
-                    Clicking the button below creates a timestamped copy of the SQLite database
-                    in the backup folder using the system's current date and time.
-                </p>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'ملف قاعدة البيانات' if g.lang == 'ar' else 'Database File' }}</label>
+                    <div><code style="color:var(--ihis-primary);background:var(--ihis-surface-inset);padding:4px 8px;border-radius:4px">{{ db_name }}</code></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'مجلد النسخ الاحتياطي' if g.lang == 'ar' else 'Backup Directory' }}</label>
+                    <div><code style="color:var(--ihis-primary);background:var(--ihis-surface-inset);padding:4px 8px;border-radius:4px">{{ backup_folder }}</code></div>
+                </div>
+                <p style="color:var(--ihis-text-muted);margin:var(--sp-3) 0 0 0">{{ 'النقر على الزر أدناه ينشئ نسخة موقّتة من قاعدة البيانات SQLite في مجلد النسخ الاحتياطي باستخدام التاريخ والوقت الحالي للنظام.' if g.lang == 'ar' else 'Clicking the button below creates a timestamped copy of the SQLite database in the backup folder using the system\'s current date and time.' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-shield-alt" style="color:var(--ihis-danger)"></i> {{ 'إجراء النسخ الاحتياطي' if g.lang == 'ar' else 'Backup Action' }}</div>
+            </div>
+            <div class="card-body">
                 <form method="post" action="{{ url_for('super_admin.backup') }}"
                       onsubmit="return confirm('Create a new database backup now?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger btn-lg">
-                        <i class="fas fa-download"></i> Create Backup Now
+                    <button type="submit" class="btn-ihs btn-ihs-danger btn-ihs-lg w-100">
+                        <i class="fas fa-download me-1"></i>{{ 'إنشاء نسخة احتياطية الآن' if g.lang == 'ar' else 'Create Backup Now' }}
                     </button>
                 </form>
             </div>

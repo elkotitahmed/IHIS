@@ -1,73 +1,103 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'تسجيل مريض جديد' if g.lang == 'ar' else 'Register New Patient' }}</h1>
+        <p class="page-subtitle">{{ 'إنشاء حساب جديد لنظام المعلومات' if g.lang == 'ar' else 'Create a new patient record' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reception.dashboard') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+        </a>
+    </div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0"><i class="fas fa-user-plus text-primary"></i> Register New Patient</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-plus" style="color:var(--ihis-primary)"></i> {{ 'بيانات المريض' if g.lang == 'ar' else 'Patient Information' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" novalidate>
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="full_name" class="form-control" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الاسم الكامل' if g.lang == 'ar' else 'Full Name' }} <span class="required">*</span></label>
+                                <input type="text" name="full_name" class="form-control" required>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Username <span class="text-danger">*</span></label>
-                            <input type="text" name="username" class="form-control" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'اسم المستخدم' if g.lang == 'ar' else 'Username' }} <span class="required">*</span></label>
+                                <input type="text" name="username" class="form-control" required>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Password <span class="text-danger">*</span></label>
-                            <input type="password" name="password" class="form-control" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'كلمة المرور' if g.lang == 'ar' else 'Password' }} <span class="required">*</span></label>
+                                <input type="password" name="password" class="form-control" required>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'البريد الإلكتروني' if g.lang == 'ar' else 'Email' }}</label>
+                                <input type="email" name="email" class="form-control">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Phone</label>
-                            <input type="text" name="phone" class="form-control">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الهاتف' if g.lang == 'ar' else 'Phone' }}</label>
+                                <input type="text" name="phone" class="form-control">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Gender</label>
-                            <select name="gender" class="form-select">
-                                <option value="">Select...</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}</label>
+                                <select name="gender" class="form-control">
+                                    <option value="">{{ 'اختر...' if g.lang == 'ar' else 'Select...' }}</option>
+                                    <option value="Male">{{ 'ذكر' if g.lang == 'ar' else 'Male' }}</option>
+                                    <option value="Female">{{ 'أنثى' if g.lang == 'ar' else 'Female' }}</option>
+                                    <option value="Other">{{ 'آخر' if g.lang == 'ar' else 'Other' }}</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Date of Birth</label>
-                            <input type="date" name="date_of_birth" class="form-control">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'تاريخ الميلاد' if g.lang == 'ar' else 'Date of Birth' }}</label>
+                                <input type="date" name="date_of_birth" class="form-control">
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Blood Type</label>
-                            <select name="blood_type" class="form-select">
-                                <option value="">Unknown</option>
-                                <option value="A+">A+</option>
-                                <option value="A-">A-</option>
-                                <option value="B+">B+</option>
-                                <option value="B-">B-</option>
-                                <option value="AB+">AB+</option>
-                                <option value="AB-">AB-</option>
-                                <option value="O+">O+</option>
-                                <option value="O-">O-</option>
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'فصيلة الدم' if g.lang == 'ar' else 'Blood Type' }}</label>
+                                <select name="blood_type" class="form-control">
+                                    <option value="">{{ 'غير معروف' if g.lang == 'ar' else 'Unknown' }}</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Address</label>
-                            <textarea name="address" class="form-control" rows="2"></textarea>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'العنوان' if g.lang == 'ar' else 'Address' }}</label>
+                                <textarea name="address" class="form-control" rows="2"></textarea>
+                            </div>
                         </div>
                     </div>
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{{ url_for('reception.dashboard') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left"></i> Cancel
+                        <a href="{{ url_for('reception.dashboard') }}" class="btn-ihs btn-ihs-ghost">
+                            <i class="fas fa-arrow-left"></i> {{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-user-plus"></i> Register Patient
+                        <button type="submit" class="btn-ihs btn-ihs-primary">
+                            <i class="fas fa-user-plus"></i> {{ 'تسجيل المريض' if g.lang == 'ar' else 'Register Patient' }}
                         </button>
                     </div>
                 </form>

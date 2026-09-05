@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-cloud-arrow-down" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>FHIR — {{ patient.user.full_name }}</h1>
+        <p class="page-subtitle">
+            {{ 'تمثيل السجل السريري بمعايير FHIR R4 (قراءة فقط)' if g.lang == 'ar' else 'Structured FHIR R4 representation of the clinical record (read-only)' }}
+            · {{ resources|length }} {{ 'مورد' if g.lang == 'ar' else 'resources' }}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('fhir.patient_resource', patient_id=patient.id) }}" target="_blank"><i class="fas fa-user-doctor"></i> Patient</a>
+        <a class="btn-ihs btn-ihs-primary" href="{{ url_for('fhir.patient_everything_route', patient_id=patient.id) }}" target="_blank"><i class="fas fa-box-archive"></i> {{ '$everything' }}</a>
+    </div>
+</div>
+
+{% set groups = resources|groupby('resourceType') %}
+<div class="kpi-grid mb-4">
+    {% for rt, items in groups %}
+    <div class="kpi-card">
+        <div class="kpi-icon primary"><i class="fas fa-cube"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ rt }}</div>
+            <div class="kpi-value">{{ items|length }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'الموارد' if g.lang == 'ar' else 'Resources' }}</div>
+        <div class="card-actions">
+            <span class="tag-ihs">application/fhir+json</span>
+        </div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr>
+                    <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                    <th>ID</th>
+                    <th>{{ 'المحتوى' if g.lang == 'ar' else 'Content' }}</th>
+                </tr></thead>
+                <tbody>
+                {% for item in resources %}
+                    <tr>
+                        <td class="cell-secondary"><span class="status-badge s-pending">{{ item.resourceType }}</span></td>
+                        <td class="cell-mono">{{ item.id }}</td>
+                        <td class="cell-primary">{{ item.label }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="3">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-box-open"></i></div>
+                                <div class="empty-title">{{ 'لا توجد موارد' if g.lang == 'ar' else 'No resources yet' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

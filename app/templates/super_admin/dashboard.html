@@ -1,152 +1,442 @@
 {% extends "base.html" %}
+{% set title = 'Command Center' %}
+
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-user-shield text-primary"></i> Super Admin Dashboard</h4>
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">
+            <i class="fas fa-gauge-high" style="color:var(--ihis-primary)"></i>
+            {{ 'اللوحة التنفيذية' if g.lang == 'ar' else 'Hospital Command Center' }}
+        </h1>
+        <p class="page-subtitle">
+            {{ 'نظرة عامة على جميع عمليات المستشفى في الوقت الحقيقي' if g.lang == 'ar' else 'Real-time overview of all hospital operations' }}
+            <span style="color:var(--ihis-text-muted);margin-inline-start:var(--sp-2)">
+                {{ now.strftime('%A, %B %d, %Y at %H:%M') if now else '' }}
+            </span>
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{{ url_for('super_admin.capabilities') }}" class="btn btn-outline btn-sm">
+            <i class="fas fa-rocket"></i> {{ 'قدرات المنصة' if g.lang == 'ar' else 'Platform Capabilities' }}
+        </a>
+        <button onclick="location.reload()" class="btn btn-primary btn-sm">
+            <i class="fas fa-refresh"></i> {{ 'تحديث' if g.lang == 'ar' else 'Refresh' }}
+        </button>
+    </div>
+</div>
 
-<div class="row g-3">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-user-check icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Active Users</h6>
-                    <p class="display-6 mb-0">{{ active_users }}</p>
-                </div>
+<!-- ============================================================ -->
+<!-- SECTION 1: CRITICAL KPIs — Top of Command Center             -->
+<!-- ============================================================ -->
+<div class="stat-row" style="margin-bottom:var(--sp-5)">
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-primary-bg);color:var(--ihis-primary)">
+            <i class="fas fa-hospital"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ system_health }}</div>
+            <div class="stat-row-label">{{ 'حالة النظام' if g.lang == 'ar' else 'System Health' }}</div>
+        </div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-success-bg);color:var(--ihis-success)">
+            <i class="fas fa-users"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ active_users }}</div>
+            <div class="stat-row-label">{{ 'المستخدمون النشطون' if g.lang == 'ar' else 'Active Users' }}</div>
+        </div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-info-bg);color:var(--ihis-info)">
+            <i class="fas fa-calendar-check"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ appts_today }}</div>
+            <div class="stat-row-label">{{ 'مواعيد اليوم' if g.lang == 'ar' else 'Appointments Today' }}</div>
+        </div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-purple-bg);color:var(--ihis-purple)">
+            <i class="fas fa-user-injured"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ total_patients }}</div>
+            <div class="stat-row-label">{{ 'إجمالي المرضى' if g.lang == 'ar' else 'Total Patients' }}</div>
+        </div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-warning-bg);color:var(--ihis-warning)">
+            <i class="fas fa-door-open"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ active_admissions }}</div>
+            <div class="stat-row-label">{{ 'الاستشفاء النشط' if g.lang == 'ar' else 'Active Admissions' }}</div>
+        </div>
+    </div>
+    <div class="stat-row-item">
+        <div class="stat-row-icon" style="background:var(--ihis-danger-bg);color:var(--ihis-danger)">
+            <i class="fas fa-syringe"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ appts_waiting }}</div>
+            <div class="stat-row-label">{{ 'بانتظار الفحص' if g.lang == 'ar' else 'Waiting' }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: COMMAND CENTER GRID — Department Operations       -->
+<!-- ============================================================ -->
+<div class="cc-grid" style="margin-bottom:var(--sp-5)">
+    <!-- REVENUE & BILLING -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-file-invoice-dollar" style="color:var(--ihis-danger)"></i>
+                {{ 'المالية' if g.lang == 'ar' else 'Revenue & Billing' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إيرادات اليوم' if g.lang == 'ar' else 'Daily Revenue' }}</span>
+                <span class="metric-value">{{ "{:,.0f}".format(daily_revenue|default(0, true)) }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إجمالي الإيرادات' if g.lang == 'ar' else 'Total Revenue' }}</span>
+                <span class="metric-value">{{ "{:,.0f}".format(total_revenue|default(0, true)) }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'فواتير غير مدفوعة' if g.lang == 'ar' else 'Unpaid Bills' }}</span>
+                <span class="metric-value" style="color:var(--ihis-danger)">{{ unpaid_bills }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'المستحقات' if g.lang == 'ar' else 'Outstanding' }}</span>
+                <span class="metric-value" style="color:var(--ihis-danger)">{{ "{:,.0f}".format(total_outstanding|default(0, true)) }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'فواتير اليوم' if g.lang == 'ar' else 'Bills Today' }}</span>
+                <span class="metric-value">{{ today_bills }}</span>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-users icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Total Users</h6>
-                    <p class="display-6 mb-0">{{ total_users }}</p>
-                </div>
+
+    <!-- LABORATORY -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-flask" style="color:var(--ihis-info)"></i>
+                {{ 'المختبر' if g.lang == 'ar' else 'Laboratory' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'قيد الانتظار' if g.lang == 'ar' else 'Pending' }}</span>
+                <span class="metric-value" style="color:var(--ihis-warning)">{{ pending_lab }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'مكتملة اليوم' if g.lang == 'ar' else 'Completed Today' }}</span>
+                <span class="metric-value" style="color:var(--ihis-success)">{{ completed_lab_today }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إجمالي الطلبات' if g.lang == 'ar' else 'Total Orders' }}</span>
+                <span class="metric-value">{{ lab_volume_total }}</span>
+            </div>
+            {% if pending_lab > 5 %}
+            <div class="metric-row" style="background:var(--ihis-warning-bg);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin-top:var(--sp-1)">
+                <span style="font-size:0.75rem;color:var(--ihis-warning)"><i class="fas fa-exclamation-triangle"></i> {{ 'تنبيه: طلبات كثيرة في الانتظار' if g.lang == 'ar' else 'Alert: High pending volume' }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- RADIOLOGY -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-x-ray" style="color:var(--ihis-purple)"></i>
+                {{ 'الأشعة' if g.lang == 'ar' else 'Radiology' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'قيد الانتظار' if g.lang == 'ar' else 'Pending' }}</span>
+                <span class="metric-value" style="color:var(--ihis-warning)">{{ pending_radiology }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'مكتملة اليوم' if g.lang == 'ar' else 'Completed Today' }}</span>
+                <span class="metric-value" style="color:var(--ihis-success)">{{ completed_radiology_today }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إجمالي الطلبات' if g.lang == 'ar' else 'Total Orders' }}</span>
+                <span class="metric-value">{{ radiology_volume_total }}</span>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-procedures icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Patients</h6>
-                    <p class="display-6 mb-0">{{ total_patients }}</p>
-                </div>
+
+    <!-- PHARMACY -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-pills" style="color:var(--ihis-success)"></i>
+                {{ 'الصيدلية' if g.lang == 'ar' else 'Pharmacy' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'وصفات نشطة' if g.lang == 'ar' else 'Active Rx' }}</span>
+                <span class="metric-value" style="color:var(--ihis-warning)">{{ pending_prescriptions }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'صرف اليوم' if g.lang == 'ar' else 'Dispensed Today' }}</span>
+                <span class="metric-value" style="color:var(--ihis-success)">{{ dispensed_today }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'أصناف المخزون' if g.lang == 'ar' else 'Inventory Items' }}</span>
+                <span class="metric-value">{{ pharmacy_items }}</span>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-secondary card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-user-md icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Doctors</h6>
-                    <p class="display-6 mb-0">{{ total_doctors }}</p>
-                </div>
+
+    <!-- TASKS & ALERTS -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-clipboard-list" style="color:var(--ihis-amber)"></i>
+                {{ 'المهام والتنبيهات' if g.lang == 'ar' else 'Tasks & Alerts' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'مهام معلقة' if g.lang == 'ar' else 'Pending Tasks' }}</span>
+                <span class="metric-value" style="color:var(--ihis-warning)">{{ pending_tasks }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'مهام متأخرة' if g.lang == 'ar' else 'Overdue Tasks' }}</span>
+                <span class="metric-value" style="color:var(--ihis-danger)">{{ overdue_tasks }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'تنبيهات سريرية' if g.lang == 'ar' else 'Clinical Alerts' }}</span>
+                <span class="metric-value" style="color:var(--ihis-danger)">{{ open_alerts }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إشعارات غير مقروءة' if g.lang == 'ar' else 'Unread Notifications' }}</span>
+                <span class="metric-value">{{ unread_notifications_total }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMISSIONS & OPERATIONS -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-door-open" style="color:var(--ihis-teal)"></i>
+                {{ 'الاستشفاء والإحالات' if g.lang == 'ar' else 'Admissions & Referrals' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'استشفاء نشط' if g.lang == 'ar' else 'Active' }}</span>
+                <span class="metric-value">{{ active_admissions }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'استشفاء اليوم' if g.lang == 'ar' else 'Admitted Today' }}</span>
+                <span class="metric-value" style="color:var(--ihis-success)">{{ admissions_today }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'خروج اليوم' if g.lang == 'ar' else 'Discharged Today' }}</span>
+                <span class="metric-value" style="color:var(--ihis-info)">{{ discharges_today }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إحالات معلقة' if g.lang == 'ar' else 'Pending Referrals' }}</span>
+                <span class="metric-value" style="color:var(--ihis-warning)">{{ pending_referrals }}</span>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-3 mt-1">
-    <div class="col-md-2">
-        <div class="card card-shadow h-100">
-            <div class="card-body text-center">
-                <i class="fas fa-user-tag text-primary"></i>
-                <p class="mb-0 mt-1">Roles</p>
-                <h4 class="mb-0">{{ total_roles }}</h4>
+<!-- ============================================================ -->
+<!-- SECTION 3: USER DISTRIBUTION + SECURITY                      -->
+<!-- ============================================================ -->
+<div class="cc-grid cc-grid-2" style="margin-bottom:var(--sp-5)">
+    <!-- Role Distribution -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-users-gear" style="color:var(--ihis-primary)"></i>
+                {{ 'توزيع المستخدمين' if g.lang == 'ar' else 'User Distribution by Role' }}
+            </span>
+        </div>
+        <div class="cc-panel-body">
+            {% for role_name, count in role_counts.items()|sort(attribute='1', reverse=true) %}
+            <div class="metric-row">
+                <span class="metric-label">
+                    <span class="role-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:var(--sp-2);
+                        {% if role_name == 'SuperAdmin' %}background:var(--ihis-danger)
+                        {% elif role_name == 'Doctor' %}background:var(--ihis-primary)
+                        {% elif role_name == 'Nurse' %}background:var(--ihis-purple)
+                        {% elif role_name == 'Pharmacist' %}background:var(--ihis-success)
+                        {% elif role_name == 'LabTechnician' %}background:var(--ihis-info)
+                        {% elif role_name == 'Radiologist' %}background:var(--ihis-amber)
+                        {% elif role_name == 'Receptionist' %}background:var(--ihis-teal)
+                        {% elif role_name == 'Dentist' %}background:var(--ihis-amber)
+                        {% elif role_name == 'Physiotherapist' %}background:var(--ihis-teal)
+                        {% else %}background:var(--ihis-text-muted){% endif %}"></span>
+                    {{ role_labels.get(role_name, role_name) }}
+                </span>
+                <span class="metric-value">{{ count }}</span>
+            </div>
+            {% endfor %}
+            <div class="metric-row" style="border-top:1px solid var(--ihis-border);margin-top:var(--sp-2);padding-top:var(--sp-2)">
+                <span class="metric-label" style="font-weight:600">{{ 'إجمالي' if g.lang == 'ar' else 'Total' }}</span>
+                <span class="metric-value">{{ total_users }}</span>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card card-shadow h-100">
-            <div class="card-body text-center">
-                <i class="fas fa-key text-warning"></i>
-                <p class="mb-0 mt-1">Permissions</p>
-                <h4 class="mb-0">{{ total_permissions }}</h4>
-            </div>
+
+    <!-- Security -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-shield-halved" style="color:var(--ihis-danger)"></i>
+                {{ 'الأمان والمراجعة' if g.lang == 'ar' else 'Security & Audit' }}
+            </span>
         </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card card-shadow h-100">
-            <div class="card-body text-center">
-                <i class="fas fa-history text-info"></i>
-                <p class="mb-0 mt-1">Audit Logs</p>
-                <h4 class="mb-0">{{ total_audit_logs }}</h4>
+        <div class="cc-panel-body">
+            <div class="metric-row">
+                <span class="metric-label">{{ 'تسجيلات دخول فاشلة (7 أيام)' if g.lang == 'ar' else 'Failed Logins (7d)' }}</span>
+                <span class="metric-value" style="color:{{ 'var(--ihis-danger)' if failed_logins_7d > 5 else 'var(--ihis-text)' }}">{{ failed_logins_7d }}</span>
             </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card card-shadow h-100">
-            <div class="card-body text-center">
-                <i class="fas fa-cogs text-secondary"></i>
-                <p class="mb-0 mt-1">Settings</p>
-                <h4 class="mb-0">{{ total_settings }}</h4>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'تنبيهات الأمان' if g.lang == 'ar' else 'Security Alerts' }}</span>
+                <span class="metric-value" style="color:{{ 'var(--ihis-danger)' if security_alerts > 10 else 'var(--ihis-text)' }}">{{ security_alerts }}</span>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card card-shadow h-100">
-            <div class="card-body d-flex align-items-center justify-content-between">
-                <div>
-                    <i class="fas fa-heartbeat text-danger"></i>
-                    <strong class="ms-2">System Health</strong>
-                    <span class="badge bg-success ms-2">Operational</span>
-                </div>
-                <div class="ms-3 text-end">
-                    <small class="text-muted d-block">Security Alerts</small>
-                    <span class="badge bg-danger">{{ security_alerts }} alert(s)</span>
-                    <small class="text-muted d-block mt-1">Error Log Entries</small>
-                    <span class="badge bg-warning text-dark">{{ error_log_count }}</span>
-                </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'إجمالي سجلات المراجعة' if g.lang == 'ar' else 'Total Audit Logs' }}</span>
+                <span class="metric-value">{{ total_audit_logs }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'الأدوار' if g.lang == 'ar' else 'Roles' }}</span>
+                <span class="metric-value">{{ total_roles }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'الصلاحيات' if g.lang == 'ar' else 'Permissions' }}</span>
+                <span class="metric-value">{{ total_permissions }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">{{ 'سجلات النظام' if g.lang == 'ar' else 'System Settings' }}</span>
+                <span class="metric-value">{{ total_settings }}</span>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    <a href="{{ url_for('super_admin.users') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-users text-primary"></i> Manage Users
-                    </a>
-                    <a href="{{ url_for('super_admin.roles') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-tag text-success"></i> Manage Roles
-                    </a>
-                    <a href="{{ url_for('super_admin.permissions') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-key text-warning"></i> Manage Permissions
-                    </a>
-                    <a href="{{ url_for('super_admin.audit_logs') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-history text-info"></i> Audit Logs
-                    </a>
-                    <a href="{{ url_for('super_admin.settings') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-cogs text-secondary"></i> System Settings
-                    </a>
-                    <a href="{{ url_for('super_admin.backup') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-database text-danger"></i> Database Backup
-                    </a>
+<!-- ============================================================ -->
+<!-- SECTION 4: RECENT ACTIVITY FEED                              -->
+<!-- ============================================================ -->
+<div class="cc-grid cc-grid-2" style="margin-bottom:var(--sp-5)">
+    <!-- Recent Audit Activity -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-clock-rotate-left" style="color:var(--ihis-info)"></i>
+                {{ 'آخر النشاطات' if g.lang == 'ar' else 'Recent Activity Feed' }}
+            </span>
+        </div>
+        <div class="cc-panel-body" style="max-height:340px;overflow-y:auto">
+            {% if recent_audits %}
+            <div class="activity-panel">
+                {% for audit in recent_audits %}
+                <div class="activity-item">
+                    <div class="activity-dot dot-info" style="background:var(--ihis-info)"></div>
+                    <div class="activity-body">
+                        <div class="activity-text">
+                            <strong>{{ audit.action }}</strong>
+                            {% if audit.details %}
+                            <span style="color:var(--ihis-text-muted)"> — {{ audit.details[:80] }}{% if audit.details|length > 80 %}...{% endif %}</span>
+                            {% endif %}
+                        </div>
+                        <div class="activity-meta">
+                            {{ audit.user.username if audit.user else 'System' }} &middot;
+                            {{ audit.created_at.strftime('%b %d, %H:%M') if audit.created_at else '' }}
+                        </div>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
+            {% else %}
+            <div style="text-align:center;padding:var(--sp-6);color:var(--ihis-text-muted)">
+                <i class="fas fa-inbox" style="font-size:1.5rem;margin-bottom:var(--sp-2);display:block"></i>
+                {{ 'لا توجد نشاطات حديثة' if g.lang == 'ar' else 'No recent activity' }}
+            </div>
+            {% endif %}
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-shield-alt"></i> System Overview</h5>
+
+    <!-- Recent Tasks -->
+    <div class="cc-panel">
+        <div class="cc-panel-header">
+            <span class="cc-panel-title">
+                <i class="fas fa-clipboard-list" style="color:var(--ihis-amber)"></i>
+                {{ 'آخر المهام' if g.lang == 'ar' else 'Recent Tasks' }}
+            </span>
+        </div>
+        <div class="cc-panel-body" style="max-height:340px;overflow-y:auto">
+            {% if recent_tasks %}
+            <div class="activity-panel">
+                {% for task in recent_tasks %}
+                <div class="activity-item">
+                    <div class="activity-dot" style="background:{{ 'var(--ihis-success)' if task.status == 'COMPLETED' else ('var(--ihis-danger)' if task.status in ['OVERDUE','CANCELLED'] else 'var(--ihis-warning)') }}"></div>
+                    <div class="activity-body">
+                        <div class="activity-text">
+                            <strong>{{ task.title }}</strong>
+                        </div>
+                        <div class="activity-meta">
+                            {{ task.status }} &middot;
+                            {% if task.assignee %}{{ task.assignee.full_name }}{% endif %}
+                            &middot; {{ task.created_at.strftime('%b %d') if task.created_at else '' }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-            <div class="card-body">
-                <p class="mb-1"><strong>{{ active_users }}</strong> user(s) currently active out of <strong>{{ total_users }}</strong>.</p>
-                <p class="mb-1"><strong>{{ total_patients }}</strong> patient record(s) registered.</p>
-                <p class="mb-1"><strong>{{ total_doctors }}</strong> doctor profile(s) on file.</p>
-                <p class="mb-1"><strong>{{ security_alerts }}</strong> security alert(s) detected from audit logs.</p>
-                <p class="mb-0"><strong>System health:</strong> {{ system_health }}.</p>
+            {% else %}
+            <div style="text-align:center;padding:var(--sp-6);color:var(--ihis-text-muted)">
+                <i class="fas fa-inbox" style="font-size:1.5rem;margin-bottom:var(--sp-2);display:block"></i>
+                {{ 'لا توجد مهام' if g.lang == 'ar' else 'No tasks' }}
             </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: SPECIALTY MODULES                                 -->
+<!-- ============================================================ -->
+<div class="cc-panel" style="margin-bottom:var(--sp-5)">
+    <div class="cc-panel-header">
+        <span class="cc-panel-title">
+            <i class="fas fa-stethoscope" style="color:var(--ihis-primary)"></i>
+            {{ 'وحدات التخصصات' if g.lang == 'ar' else 'Specialty Modules' }}
+        </span>
+    </div>
+    <div class="cc-panel-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--sp-4)">
+        <div style="text-align:center;padding:var(--sp-4)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--ihis-purple)">{{ vitals_today }}</div>
+            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'علامات حيوية اليوم' if g.lang == 'ar' else 'Vitals Today' }}</div>
+        </div>
+        <div style="text-align:center;padding:var(--sp-4)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--ihis-amber)">{{ dental_records }}</div>
+            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'سجلات أسنان' if g.lang == 'ar' else 'Dental Records' }}</div>
+        </div>
+        <div style="text-align:center;padding:var(--sp-4)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--ihis-teal)">{{ therapy_sessions }}</div>
+            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'جلسات علاج اليوم' if g.lang == 'ar' else 'Therapy Sessions Today' }}</div>
+        </div>
+        <div style="text-align:center;padding:var(--sp-4)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--ihis-primary)">{{ total_doctors }}</div>
+            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'أطباء' if g.lang == 'ar' else 'Doctors' }}</div>
         </div>
     </div>
 </div>

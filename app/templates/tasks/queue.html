@@ -1,62 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-inbox text-primary"></i> Department Queue</h4>
-
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto">
-        <select name="department" class="form-select form-select-sm" onchange="this.form.submit()">
-            <option value="">All Departments</option>
-            {% for d in departments %}
-            <option value="{{ d }}" {{ 'selected' if d == current_department }}>{{ d }}</option>
-            {% endfor %}
-        </select>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-inbox" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ 'قائمة الأقسام' if g.lang == 'ar' else 'Department Queue' }}</h1>
+        <p class="page-subtitle">{{ 'جميع المهام حسب القسم والحالة' if g.lang == 'ar' else 'All tasks by department and status' }}</p>
     </div>
-    <div class="col-auto">
-        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-            <option value="">All Open</option>
-            {% for s in ['NEW','ASSIGNED','IN_PROGRESS','ON_HOLD','REJECTED','COMPLETED','CANCELLED'] %}
-            <option value="{{ s }}" {{ 'selected' if s == current_status }}>{{ s }}</option>
-            {% endfor %}
-        </select>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-primary" href="{{ url_for('tasks.new_task') }}"><i class="fas fa-plus"></i> {{ 'مهمة جديدة' if g.lang == 'ar' else 'New Task' }}</a>
     </div>
-    <div class="col-auto">
-        <a class="btn btn-sm btn-success" href="{{ url_for('tasks.new_task') }}"><i class="fas fa-plus"></i> New Task</a>
+</div>
+
+<div class="card-premium mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <select name="department" class="form-select" onchange="this.form.submit()" style="min-width:180px">
+                    <option value="">{{ 'كل الأقسام' if g.lang == 'ar' else 'All Departments' }}</option>
+                    {% for d in departments %}
+                    <option value="{{ d }}" {{ 'selected' if d == current_department }}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <select name="status" class="form-select" onchange="this.form.submit()" style="min-width:160px">
+                    <option value="">{{ 'كل الحالات' if g.lang == 'ar' else 'All Statuses' }}</option>
+                    {% for s in ['NEW','ASSIGNED','IN_PROGRESS','ON_HOLD','REJECTED','COMPLETED','CANCELLED'] %}
+                    <option value="{{ s }}" {{ 'selected' if s == current_status }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
     </div>
-</form>
+</div>
 
-{% if not tasks %}
-<div class="alert alert-info">No tasks match the selected filters.</div>
-{% endif %}
-
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>#</th><th>Priority</th><th>Title</th><th>Type</th>
-                <th>Patient</th><th>Assigned To</th><th>Due</th><th>Status</th><th></th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for t in tasks %}
-            <tr>
-                <td>{{ t.id }}</td>
-                <td>
-                    <span class="badge bg-{{ 'danger' if t.priority in ('URGENT','CRITICAL') else ('warning text-dark' if t.priority=='HIGH' else 'info') }}">
-                        {{ t.priority }}
-                    </span>
-                </td>
-                <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
-                <td>{{ t.task_type }}</td>
-                <td>{{ t.patient.user.full_name if t.patient and t.patient.user else '-' }}</td>
-                <td>
-                    {{ t.assignee.full_name if t.assignee else (t.assigned_role or 'Unassigned') }}
-                </td>
-                <td>{{ t.due_at.strftime('%Y-%m-%d %H:%M') if t.due_at else '-' }}</td>
-                <td><span class="badge bg-{{ 'success' if t.status=='COMPLETED' else ('danger' if t.status in ('CANCELLED','REJECTED') else ('primary' if t.status=='IN_PROGRESS' else 'secondary')) }}">{{ t.status }}</span></td>
-                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('tasks.detail', task_id=t.id) }}">View</a></td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="card-premium">
+    <div class="card-body flush">
+        {% if tasks %}
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>#</th><th>{{ 'أولوية' if g.lang == 'ar' else 'Priority' }}</th><th>{{ t('title') }}</th><th>{{ 'نوع' if g.lang == 'ar' else 'Type' }}</th>
+                        <th>{{ t('patient') }}</th><th>{{ 'المسند إلى' if g.lang == 'ar' else 'Assigned To' }}</th><th>{{ 'الموعد' if g.lang == 'ar' else 'Due' }}</th><th>{{ t('status') }}</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in tasks %}
+                    <tr>
+                        <td class="cell-mono">{{ t.id }}</td>
+                        <td><span class="status-badge {{ 's-cancelled' if t.priority in ('URGENT','CRITICAL') else ('s-hold' if t.priority=='HIGH' else 's-pending') }}">{{ t.priority }}</span></td>
+                        <td class="cell-primary"><a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="link-ihs">{{ t.title }}</a></td>
+                        <td class="cell-secondary">{{ t.task_type }}</td>
+                        <td class="cell-secondary">{{ t.patient.user.full_name if t.patient and t.patient.user else '-' }}</td>
+                        <td class="cell-secondary">{{ t.assignee.full_name if t.assignee else (t.assigned_role or '-') }}</td>
+                        <td class="cell-secondary">{{ t.due_at.strftime('%d %b %H:%M') if t.due_at else '-' }}</td>
+                        <td><span class="status-badge s-{{ 'completed' if t.status=='COMPLETED' else ('cancelled' if t.status in ('CANCELLED','REJECTED') else 'in-progress' if t.status=='IN_PROGRESS' else 'draft') }}">{{ t.status }}</span></td>
+                        <td class="text-end"><a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('tasks.detail', task_id=t.id) }}"><i class="fas fa-eye"></i></a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+            <div class="empty-title">{{ 'لا توجد مهام مطابقة' if g.lang == 'ar' else 'No matching tasks' }}</div>
+            <div class="empty-desc">{{ 'جرّب تعديل عوامل التصفية' if g.lang == 'ar' else 'Try adjusting your filters' }}</div>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

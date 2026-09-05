@@ -1,37 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>AI Hospital Analytics</h4>
-    <a class="btn btn-outline-primary btn-sm"
-       href="{{ url_for('reports.statistics') }}">
-        <i class="fas fa-file-pdf me-1"></i>Statistics Report</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'تحليلات المستشفى' if g.lang == 'ar' else 'AI Hospital Analytics' }}</h1>
+        <p class="page-subtitle">{{ 'لقطة فورية لنشاط المستشفى' if g.lang == 'ar' else 'Real-time snapshot of hospital activity' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('reports.statistics') }}">
+            <i class="fas fa-file-pdf"></i>{{ 'تقرير الإحصائيات' if g.lang == 'ar' else 'Statistics Report' }}</a>
+    </div>
 </div>
 
-<div class="row g-4">
+<div class="kpi-grid mb-4">
     {% set cards = [
         ('fa-users', 'Patients', result.counts.patients, 'primary'),
         ('fa-calendar-check', 'Appointments', result.counts.appointments, 'info'),
         ('fa-flask', 'Lab Orders', result.counts.lab_orders, 'success'),
         ('fa-x-ray', 'Radiology Orders', result.counts.radiology_orders, 'warning'),
         ('fa-pills', 'Active Prescriptions', result.counts.active_prescriptions, 'danger'),
-        ('fa-clipboard-list', 'Open Care Plans', result.counts.open_care_plans, 'secondary'),
+        ('fa-clipboard-list', 'Open Care Plans', result.counts.open_care_plans, 'primary'),
     ] %}
     {% for icon, label, value, color in cards %}
-    <div class="col-md-4">
-        <div class="card card-shadow text-center">
-            <div class="card-body">
-                <i class="fas {{ icon }} fa-2x text-{{ color }}"></i>
-                <h3 class="mt-2 mb-0">{{ value }}</h3>
-                <span class="text-muted">{{ label }}</span>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon {{ color }}"><i class="fas {{ icon }}"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ label }}</div>
+            <div class="kpi-value">{{ value }}</div>
         </div>
     </div>
     {% endfor %}
 </div>
 
-<div class="card card-shadow mt-4">
-    <div class="card-body text-muted small">
-        <i class="fas fa-info-circle me-1"></i>{{ result.status }}.
+<div class="card-premium">
+    <div class="card-body" style="display:flex;align-items:center;gap:0.5rem;color:var(--ihis-text-muted);font-size:0.8125rem">
+        <i class="fas fa-info-circle" style="color:var(--ihis-info)"></i>{{ result.status }}.
         Operational analytics provide a real-time snapshot of hospital activity.
     </div>
 </div>

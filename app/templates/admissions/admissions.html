@@ -1,88 +1,132 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-arrow-up-right-from-square text-info"></i> Admissions</h4>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ 'الدخول' if g.lang == 'ar' else 'Admissions' }}</h1>
+    <p class="page-subtitle">{{ 'إدارة دخول وخروج المرضى' if g.lang == 'ar' else 'Patient admission and discharge records' }}</p>
+  </div>
+</div>
 
 {% if current_user.has_permission('ADMISSION_CREATE') %}
-<div class="card card-shadow mb-3">
-    <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-user-plus"></i> Admit Patient</h6></div>
-    <div class="card-body">
-        <form method="post" action="{{ url_for('admissions.admit') }}" class="row g-3">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="col-md-3">
-                <label class="form-label small">Patient</label>
-                <select class="form-select" name="patient_id" required>
-                    <option value="">-- Select --</option>
-                    {% for p in patients %}<option value="{{ p.id }}">{{ p.user.full_name }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Ward</label>
-                <select class="form-select" name="ward_id" id="wardSelect" required>
-                    <option value="">-- Select --</option>
-                    {% for w in wards %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Bed (available only)</label>
-                <select class="form-select" name="bed_id" id="bedSelect" required>
-                    <option value="">-- Select ward first --</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Admitting Doctor</label>
-                <select class="form-select" name="doctor_id">
-                    <option value="">-- Optional --</option>
-                    {% for d in doctors %}<option value="{{ d.id }}">{{ d.user.full_name }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small">Admitting Diagnosis / Reason</label>
-                <input class="form-control" name="reason" placeholder="Provisional diagnosis">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Expected Discharge</label>
-                <input class="form-control" type="date" name="expected_discharge">
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button class="btn btn-info w-100"><i class="fas fa-arrow-up-right-from-square"></i> Admit</button>
-            </div>
-        </form>
-    </div>
+<div class="card-premium">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-user-plus" style="color:var(--ihis-info)"></i> {{ 'إدخال مريض' if g.lang == 'ar' else 'Admit Patient' }}</div>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('admissions.admit') }}" class="row g-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'المريض' if g.lang == 'ar' else 'Patient' }} <span class="required">*</span></label>
+          <select class="form-control" name="patient_id" required>
+            <option value="">{{ '-- اختر --' if g.lang == 'ar' else '-- Select --' }}</option>
+            {% for p in patients %}<option value="{{ p.id }}">{{ p.user.full_name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'الجناح' if g.lang == 'ar' else 'Ward' }} <span class="required">*</span></label>
+          <select class="form-control" name="ward_id" id="wardSelect" required>
+            <option value="">{{ '-- اختر --' if g.lang == 'ar' else '-- Select --' }}</option>
+            {% for w in wards %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'السرير (المتوفر فقط)' if g.lang == 'ar' else 'Bed (available only)' }} <span class="required">*</span></label>
+          <select class="form-control" name="bed_id" id="bedSelect" required>
+            <option value="">{{ '-- اختر الجناح أولاً --' if g.lang == 'ar' else '-- Select ward first --' }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'الطبيب المعالج' if g.lang == 'ar' else 'Admitting Doctor' }}</label>
+          <select class="form-control" name="doctor_id">
+            <option value="">{{ '-- اختياري --' if g.lang == 'ar' else '-- Optional --' }}</option>
+            {% for d in doctors %}<option value="{{ d.id }}">{{ d.user.full_name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'التشخيص / سبب الدخول' if g.lang == 'ar' else 'Admitting Diagnosis / Reason' }}</label>
+          <input class="form-control" name="reason" placeholder="{{ 'التشخيص المبدئي' if g.lang == 'ar' else 'Provisional diagnosis' }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'الخروج المتوقع' if g.lang == 'ar' else 'Expected Discharge' }}</label>
+          <input class="form-control" type="date" name="expected_discharge">
+        </div>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button class="btn-ihs btn-ihs-primary" style="width:100%"><i class="fas fa-arrow-up-right-from-square"></i> {{ 'إدخال' if g.lang == 'ar' else 'Admit' }}</button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endif %}
 
-<div class="card card-shadow">
-    <div class="card-body">
-        <form method="get" class="row g-2 align-items-end mb-2">
-            <div class="col-md-3">
-                <label class="form-label small">Status</label>
-                <select class="form-select" name="status" onchange="this.form.submit()">
-                    <option value="">All</option>
-                    {% for s in ['Admitted','Discharged','Moved'] %}
-                    <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </form>
-        <table class="table table-hover align-middle">
-            <thead><tr><th>Admission #</th><th>Patient</th><th>Ward / Bed</th><th>Admitted</th><th>Days</th><th>Status</th><th>Discharged</th></tr></thead>
-            <tbody>
-            {% for a in items %}
-                <tr>
-                    <td>{{ a.admission_no }}</td>
-                    <td>{{ a.patient.user.full_name }}</td>
-                    <td>{{ (a.ward.name if a.ward else '-') }} / {{ (a.bed.bed_no if a.bed else '-') }}</td>
-                    <td>{{ a.admitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ a.days_stayed() }}</td>
-                    <td><span class="badge bg-{% if a.status=='Admitted' %}info{% elif a.status=='Discharged' %}success{% else %}warning{% endif %}">{{ a.status }}</span></td>
-                    <td>{{ a.discharged_at.strftime('%Y-%m-%d') if a.discharged_at else '-' }}</td>
-                </tr>
-            {% else %}
-                <tr><td colspan="7" class="text-center text-muted py-4">No admissions found.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium" style="margin-top:var(--sp-4)">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'سجل الدخول' if g.lang == 'ar' else 'Admission Records' }}</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end mb-3">
+      <div class="col-md-3">
+        <label class="form-label-ihs">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</label>
+        <select class="form-control" name="status" onchange="this.form.submit()">
+          <option value="">{{ 'الكل' if g.lang == 'ar' else 'All' }}</option>
+          {% for s in ['Admitted','Discharged','Moved'] %}
+          <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+    <div class="table-wrapper">
+      <table class="table-ihs">
+        <thead>
+          <tr>
+            <th>{{ 'رقم الدخول' if g.lang == 'ar' else 'Admission #' }}</th>
+            <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+            <th>{{ 'الجناح / السرير' if g.lang == 'ar' else 'Ward / Bed' }}</th>
+            <th>{{ 'تاريخ الدخول' if g.lang == 'ar' else 'Admitted' }}</th>
+            <th>{{ 'الأيام' if g.lang == 'ar' else 'Days' }}</th>
+            <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+            <th>{{ 'تاريخ الخروج' if g.lang == 'ar' else 'Discharged' }}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for a in items %}
+          <tr>
+            <td><span class="cell-primary">{{ a.admission_no }}</span></td>
+            <td>{{ a.patient.user.full_name }}</td>
+            <td>{{ (a.ward.name if a.ward else '-') }} / {{ (a.bed.bed_no if a.bed else '-') }}</td>
+            <td><span class="cell-muted">{{ a.admitted_at.strftime('%Y-%m-%d %H:%M') }}</span></td>
+            <td><span class="t-num">{{ a.days_stayed() }}</span></td>
+            <td>
+              <span class="status-badge {% if a.status=='Admitted' %}s-active{% elif a.status=='Discharged' %}s-completed{% else %}s-pending{% endif %}">{{ a.status }}</span>
+            </td>
+            <td><span class="cell-muted">{{ a.discharged_at.strftime('%Y-%m-%d') if a.discharged_at else '-' }}</span></td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7">
+              <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-arrow-up-right-from-square"></i></div>
+                <div class="empty-title">{{ 'لا توجد سجلات دخول' if g.lang == 'ar' else 'No admissions found' }}</div>
+                <div class="empty-desc">{{ 'لم يتم العثور على سجلات دخول مطابقة.' if g.lang == 'ar' else 'No admissions match your criteria.' }}</div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}

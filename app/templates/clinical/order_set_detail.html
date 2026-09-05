@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-layer-group" style="color:var(--ihis-primary)"></i> {{ oset.name }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ oset.description or '' }}{% if oset.specialty %}&middot; {{ oset.specialty.name }}{% endif %}
+            {% if oset.department %}&middot; {{ oset.department.name }}{% endif %}
+        </p>
+    </div>
+    <div style="display:flex;gap:var(--sp-2)">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.order_sets') }}">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+        </a>
+        {% if oset.is_active %}
+        <a class="btn-ihs btn-ihs-primary btn-ihs-sm" href="{{ url_for('clinical.order_set_apply_picker', order_set_id=oset.id) }}">
+            <i class="fas fa-play"></i> {{ 'تطبيق على مريض' if g.lang == 'ar' else 'Apply to Patient' }}
+        </a>
+        {% endif %}
+        <form method="POST" action="{{ url_for('clinical.order_set_toggle', order_set_id=oset.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-ihs btn-ihs-secondary btn-ihs-sm" type="submit">
+                {{ 'تفعيل' if g.lang == 'ar' else 'Activate' if not oset.is_active else 'تعطيل' if g.lang == 'ar' else 'Deactivate' }}
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card-premium">
+    <div class="card-header"><div class="card-title"><i class="fas fa-list-check"></i> {{ oset.items|length }} {{ 'عنصر' if g.lang == 'ar' else 'items' }}</div></div>
+    <div class="card-body flush">
+        {% if oset.items %}
+        <div class="list-compact">
+            {% for it in oset.items %}
+            <div class="list-item">
+                <i class="{{ 'fas fa-flask' if it.item_type == 'LAB' else 'fas fa-x-ray' if it.item_type == 'RADIOLOGY' else 'fas fa-pills' if it.item_type == 'MEDICATION' else 'fas fa-share-nodes' }}"
+                   style="color:var(--ihis-primary)"></i>
+                <div style="flex:1">
+                    <div style="font-size:0.8125rem;font-weight:500">{{ it.label }}
+                        {% if it.item_type == 'MEDICATION' %}<span class="text-muted" style="font-weight:400">
+                            {% if it.dosage %} · {{ it.dosage }}{% endif %}{% if it.duration %} · {{ it.duration }}{% endif %}{% if it.quantity %} · qty {{ it.quantity }}{% endif %}</span>{% endif %}
+                    </div>
+                    {% if it.notes %}<div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ it.notes }}</div>{% endif %}
+                </div>
+                <span class="status-badge s-{{ 'pending' if it.priority in ('Urgent','Stat') else 'primary' }}">{{ it.priority }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">{{ 'لا عناصر.' if g.lang == 'ar' else 'No items.' }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

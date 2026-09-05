@@ -1,55 +1,61 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-history text-info"></i> Audit Logs</h4>
-    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-history" style="color:var(--ihis-info)"></i> {{ 'سجلات التدقيق' if g.lang == 'ar' else 'Audit Logs' }}</h1>
+        <p class="page-subtitle">{{ 'تتبع جميع الأنشطة والإجراءات في النظام' if g.lang == 'ar' else 'Track all system activity and actions' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.dashboard') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5>System Activity Log</h5>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-info)"></i> {{ 'سجل نشاط النظام' if g.lang == 'ar' else 'System Activity Log' }}</div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Resource</th>
-                    <th>Resource ID</th>
-                    <th>Details</th>
-                    <th>IP Address</th>
-                    <th>Timestamp</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs %}
-                <tr>
-                    <td>{{ log.id }}</td>
-                    <td>
-                        {% if log.user %}
-                            {{ log.user.email }}
-                        {% else %}
-                            <span class="text-muted">System/Unknown</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="badge bg-secondary">{{ log.action }}</span></td>
-                    <td>{{ log.resource or 'N/A' }}</td>
-                    <td>{{ log.resource_id or 'N/A' }}</td>
-                    <td class="text-truncate" style="max-width:200px;" title="{{ log.details }}">{{ log.details or 'N/A' }}</td>
-                    <td>{{ log.ip_address or 'N/A' }}</td>
-                    <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else 'N/A' }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No audit log entries found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>{{ 'المستخدم' if g.lang == 'ar' else 'User' }}</th>
+                        <th>{{ 'الإجراء' if g.lang == 'ar' else 'Action' }}</th>
+                        <th>{{ 'المورد' if g.lang == 'ar' else 'Resource' }}</th>
+                        <th>{{ 'معرف المورد' if g.lang == 'ar' else 'Resource ID' }}</th>
+                        <th>{{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</th>
+                        <th>{{ 'عنوان IP' if g.lang == 'ar' else 'IP Address' }}</th>
+                        <th>{{ 'الوقت' if g.lang == 'ar' else 'Timestamp' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><span class="t-num">{{ log.id }}</span></td>
+                        <td>
+                            {% if log.user %}
+                                <span class="cell-primary">{{ log.user.email }}</span>
+                            {% else %}
+                                <span class="cell-muted">{{ 'النظام/غير معروف' if g.lang == 'ar' else 'System/Unknown' }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="tag-ihs">{{ log.action }}</span></td>
+                        <td>{{ log.resource or ('غير متوفر' if g.lang == 'ar' else 'N/A') }}</td>
+                        <td><span class="t-num">{{ log.resource_id or ('غير متوفر' if g.lang == 'ar' else 'N/A') }}</span></td>
+                        <td class="text-truncate" style="max-width:200px;" title="{{ log.details }}"><span class="cell-muted">{{ log.details or ('غير متوفر' if g.lang == 'ar' else 'N/A') }}</span></td>
+                        <td><span class="cell-mono">{{ log.ip_address or ('غير متوفر' if g.lang == 'ar' else 'N/A') }}</span></td>
+                        <td><span class="cell-mono">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else ('غير متوفر' if g.lang == 'ar' else 'N/A') }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8"><div class="empty-state"><div class="empty-icon"><i class="fas fa-history"></i></div><div class="empty-title">{{ 'لم يتم العثور على سجلات تدقيق' if g.lang == 'ar' else 'No audit log entries found' }}</div></div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

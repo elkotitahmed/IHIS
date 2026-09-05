@@ -1,50 +1,89 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-building-shield text-info"></i> Wards & Beds</h4>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ 'الأجنحة والأسرّة' if g.lang == 'ar' else 'Wards & Beds' }}</h1>
+    <p class="page-subtitle">{{ 'إدارة الأجنحة وحالة الأسرّة' if g.lang == 'ar' else 'Manage ward configuration and bed occupancy' }}</p>
+  </div>
+</div>
 
 {% if current_user.has_permission('BED_MANAGE') %}
-<div class="card card-shadow mb-3">
-    <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-plus"></i> Add Ward</h6></div>
-    <div class="card-body">
-        <form method="post" action="{{ url_for('admissions.add_ward') }}" class="row g-3">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="col-md-3"><label class="form-label small">Ward name</label><input class="form-control" name="name" required></div>
-            <div class="col-md-2"><label class="form-label small">Type</label>
-                <select class="form-select" name="ward_type">
-                    {% for t in ['General','Private','SemiPrivate','ICU'] %}<option>{{ t }}</option>{% endfor %}
-                </select></div>
-            <div class="col-md-2"><label class="form-label small">Floor</label><input class="form-control" name="floor"></div>
-            <div class="col-md-2"><label class="form-label small">Charge/day</label><input class="form-control" type="number" step="0.01" name="room_charge_per_day" value="0"></div>
-            <div class="col-md-2"><label class="form-label small">Beds</label><input class="form-control" type="number" min="0" name="num_beds" value="0"></div>
-            <div class="col-md-1 d-flex align-items-end"><button class="btn btn-info w-100"><i class="fas fa-plus"></i></button></div>
-        </form>
-    </div>
+<div class="card-premium">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إضافة جناح جديد' if g.lang == 'ar' else 'Add Ward' }}</div>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('admissions.add_ward') }}" class="row g-3 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'اسم الجناح' if g.lang == 'ar' else 'Ward name' }} <span class="required">*</span></label>
+          <input class="form-control" name="name" required>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'النوع' if g.lang == 'ar' else 'Type' }}</label>
+          <select class="form-control" name="ward_type">
+            {% for t in ['General','Private','SemiPrivate','ICU'] %}<option>{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'الطابق' if g.lang == 'ar' else 'Floor' }}</label>
+          <input class="form-control" name="floor">
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'التكلفة/يوم' if g.lang == 'ar' else 'Charge/day' }}</label>
+          <input class="form-control" type="number" step="0.01" name="room_charge_per_day" value="0">
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'عدد الأسرّة' if g.lang == 'ar' else 'Beds' }}</label>
+          <input class="form-control" type="number" min="0" name="num_beds" value="0">
+        </div>
+      </div>
+      <div class="col-md-1">
+        <button class="btn-ihs btn-ihs-success" style="width:100%"><i class="fas fa-plus"></i></button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endif %}
 
-<div class="row g-3">
+<div class="row g-4" style="margin-top:var(--sp-4)">
 {% for w in items %}
-    <div class="col-md-6 col-xl-4">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-transparent d-flex justify-content-between">
-                <h6 class="mb-0"><i class="fas fa-bed"></i> {{ w.name }}</h6>
-                <span class="badge bg-info">{{ w.ward_type }}{% if w.room_charge_per_day %} · {{ w.room_charge_per_day }}/day{% endif %}</span>
-            </div>
-            <div class="card-body">
-                <div class="d-flex flex-wrap gap-1">
-                    {% for b in w.beds %}
-                    <span class="badge bg-{% if b.status=='Available' %}success{% elif b.status=='Occupied' %}danger{% else %}secondary{% endif %}"
-                          title="{{ b.bed_no }}: {{ b.status }}"> {{ b.bed_no }} </span>
-                    {% endfor %}
-                </div>
-                <div class="small text-muted mt-2">
-                    {{ w.beds|selectattr('status','equalto','Occupied')|list|length }}/{{ w.beds|length }} occupied
-                </div>
-            </div>
+  <div class="col-md-6 col-xl-4">
+    <div class="card-premium h-100">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-bed" style="color:var(--ihis-primary)"></i> {{ w.name }}</div>
+        <span class="tag-ihs">{{ w.ward_type }}{% if w.room_charge_per_day %} · {{ w.room_charge_per_day }}/day{% endif %}</span>
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap" style="gap:var(--sp-1)">
+          {% for b in w.beds %}
+          <span class="status-badge {% if b.status=='Available' %}s-completed{% elif b.status=='Occupied' %}s-cancelled{% else %}s-pending{% endif %}"
+                title="{{ b.bed_no }}: {{ b.status }}" style="cursor:default">{{ b.bed_no }}</span>
+          {% endfor %}
         </div>
+        <p class="cell-muted" style="margin-top:var(--sp-3);margin-bottom:0;font-size:0.85rem">
+          {{ w.beds|selectattr('status','equalto','Occupied')|list|length }}/{{ w.beds|length }} {{ 'مشغول' if g.lang == 'ar' else 'occupied' }}
+        </p>
+      </div>
     </div>
+  </div>
 {% else %}
-    <div class="col-12"><div class="alert alert-info">No wards yet. Add a ward to begin bed management.</div></div>
+  <div class="col-12">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-building-shield"></i></div>
+      <div class="empty-title">{{ 'لا توجد أجنحة' if g.lang == 'ar' else 'No wards yet' }}</div>
+      <div class="empty-desc">{{ 'أضف جناحاً للبدء في إدارة الأسرّة.' if g.lang == 'ar' else 'Add a ward to begin bed management.' }}</div>
+    </div>
+  </div>
 {% endfor %}
 </div>
 {% endblock %}

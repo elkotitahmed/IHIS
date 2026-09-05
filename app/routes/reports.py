@@ -48,17 +48,11 @@ def dashboard():
 
 
 def _patient_report_access(patient):
-    """A user may view a patient's report if patient themselves, their doctor,
-    or a staff member (admin/super admin)."""
-    if current_user.user_type == 'patient':
-        return patient and current_user.id == patient.user_id
-    if current_user.has_any_role('Admin', 'SuperAdmin'):
-        return True
-    if current_user.has_any_role('Doctor', 'Nurse', 'Physiotherapist',
-                                 'LabTechnician', 'Radiologist', 'Pharmacist',
-                                 'Dentist', 'Receptionist'):
-        return True
-    return False
+    """A user may view a patient's report only under the documented
+    need-to-know policy: the patient themselves, an Admin/SuperAdmin, or a
+    staff member with an explicit relationship to the patient."""
+    from app.access import has_need_to_know
+    return has_need_to_know(patient)
 
 
 @reports_bp.route('/medical-record/<int:record_id>')

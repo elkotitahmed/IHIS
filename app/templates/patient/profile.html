@@ -1,67 +1,95 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-user-edit text-primary"></i> My Profile</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'الملف الشخصي' if g.lang == 'ar' else 'My Profile' }}</h1>
+        <p class="page-subtitle">{{ 'إدارة معلوماتك الشخصية والطبية' if g.lang == 'ar' else 'Manage your personal and medical information' }}</p>
+    </div>
+</div>
 
 <div class="row">
     <div class="col-lg-8">
-        <div class="card card-shadow">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-edit" style="color:var(--ihis-primary)"></i> {{ 'المعلومات الشخصية' if g.lang == 'ar' else 'Personal Information' }}</div>
+            </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('patient.profile') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" name="full_name" class="form-control" value="{{ patient.full_name or '' }}">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الاسم الكامل' if g.lang == 'ar' else 'Full Name' }}</label>
+                                <input type="text" name="full_name" class="form-control" value="{{ patient.full_name or '' }}">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Phone</label>
-                            <input type="text" name="phone" class="form-control" value="{{ patient.phone or '' }}">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الهاتف' if g.lang == 'ar' else 'Phone' }}</label>
+                                <input type="text" name="phone" class="form-control" value="{{ patient.phone or '' }}">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Date of Birth</label>
-                            <input type="date" name="date_of_birth" class="form-control" value="{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '' }}">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'تاريخ الميلاد' if g.lang == 'ar' else 'Date of Birth' }}</label>
+                                <input type="date" name="date_of_birth" class="form-control" value="{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '' }}">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Gender</label>
-                            <select name="gender" class="form-select">
-                                <option value="">-- Select Gender --</option>
-                                {% for g in ['Male', 'Female', 'Other'] %}
-                                <option value="{{ g }}" {{ 'selected' if patient.gender == g }}>{{ g }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}</label>
+                                <select name="gender" class="form-control">
+                                    <option value="">{{ '-- اختر الجنس --' if g.lang == 'ar' else '-- Select Gender --' }}</option>
+                                    {% for gen in ['Male', 'Female', 'Other'] %}
+                                    <option value="{{ gen }}" {{ 'selected' if patient.gender == gen }}>{{ gen }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Address</label>
-                            <textarea name="address" class="form-control" rows="2">{{ patient.address or '' }}</textarea>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'العنوان' if g.lang == 'ar' else 'Address' }}</label>
+                                <textarea name="address" class="form-control" rows="2">{{ patient.address or '' }}</textarea>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Blood Type</label>
-                            <select name="blood_type" class="form-select">
-                                <option value="">-- Select Blood Type --</option>
-                                {% for bt in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
-                                <option value="{{ bt }}" {{ 'selected' if patient.blood_type == bt }}>{{ bt }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'فصيلة الدم' if g.lang == 'ar' else 'Blood Type' }}</label>
+                                <select name="blood_type" class="form-control">
+                                    <option value="">{{ '-- اختر فصيلة الدم --' if g.lang == 'ar' else '-- Select Blood Type --' }}</option>
+                                    {% for bt in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+                                    <option value="{{ bt }}" {{ 'selected' if patient.blood_type == bt }}>{{ bt }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Emergency Contact</label>
-                            <input type="text" name="emergency_contact" class="form-control" value="{{ patient.emergency_contact or '' }}">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'جهة الاتصال الطارئ' if g.lang == 'ar' else 'Emergency Contact' }}</label>
+                                <input type="text" name="emergency_contact" class="form-control" value="{{ patient.emergency_contact or '' }}">
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Allergies</label>
-                            <input type="text" name="allergies" class="form-control" value="{{ patient.allergies or '' }}">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الحساسيات' if g.lang == 'ar' else 'Allergies' }}</label>
+                                <input type="text" name="allergies" class="form-control" value="{{ patient.allergies or '' }}">
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Chronic Diseases</label>
-                            <input type="text" name="chronic_diseases" class="form-control" value="{{ patient.chronic_diseases or '' }}">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الأمراض المزمنة' if g.lang == 'ar' else 'Chronic Diseases' }}</label>
+                                <input type="text" name="chronic_diseases" class="form-control" value="{{ patient.chronic_diseases or '' }}">
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Vaccination Records</label>
-                            <textarea name="vaccination_records" class="form-control" rows="3">{{ patient.vaccination_records or '' }}</textarea>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'سجلات التطعيم' if g.lang == 'ar' else 'Vaccination Records' }}</label>
+                                <textarea name="vaccination_records" class="form-control" rows="3">{{ patient.vaccination_records or '' }}</textarea>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Save Changes
+                            <button type="submit" class="btn-ihs btn-ihs-primary">
+                                <i class="fas fa-save"></i> {{ 'حفظ التغييرات' if g.lang == 'ar' else 'Save Changes' }}
                             </button>
                         </div>
                     </div>

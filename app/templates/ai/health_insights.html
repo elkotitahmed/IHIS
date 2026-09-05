@@ -1,75 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-brain me-2 text-primary"></i>AI Health Insights</h4>
-    <button class="btn btn-outline-primary btn-sm" onclick="window.print()">
-        <i class="fas fa-print me-1"></i>Print</button>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'رؤى صحية ذكية' if g.lang == 'ar' else 'AI Health Insights' }}</h1>
+        <p class="page-subtitle">{{ 'تحليل شامل لملف المريض' if g.lang == 'ar' else 'Comprehensive patient health analysis' }}</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn-ihs btn-ihs-outline btn-ihs-sm" onclick="window.print()">
+            <i class="fas fa-print"></i>{{ 'طباعة' if g.lang == 'ar' else 'Print' }}</button>
+    </div>
+</div>
+
+{% if picker %}
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ 'اختر مريضاً للتحليل' if g.lang == 'ar' else 'Select Patient to Analyze' }} <span class="tag-ihs">AI</span></div>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('ai.health_insights') }}" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label-ihs">{{ t('patient') }}</label>
+                <select name="pid" class="form-select" onchange="this.form.submit()">
+                    {% for p in patients %}
+                    <option value="{{ p.id }}" {% if p.id == patient.id %}selected{% endif %}>{{ p.user.full_name }} (MRN: {{ p.mrn }})</option>
+                    {% endfor %}
+                </select>
+                <div class="form-hint">{{ 'اختر المريض ثم يتم توليد الرؤى الصحية تلقائياً.' if g.lang == 'ar' else 'Select a patient and AI health insights generate automatically.' }}</div>
+            </div>
+            <div class="col-md-4">
+                <button class="btn-ihs btn-ihs-primary w-100" type="submit"><i class="fas fa-brain"></i> {{ 'تحليل' if g.lang == 'ar' else 'Analyze' }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card-premium mb-4">
+    <div class="card-body d-flex align-items-center justify-content-between flex-wrap" style="gap:0.5rem">
+        <div>
+            <div class="t-h4 mb-0">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}:
+                <strong>{{ patient.user.full_name }}</strong>
+            </div>
+            <div class="cell-muted small">MRN: {{ patient.mrn }}</div>
+        </div>
+        <span class="status-badge s-active"><i class="fas fa-robot"></i> AI</span>
+    </div>
 </div>
 
 <div class="row g-4">
     <div class="col-lg-4">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-white fw-bold text-primary">Risk Assessment</div>
+        <div class="card-premium h-100" style="border-top:3px solid {{ 'var(--ihis-danger)' if risk.level == 'High' else ('var(--ihis-warning)' if risk.level == 'Moderate' else 'var(--ihis-success)') }}">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-shield-alt" style="color:var(--ihis-danger)"></i> {{ 'تقييم المخاطر' if g.lang == 'ar' else 'Risk Assessment' }} <span class="tag-ihs">AI</span></div>
+            </div>
             <div class="card-body">
-                <div class="display-4 fw-bold
-                    {% if risk.level == 'High' %}text-danger
-                    {% elif risk.level == 'Moderate' %}text-warning
-                    {% else %}text-success{% endif %}">
+                <div class="t-display" style="color:{{ 'var(--ihis-danger)' if risk.level == 'High' else ('var(--ihis-warning)' if risk.level == 'Moderate' else 'var(--ihis-success)') }}">
                     {{ risk.score }}
                 </div>
-                <span class="badge
-                    {% if risk.level == 'High' %}bg-danger
-                    {% elif risk.level == 'Moderate' %}bg-warning text-dark
-                    {% else %}bg-success{% endif %}">
-                    {{ risk.level }} Risk
+                <span class="status-badge {{ 's-cancelled' if risk.level == 'High' else ('s-pending' if risk.level == 'Moderate' else 's-completed') }}">
+                    {{ risk.level }} {{ 'مخاطرة' if g.lang == 'ar' else 'Risk' }}
                 </span>
                 <hr>
-                <h6 class="fw-bold">Contributing factors</h6>
+                <div class="t-h4">{{ 'العوامل المساهمة' if g.lang == 'ar' else 'Contributing factors' }}</div>
                 <ul class="mb-0">
                     {% for r in risk.reasons %}
                     <li><small>{{ r }}</small></li>
                     {% else %}
-                    <li><small>No significant risk factors detected.</small></li>
+                    <li><small>{{ 'لا توجد عوامل خطر مكتشفة.' if g.lang == 'ar' else 'No significant risk factors detected.' }}</small></li>
                     {% endfor %}
                 </ul>
                 <hr>
-                <p class="text-muted small mb-0">{{ risk.disclaimer }}</p>
+                <p class="cell-muted small mb-0">{{ risk.disclaimer }}</p>
             </div>
         </div>
     </div>
 
     <div class="col-lg-8">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-white fw-bold text-primary">Health Summary</div>
+        <div class="card-premium h-100" style="border-top:3px solid var(--ihis-primary)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-heartbeat" style="color:var(--ihis-primary)"></i> {{ 'الملخص الصحي' if g.lang == 'ar' else 'Health Summary' }} <span class="tag-ihs">AI</span></div>
+            </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>Blood Type:</strong>
-                            <span class="badge bg-danger">{{ summary.blood_type }}</span></p>
-                        <p><strong>Allergies:</strong><br>{{ summary.allergies }}</p>
+                        <p><strong>{{ 'فصيلة الدم' if g.lang == 'ar' else 'Blood Type' }}:</strong>
+                            <span class="tag-ihs">{{ summary.blood_type }}</span></p>
+                        <p><strong>{{ 'الحساسية' if g.lang == 'ar' else 'Allergies' }}:</strong><br>{{ summary.allergies }}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Chronic Conditions:</strong><br>{{ summary.chronic_diseases }}</p>
-                        <p><strong>Last Visit:</strong> {{ summary.last_visit }}</p>
+                        <p><strong>{{ 'الأمراض المزمنة' if g.lang == 'ar' else 'Chronic Conditions' }}:</strong><br>{{ summary.chronic_diseases }}</p>
+                        <p><strong>{{ 'آخر زيارة' if g.lang == 'ar' else 'Last Visit' }}:</strong> {{ summary.last_visit }}</p>
                     </div>
                 </div>
                 <hr>
-                <h6 class="fw-bold">Diagnoses on Record</h6>
+                <div class="t-h4">{{ 'التشخيصات المسجلة' if g.lang == 'ar' else 'Diagnoses on Record' }}</div>
                 <ul>
                     {% for d in summary.diagnoses %}
                     <li>{{ d.description }}
-                        {% if d.primary %}<span class="badge bg-info text-dark">Primary</span>{% endif %}
-                        <small class="text-muted">({{ d.icd10 }})</small></li>
+                        {% if d.primary %}<span class="tag-ihs">{{ 'أساسي' if g.lang == 'ar' else 'Primary' }}</span>{% endif %}
+                        <small class="cell-muted">({{ d.icd10 }})</small></li>
                     {% else %}
-                    <li class="text-muted">No diagnoses recorded.</li>
+                    <li class="cell-muted">{{ 'لا توجد تشخيصات مسجلة.' if g.lang == 'ar' else 'No diagnoses recorded.' }}</li>
                     {% endfor %}
                 </ul>
-                <h6 class="fw-bold">Active Medications</h6>
+                <div class="t-h4">{{ 'الأدوية النشطة' if g.lang == 'ar' else 'Active Medications' }}</div>
                 <ul>
                     {% for p in summary.active_prescriptions %}
                     <li>{{ p.medication }} &mdash; {{ p.dosage }} {{ p.frequency }}</li>
                     {% else %}
-                    <li class="text-muted">No active medications.</li>
+                    <li class="cell-muted">{{ 'لا توجد أدوية نشطة.' if g.lang == 'ar' else 'No active medications.' }}</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -78,17 +117,16 @@
 </div>
 
 {% if analysis.flags %}
-<div class="card card-shadow mt-4">
-    <div class="card-header bg-white fw-bold text-primary">AI Observations</div>
+<div class="card-premium mt-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-eye" style="color:var(--ihis-info)"></i> {{ 'ملاحظات الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Observations' }} <span class="tag-ihs">AI</span></div>
+    </div>
     <div class="card-body">
         <div class="row g-3">
             {% for f in analysis.flags %}
             <div class="col-md-6">
-                <div class="alert
-                    {% if f.level == 'warning' %}alert-warning
-                    {% elif f.level == 'info' %}alert-info
-                    {% else %}alert-secondary{% endif %} mb-0">
-                    <strong>{{ f.title }}</strong><br>{{ f.detail }}
+                <div class="empty-state" style="padding:var(--sp-4);background:var(--ihis-surface-inset);border-radius:var(--radius-md);text-align:left">
+                    <strong style="color:{{ 'var(--ihis-warning)' if f.level == 'warning' else ('var(--ihis-info)' if f.level == 'info' else 'var(--ihis-text-secondary)') }}">{{ f.title }}</strong><br>{{ f.detail }}
                 </div>
             </div>
             {% endfor %}

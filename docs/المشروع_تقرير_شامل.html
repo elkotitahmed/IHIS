@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام iHIS للمعلومات الصحية — التقرير الشامل</title>
+<style>
+/* ============ إعدادات عامة ============ */
+:root{
+  --primary:#0f6b50; --primary-hover:#0c5741; --primary-light:#e6f5ef;
+  --navy:#0b1120; --bg:#f4f5f7; --surface:#ffffff; --border:#dde0e6;
+  --text:#1f2937; --muted:#6b7280;
+  --success:#0f766e; --warning:#b45309; --danger:#b91c1c; --info:#1e40af;
+  --purple:#6d28d9; --teal:#0d9488; --amber:#d97706;
+  --radius:12px; --shadow:0 4px 20px rgba(11,17,32,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.9;}
+a{color:var(--primary);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* ============ الهيدر ============ */
+header.hero{
+  background:linear-gradient(135deg,var(--navy) 0%,#123a2f 55%,var(--primary) 100%);
+  color:#fff; padding:70px 5vw 60px; text-align:center; position:relative; overflow:hidden;
+}
+header.hero::before{
+  content:''; position:absolute; top:-40%; left:-20%; width:500px; height:500px;
+  border-radius:50%; background:radial-gradient(circle,rgba(52,211,153,.25),transparent 70%);
+}
+header.hero .badge{
+  display:inline-block; background:rgba(52,211,153,.2); color:#34d399;
+  padding:6px 18px; border-radius:20px; font-size:14px; margin-bottom:18px;
+  border:1px solid rgba(52,211,153,.4);
+}
+header.hero h1{font-size:42px;font-weight:800;margin-bottom:12px;}
+header.hero p{font-size:19px;color:#c5d5cd;max-width:760px;margin:0 auto 30px;}
+.stats-strip{display:flex;flex-wrap:wrap;justify-content:center;gap:22px;margin-top:30px;}
+.stat-box{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  padding:16px 26px;border-radius:var(--radius);min-width:140px;backdrop-filter:blur(4px);
+}
+.stat-box .num{font-size:30px;font-weight:800;color:#34d399;display:block;}
+.stat-box .lbl{font-size:14px;color:#bcd5ca;}
+
+/* ============ شريط التنقل ============ */
+nav.toc{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(11,17,32,.05);
+}
+nav.toc .inner{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+nav.toc .toc-title{font-weight:800;color:var(--primary);margin-inline-end:8px;font-size:15px;}
+nav.toc button{
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  padding:7px 14px;border-radius:20px;cursor:pointer;font-size:13px;font-family:inherit;
+  transition:all .15s;
+}
+nav.toc button:hover{background:var(--primary-light);border-color:var(--primary);color:var(--primary);}
+
+/* ============ المحتوى ============ */
+.container{max-width:1150px;margin:0 auto;padding:40px 24px 80px;}
+section{
+  background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);
+  margin-bottom:40px;overflow:hidden;border:1px solid var(--border);
+  scroll-margin-top:80px;
+}
+section.dim{opacity:0;transform:translateY(30px);}
+.section-head{
+  padding:26px 32px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;background:#fbfcfd;
+}
+.section-icon{
+  width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+}
+.section-head h2{font-size:26px;font-weight:800;color:var(--navy);}
+.section-head .subtitle{color:var(--muted);font-size:14px;margin-top:2px;}
+.section-body{padding:28px 32px;}
+
+h3{color:var(--navy);font-size:20px;font-weight:700;margin:26px 0 12px;}
+h3:first-child{margin-top:0;}
+h4{color:var(--primary);font-size:17px;font-weight:700;margin:20px 0 8px;}
+p{margin-bottom:12px;color:#374151;}
+ul,ol{margin:8px 30px 16px;color:#374151;}
+li{margin-bottom:6px;}
+strong{color:var(--navy);}
+.hl{background:var(--primary-light);color:var(--primary-dark,#0a4532);padding:0 6px;border-radius:4px;font-weight:700;}
+code{
+  background:#f0f2f5;padding:2px 7px;border-radius:5px;font-size:13px;
+  font-family:'SF Mono','Fira Code',Consolas,monospace;color:#be185d;
+}
+table{width:100%;border-collapse:collapse;margin:12px 0 22px;font-size:14px;}
+th,td{padding:11px 14px;text-align:right;border:1px solid var(--border);vertical-align:top;}
+th{background:var(--navy);color:#fff;font-weight:700;white-space:nowrap;}
+tr:nth-child(even) td{background:#f8faf9;}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;margin-inline-end:4px;}
+.tag-gemini{background:#7c3aed33;color:#6d28d9;border:1px solid #6d28d955;}
+.tag-rule{background:#0d948822;color:var(--teal);border:1px solid #0d948855;}
+.tag-cv{background:#b4530933;color:var(--amber);border:1px solid #b4530955;}
+.tag-sql{background:#1e40af22;color:var(--info);border:1px solid #1e40af55;}
+
+.callout{
+  padding:16px 20px;border-radius:10px;margin:16px 0;border-inline-start:4px solid;
+}
+.callout.primary{background:var(--primary-light);border-color:var(--primary);}
+.callout.warn{background:#fef3c7;border-color:var(--warning);}
+.callout.info{background:#e0e7ff;border-color:var(--info);}
+.callout.danger{background:#fee2e2;border-color:var(--danger);}
+.callout strong{display:block;margin-bottom:4px;font-size:15px;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.card{
+  background:#fbfcfd;border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:12px;
+}
+.mini-stat{background:var(--primary-light);border-radius:10px;padding:16px;text-align:center;}
+.mini-stat .num{font-size:26px;font-weight:800;color:var(--primary);}
+.mini-stat .lbl{font-size:13px;color:var(--muted);}
+
+/* ============ الفوتر ============ */
+footer{
+  background:var(--navy);color:#c5d5cd;text-align:center;padding:36px 20px;font-size:14px;
+}
+footer strong{color:#34d399;}
+footer .cv{display:block;color:#8ea4c9;font-size:13px;margin-top:8px;}
+
+@media(max-width:768px){
+  header.hero h1{font-size:30px;}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .section-body{padding:20px;}
+  nav.toc{position:static;}
+}
+
+/* أنيميشن الظهور */
+.fade-in{animation:fadeIn .6s ease forwards;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(25px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="badge">📊 التقرير الشامل للمشروع</span>
+  <h1>نظام iHIS للمعلومات الصحية</h1>
+  <p>منصة المستشفى المتكاملة — أحد نظام تشغيل مستشفى واحد متصل، يغطي جميع الأقسام السريرية والإدارية والمالية، مزوّدًا بذكاء اصطناعي متقدم (Gemini LLM + رؤية حاسوبية) ونظام أمان صارم.</p>
+  <div class="stats-strip">
+    <div class="stat-box"><span class="num">83</span><span class="lbl">نموذج قاعدة بيانات</span></div>
+    <div class="stat-box"><span class="num">22</span><span class="lbl">Blueprint/وحدة</span></div>
+    <div class="stat-box"><span class="num">15</span><span class="lbl">خدمة ذكاء اصطناعي</span></div>
+    <div class="stat-box"><span class="num">148</span><span class="lbl">اختبار ناجح</span></div>
+    <div class="stat-box"><span class="num">133</span><span class="lbl">نموذج HTML</span></div>
+    <div class="stat-box"><span class="num">226</span><span class="lbl">راوتر/نقطة نهاية</span></div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="inner">
+    <span class="toc-title">فهرس المحتوى:</span>
+    <button data-target="sec1">١. نظرة عامة</button>
+    <button data-target="sec2">٢. المميزات</button>
+    <button data-target="sec3">٣. النماذج</button>
+    <button data-target="sec4">٤. الأذونات والأمان</button>
+    <button data-target="sec5">٥. وحدات النظام</button>
+    <button data-target="sec6">٦. خدمات الذكاء الاصطناعي</button>
+    <button data-target="sec7">٧. جيميناي LLM</button>
+    <button data-target="sec8">٨. الرؤية الحاسوبية</button>
+    <button data-target="sec9">٩. سلامة الأشعة</button>
+    <button data-target="sec10">١٠. التصميم</button>
+    <button data-target="sec11">١١. الأمان</button>
+    <button data-target="sec12">١٢. الاختبارات</button>
+    <button data-target="sec13">١٣. الخلاصة</button>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ============ 1. نظرة عامة ============ -->
+<section id="sec1" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--primary-light);">🏥</div>
+    <div><h2>١. نظرة عامة على المشروع</h2><div class="subtitle">منظومة مستشفى متكاملة قائمة على Flask</div></div>
+  </div>
+  <div class="section-body">
+    <p><strong>نظام iHIS للمعلومات الصحية</strong> هو منصة مستشفى شاملة (Hospital Information System) مبنية بلغة <strong>Python/Flask</strong>، تهدف إلى توحيد جميع عمليات المستشفى في نظام واحد متصل — من الاستقبال والتسجيل، مرورًا بالأقسام السريرية (طبيب، تمريض، مختبر، أشعة، صيدلية، أسنان، علاج طبيعي)، وانتهاءً بالمالية والفوترة والإدارة العليا.</p>
+
+    <h3>المكوّن التقني الأساسي</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>واجهة العرض (Backend)</h4>
+        <ul>
+          <li>Python 3 + <strong>Flask</strong> (نموذج المصنع <code>create_app()</code>)</li>
+          <li><strong>SQLAlchemy</strong> + SQLite (للإنتاج يدعم PostgreSQL)</li>
+          <li><strong>Flask-Login</strong> للجلسات، <strong>Flask-Bcrypt</strong> لكلمات المرور</li>
+          <li><strong>Flask-WTF/CSRF</strong> لحماية النماذج</li>
+          <li><strong>Flask-Limiter</strong> للحد من محاولات الدخول</li>
+          <li>أنظمة Blueprint (22 وحدة) بهيكلية منظمة</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>واجهة العرض (Frontend)</h4>
+        <ul>
+          <li><strong>Bootstrap 5.3.3</strong> + نظام تصميم مخصص (Design System v3.0)</li>
+          <li><strong>Chart.js</strong> للرسوم البيانية</li>
+          <li>دعم كامل للغة <strong>العربية RTL</strong> والإنجليزية</li>
+          <li>وضع ليلي (Dark mode)، لوحة أوامر (Ctrl+K)</li>
+          <li>مولد PDF تقارير (ReportLab) بتصميم علامة تجارية</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>الأدوار (10+1)</h3>
+    <ul>
+      <li><strong>SuperAdmin</strong> — مركز قيادة تنفيذي وإدارة النظام بالكامل</li>
+      <li><strong>Admin</strong> — إدارة المنشأة والموظفين والإحصائيات</li>
+      <li><strong>Doctor</strong> — الطبيب (EMR، وصفات، طلبات مختبر/أشعة)</li>
+      <li><strong>Nurse</strong> — التمريض (علامات حيوية، MAR، خطط رعاية)</li>
+      <li><strong>LabTechnician</strong> — فني المختبر</li>
+      <li><strong>Radiologist</strong> — أخصائي الأشعة</li>
+      <li><strong>Radiology Technician</strong> — فني الأشعة</li>
+      <li><strong>Pharmacist</strong> — الصيدلي</li>
+      <li><strong>Physiotherapist</strong> — العلاج الطبيعي</li>
+      <li><strong>Dentist</strong> — طبيب الأسنان</li>
+      <li><strong>Cashier</strong> — المحاسب</li>
+      <li><strong>Receptionist</strong> — موظف الاستقبال</li>
+      <li><strong>Patient</strong> — المريض (بوابة المريض)</li>
+    </ul>
+
+    <h3>لماذا "نظام تشغيل مستشفى واحد متصل"؟</h3>
+    <ul>
+      <li>جميع الأقسام تعمل على <strong>نفس قاعدة البيانات</strong> — لا تكرار للبيانات.</li>
+      <li><strong>خط زمني موحّد (Timeline)</strong> لكل مريض يجمع أحداثًا من كل الأقسام.</li>
+      <li><strong>تنبيهات سريرية</strong> تلقائية عند النتائج الحرجة.</li>
+      <li><strong>فوترة تلقائية</strong> ناتجة عن الأحداث السريرية المكتملة.</li>
+      <li><strong>مهام موجّهة</strong> (Tasks) تُنشأ تلقائيًا وتصل للقسم المعني.</li>
+      <li>تحكم كامل في الوصول (Need-to-Know) على مستوى السجل.</li>
+    </ul>
+
+    <div class="callout primary">
+      <strong>مبدأ أساسي</strong>
+      جميع لوحات المعلومات (Dashboards) تعرض بيانات من استعلامات حقيقية مباشرة من قاعدة البيانات — لا توجد أي أرقام مزيّفة أو "محتوى تجريبي وهمي".
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. المميزات ============ -->
+<section id="sec2" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--primary-light);">⭐</div>
+    <div><h2>٢. مميزات المنصة</h2><div class="subtitle">قائمة شاملة بقدرات النظام مصنّفة حسب القسم</div></div>
+  </div>
+  <div class="section-body">
+    <p>يمكن الوصول إلى "مركز اكتشاف القدرات" الكامل داخل التطبيق عبر <code>/super-admin/capabilities</code>، ويعرض أكثر من <strong>60 ميزة حقيقية</strong> في 10 مجموعات:</p>
+
+    <h3>السريرية (Clinical)</h3>
+    <ul>
+      <li>سجل طبي إلكتروني (EMR) بدورة حياة كاملة (مسودة ← توقيع ← قفل) مع سلسلة تعديلات مرقّمة</li>
+      <li>التشخيصات مع أكواد ICD-10 وتمييز التشخيص الأساسي</li>
+      <li>الوصفات الطبية مع فحص تلقائي للحساسية والتفاعلات الدوائية</li>
+      <li>قائمة المشكلات (Problem List) والحساسيات المنظمة</li>
+      <li>اللقاحات مع تتبع موعد الجرعة التالية</li>
+      <li>المتابعات والتذكيرات الوقائية (Preventive Sweep)</li>
+      <li>نظرة المريض 360 (Patient 360) بخط زمني موحّد</li>
+    </ul>
+
+    <h3>التشخيص (Diagnostics)</h3>
+    <ul>
+      <li>المختبر: دورة حياة كاملة (طلب ← قبول ← جمع ← معالجة ← نتيجة ← تحقق ← نهائي)</li>
+      <li>اكتشاف تلقائي للنتائج غير الطبيعية والحرجة <span class="tag tag-sql">SQL</span></li>
+      <li>الأشعة: جدولة وتنفيذ وتقارير (مسودة ← توقيع ← قفل)</li>
+      <li>تقرير أشعة مع سجل إصدارات للترقيعات</li>
+    </ul>
+
+    <h3>الدواء (Medication)</h3>
+    <ul>
+      <li>مخزون الصيدلية (FEFO) مع اشعارات انخفاض/انتهاء الصلاحية</li>
+      <li>صرف الأدوية بذريعة شرطية آمنة ضد التزامن (Atomic decrement)</li>
+      <li>كاشف التفاعلات الدوائية (Drug Interaction)</li>
+      <li>مراجعة دوائية (Med Reconcile) مع كشف التناقضات</li>
+      <li>تدخلات الصيدلي إلى الطبيب (Interventions) بسجل محادثة</li>
+      <li>سجل حركة المخزون (StockTransaction) بالكامل</li>
+    </ul>
+
+    <h3>التمريض (Nursing)</h3>
+    <ul>
+      <li>تسجيل العلامات الحيوية مع إنذارات الحالات غير الطبيعية</li>
+      <li>سجل الصرف الدوائي (MAR) مع نتائج الجرعات</li>
+      <li>نسبة الإدخال/الإخراج (Intake/Output)</li>
+      <li>خطط الرعاية وملاحظات التمريض لكل وردية</li>
+      <li>تقييمات مخاطر التمريض (سقوط، قرح فراش)</li>
+    </ul>
+
+    <h3>العلاج الطبيعي (Rehab) وطب الأسنان</h3>
+    <ul>
+      <li>العلاج الطبيعي: تقييمات، خطط، جلسات، تتبع تقدم، مكتبة تمارين</li>
+      <li>طب الأسنان: سجل أسنان، مخطط أسنان (Dental Chart)، خطط علاج، حالات تقويم</li>
+    </ul>
+
+    <h3>العمليات والمالية</h3>
+    <ul>
+      <li>الاستقبال: حجز مواعيد مع كشف تعارض، طابور انتظار، تسجيل مرضى</li>
+      <li>قبول/تنويم/خروج (Admissions) مع إدارة الأسرة والأجنحة</li>
+      <li>الفوترة: فواتير، دفعات، كتالوج خدمات، توليد فواتير تلقائي</li>
+      <li>الإحالات وفريق الرعاية والحالات متعددة التخصصات (MDT)</li>
+    </ul>
+
+    <h3>الذكاء الاصطناعي (AI) — 15 خدمة</h3>
+    <ul>
+      <li>تشخيص تفريقي، تفسير مختبر، التنبؤ بالمخاطر، كتابة كود ICD-10</li>
+      <li>ملاحظات SOAP، مجموعات أوامر ذكية، تواصل مع المريض (عربي/إنجليزي)</li>
+      <li>مراجعة دوائية لصيدلي سريري، التنبيهات السريرية</li>
+      <li>كشف الكسور (YOLOv8)، تجزئة الأسنان (U-Net)</li>
+      <li>ذكاء رعاية صحية للاستفادة والاستشارة التلقائية</li>
+    </ul>
+
+    <div class="callout info">
+      <strong>لوحة القيادة التنفيذية</strong>
+      يملك SuperAdmin "مركز القيادة" (Command Center) الذي يعرض ~40 مؤشر أداء حقيقي عبر كل الأقسام، بالإضافة إلى قدرة <strong>معاينة أدوار الآخرين</strong> لاستكشاف الواجهات.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. النماذج ============ -->
+<section id="sec3" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--navy);color:#fff;">🗄️</div>
+    <div><h2>٣. نماذج قاعدة البيانات (83 نموذجًا)</h2><div class="subtitle">كل النماذج مجمعة في app/models.py</div></div>
+  </div>
+  <div class="section-body">
+    <p>يتم تعريف جميع نماذج البيانات في ملف واحد مركزي (<code>app/models.py</code>)، مصنفة حسب المجال. هذا التوزيع يضمن اتساق العلاقات وسهولة الصيانة.</p>
+
+    <h3>المصادقة والأدوار (Auth / RBAC)</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>Role</td><td>roles</td><td>الكيان الأساسي للأدوار</td></tr>
+      <tr><td>Permission</td><td>permissions</td><td>صلاحية باسم <code>المورد_الإجراء</code></td></tr>
+      <tr><td>User</td><td>users</td><td>حساب المستخدم مع قفل الحساب ومجال العمل</td></tr>
+    </table>
+
+    <h3>السريرية / المريض</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>Department / Specialty / Doctor</td><td>departments / specialties / doctors</td><td>الأقسام والتخصصات وملفات الأطباء</td></tr>
+      <tr><td>Patient</td><td>patients</td><td>بيانات المريض الديموغرافية (MRN، فصيلة دم، حساسية، أمراض مزمنة)</td></tr>
+      <tr><td>MedicalRecord</td><td>medical_records</td><td>النموذج الطبي (تشخيص، خطة علاج) مع دورة foo (قفل/ترقيعة)</td></tr>
+      <tr><td>Diagnosis</td><td>diagnoses</td><td>التشخيص برمز ICD-10</td></tr>
+      <tr><td>Prescription / PrescriptionItem</td><td>prescriptions / prescription_items</td><td>الوصفة الطبية ببنودها (جرعة، تكرار، كمية)</td></tr>
+      <tr><td>Appointment</td><td>appointments</td><td>المواعيد مع رقم الطابور ونوع الزيارة</td></tr>
+    </table>
+
+    <h3>المختبر والأشعة</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>LabTestCatalog / LabOrder / LabResult</td><td>lab_test_catalog / lab_orders / lab_results</td><td>كتالوج التحاليل والطلبات والنتائج</td></tr>
+      <tr><td>ImagingType / RadiologyOrder / RadiologyReport</td><td>imaging_types / radiology_orders / radiology_reports</td><td>فحوصات الأشعة والطلبات والتقارير</td></tr>
+      <tr><td>RadiologyReportVersion</td><td>radiology_report_versions</td><td>سجل نسخ تقارير الأشعة (ترقيعات)</td></tr>
+    </table>
+
+    <h3>الصيدلية</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>Medication / PharmacyInventory / StockTransaction</td><td>medications / pharmacy_inventory / stock_transactions</td><td>الأدوية والمخزون وسجل الحركة</td></tr>
+      <tr><td>DispensingRecord</td><td>dispensing_records</td><td>حدث صرف مرتبط بوصفة وصيدلي</td></tr>
+      <tr><td>DrugInteraction</td><td>drug_interactions</td><td>تفاعلات الأدوية الثنائية</td></tr>
+      <tr><td>MedicationReconciliation / ReconciliationDiscrepancy</td><td>medication_reconciliations / reconciliation_discrepancies</td><td>المراجعة الدوائية والتناقضات</td></tr>
+      <tr><td>PharmacyIntervention</td><td>pharmacy_interventions</td><td>تدخلات الصيدلي إلى الطبيب</td></tr>
+    </table>
+
+    <h3>التمريض</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>VitalSign / IntakeOutput / NursingNote</td><td>vital_signs / intake_output / nursing_notes</td><td>العلامات الحيوية ونسبة الإدخال/الإخراج والملاحظات</td></tr>
+      <tr><td>MedicationAdministration / CarePlan</td><td>medication_administrations / care_plans</td><td>سجل صرف الدواء والخطط</td></tr>
+      <tr><td>NursingRiskAssessment</td><td>nursing_risk_assessments</td><td>تقييم مخاطر التمريض</td></tr>
+    </table>
+
+    <h3>القبول وطب الأسنان والعلاج الطبيعي</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>Ward / Bed / Admission</td><td>wards / beds / admissions</td><td>الأجنحة والأسرة والقبول/التنويم</td></tr>
+      <tr><td>DentalRecord / DentalChart / DentalTreatmentPlan / DentalProcedure / DentalImage / OrthodonticCase</td><td>dental_*</td><td>نظام طب الأسنان الكامل</td></tr>
+      <tr><td>PhysicalTherapist / TherapyAssessment / TherapyPlan / TherapyExercise / TherapySession / RehabilitationProgress / FunctionalOutcome</td><td>therapy_* / rehabilitation_*</td><td>نظام العلاج الطبيعي</td></tr>
+    </table>
+
+    <h3>الهيكلية السريرية، الرسائل، التنسيق</h3>
+    <table>
+      <tr><th>النموذج</th><th>جدول</th><th>الوصف</th></tr>
+      <tr><td>Allergy / Problem / ImmunizationRecord / FollowUp</td><td>allergies / problems / immunization_records / follow_ups</td><td>السجلات السريرية المنظمة</td></tr>
+      <tr><td>Message / Notification / Task / TaskActivity</td><td>messages / notifications / tasks / task_activities</td><td>الرسائل والإشعارات ومحرك المهام</td></tr>
+      <tr><td>Referral / CareTeam / CareTeamMember / MultidisciplinaryCase</td><td>referrals / care_teams / care_team_members / multidisciplinary_cases</td><td>تنسيق الرعاية</td></tr>
+      <tr><td>TimelineEvent / ClinicalAlert</td><td>timeline_events / clinical_alerts</td><td>الخط الزمني الموحّد والتنبيهات</td></tr>
+      <tr><td>AuditLog / LoginAttempt / SystemSetting</td><td>audit_logs / login_attempts / system_settings</td><td>التدقيق والأمان</td></tr>
+      <tr><td>Bill / BillItem / Payment / ServiceCatalog</td><td>bills / bill_items / payments / service_catalog</td><td>الفوترة والمالية</td></tr>
+      <tr><td>AIRecommendation</td><td>ai_recommendations</td><td>تخزين اقتراحات الذكاء الاصطناعي مع نسبة الثقة</td></tr>
+    </table>
+
+    <h3>سلامة وأمان الأشعة (الطبقة الموسّعة)</h3>
+    <table>
+      <tr><th>النموذج</th><th>الجدول</th><th>الوصف</th></tr>
+      <tr><td>PatientImagingSafetyProfile</td><td>patient_imaging_safety_profiles</td><td>الملف الرئيسي لسلامة التصوير لكل مريض</td></tr>
+      <tr><td>MRIImplantRegistry</td><td>mri_implant_registries</td><td>سجل الغرسات وأجهزة MRI</td></tr>
+      <tr><td>ImagingDoseRecord</td><td>imaging_dose_records</td><td>بيانات جرعة الإشعاع</td></tr>
+      <tr><td>ContrastAdministration</td><td>contrast_administrations</td><td>إعطاء التباين وتتبع التفاعل</td></tr>
+      <tr><td>ImagingSafetyScreening</td><td>imaging_safety_screenings</td><td>فحص السلامة لكل طلب</td></tr>
+      <tr><td>ImagingPreparationProtocol / ImagingReferenceLevel / ImagingStudyRecord / CriticalFindingNotification</td><td>imaging_*</td><td>بروتوكولات التحضير، مستويات الجرعة المرجعية، النتائج الحرجة</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 4. الأذونات والأمان ============ -->
+<section id="sec4" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#0d948822;">🔐</div>
+    <div><h2>٤. نظام الأذونات والتحكم في الوصول</h2><div class="subtitle">أمان دقيق على المستويين: صلاحية ومستوى السجل</div></div>
+  </div>
+  <div class="section-body">
+    <h3>نظام الصلاحيات (RBAC) — app/permissions.py</h3>
+    <p>تتبع الصلاحيات نمط تسمية <code>&lt;المورد&gt;_&lt;الإجراء&gt;</code> (مثل <code>MEDICAL_RECORD_SIGN</code>, <code>LAB_RESULT_VERIFY</code>, <code>PRESCRIPTION_DISPENSE</code>)، مع أكثر من <strong>80 صلاحية</strong> مرتّبة حسب المورد. كل دور (Role) مرتبط بمجموعة صلاحيات محدّدة عبر جدول وسيط.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h4>مثال — صلاحيات الطبيب</h4>
+        <ul>
+          <li>عرض المريض + دورة حياة السجل الطبي كاملة</li>
+          <li>طلبات المختبر والأشعة + عرض النتائج</li>
+          <li>إنشاء/تعديل/إلغاء الوصفات</li>
+          <li><span class="tag tag-gemini">AI</span> استخدام الذكاء الاصطناعي (تشخيص، مخاطر، مراجعة دوائية)</li>
+          <li>التنبيهات والبحث والحساسيات والمشكلات</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>مثال — صلاحيات الصيدلي</h4>
+        <ul>
+          <li>عرض المريض + صرف الوصفات</li>
+          <li>إدارة المخزون الكامل</li>
+          <li><span class="tag tag-gemini">AI</span> مراجعة دوائية + تفاعلات الأدوية</li>
+          <li>إنشاء/إكمال المراجعة الدوائية + التدخلات</li>
+          <li>عرض نتائج المختبر والتسجيل الزمني</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>التحكم في الوصول على مستوى السجل (Need-to-Know)</h3>
+    <p>كوّن ملف <code>app/access.py</code> سياسة "الحاجة للمعرفة". لا يستطيع أي موظف الوصول لسجل مريض إلا إذا كانت لديه علاقة موثّقة:</p>
+    <ul>
+      <li><strong>المريض</strong> — يصل فقط لسجله الخاص.</li>
+      <li><strong>Admin / SuperAdmin</strong> — وصول إشرافي لكل المرضى.</li>
+      <li>الطبيب — من كتب سجلًا/تشخيصًا/وصفة/طلبًا/موعدًا/حوّله.</li>
+      <li>الممرض — من سجّل علامة حيوية/ملاحظة/خطة رعاية.</li>
+      <li>طبيب الأسنان/العلاج الطبيعي — عبر السجلات الخاصة بهم.</li>
+      <li>أخصائي الأشعة — من وقّع تقريرًا للمريض.</li>
+      <li>فني المختبر — من أنشأ/تحقق من نتيجة.</li>
+      <li>الصيدلي — إذا وجدت وصفة للمريض.</li>
+    </ul>
+    <p>يتم فرض ذلك عبر الديكور <code>@patient_access_required</code> ودالة <code>require_patient_access()</code>، ووظيفة <code>accessible_patient_ids()</code> لترشيح القوائم.</p>
+
+    <h3>سلسلة الحماية الإضافية</h3>
+    <ul>
+      <li><strong>CSRF</strong> على كل نموذج.</li>
+      <li><strong>Rate limiting</strong> للدخول (10/دقيقة) والتسجيل (5/ساعة).</li>
+      <li><strong>حماية open-redirect</strong> في معامل <code>?next=</code>.</li>
+      <li><strong>حجب الملفات الخاصة</strong> (يرفع الطريق <code>/static/uploads/</code> و <code>/static/ai_models/</code> يمنع 404) — حماية PHI.</li>
+      <li><strong>فحص صارم للرفع</strong> (magic bytes بدل الاعتماد على الامتداد).</li>
+      <li><strong>تجميد حالة الطلب</strong> من الخادم (لا يسمح للعميل بفرض حالة).</li>
+      <li><strong>تسجيل تدقيق (AuditLog)</strong> لكل تعديل مع IP وبيانات المتصفح.</li>
+      <li><strong>تفرد فوترة</strong> (قيود Idempotency) لمنع تكرار الدفعات.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 5. وحدات النظام ============ -->
+<section id="sec5" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#1e40af22;">🧩</div>
+    <div><h2>٥. وحدات النظام التفصيلية</h2><div class="subtitle">كيف تعمل كل وحدة وتتفاعل مع غيرها</div></div>
+  </div>
+  <div class="section-body">
+    <p>النظام مقسّم إلى <strong>22 Blueprint</strong> (وحدة)، ولكل منها بادئة URL مستقلة. إليك شرح لكل وحدة وكيف تعمل:</p>
+
+    <h3>الاستقبال (Reception) — <code>/reception</code></h3>
+    <p>نقطة دخول المريض: حجز المواعيد (مع كشف تعارض <code>has_appointment_conflict</code>)، فحص الدخول (Check-in)، الطابور، وتسجيل مرضى جدد. عند إكمال زيارة يتم <strong>توليد فاتورة استشارة تلقائيًا</strong>.</p>
+
+    <h3>الطبيب (Doctor) — <code>/doctor</code></h3>
+    <p>مركز العمل الطبي: نظرة 360 للمريض، إدخال/تعديل السجلات الطبية مع توقيع إلكتروني وقفل، كتابة الوصفات مع <strong>فحص تلقائي للحساسية والتفاعلات</strong> (<code>flag_prescription_safety</code>) وإنشاء تنبيهات، طلبات المختبر والأشعة (تنشئ مهام + إشعارات)، والإحالات. عند إكمال الموعد تُنشأ فاتورة الاستشارة.</p>
+
+    <h3>المختبر (Lab) — <code>/lab</code></h3>
+    <p>دورة حياة صارمة: طلب ← قبول ← جمع ← استلام ← معالجة ← إدخال نتيجة ← تحقق ← نهائي. تطبيق آلي للكشف عن الشذوذ (<code>apply_lab_abnormality</code>)، مع دعم تعديل نتيجة محققة (يتطلب سببًا ويعيد الفتح). عند النتيجة الحرجة: إشعار فوري لفئة الأطباء + تنبيه <code>CRITICAL_LAB</code>. التحقق يولّد فاتورة المختبر.</p>
+
+    <h3>الأشعة (Radiology) — <code>/radiology</code></h3>
+    <p>جدولة/تنفيذ الطلب وتحميل الصور وإنشاء التقارير (توقيع وقفل وسجل إصدارات). تم دمج <strong>وحدة سلامة الأشعة الكاملة</strong> (انظر القسم ٩): فحص سلامة CT/MRI، ملف سلامة المريض، رصد الجرعات، مستويات مرجعية، نتائج حرجة. عند التوقيع تُنشأ فاتورة الأشعة ويُبلَّغ الطبيب المطلوب والمريض.</p>
+
+    <h3>الصيدلية (Pharmacy) — <code>/pharmacy</code></h3>
+    <p>إدارة المخزون (FEFO: أول انتهاء صلاحية يُصرف أولًا) بعدّ تناقص ذري آمن، صرف الوصفات مع تسجيل سجلّ حركة كامل، كشف التفاعلات (<code>DrugInteraction</code>)، المراجعة الدوائية ضد قائمة الأدوية المنزلية مع توليد التناقضات، تدخلات الصيدلي إلى الطبيب، ومحطة عمل الصيدلاني السريري بالذكاء الاصطناعي.</p>
+
+    <h3>التمريض (Nursing) — <code>/nursing</code></h3>
+    <p>تسجيل العلامات الحيوية (مع إنذار تلقائي للحالات غير الطبيعية والحرجة)، نسبة الإدخال/الإخراج، خطط الرعاية، وسجل الصرف الدوائي <strong>MAR</strong> الذي يتيح تسجيل نتيجة كل جرعة (Administered/Refused/Held/Missed) مع إشعار الطبيب في الحالات الحرجة.</p>
+
+    <h3>طب الأسنان والعلاج الطبيعي</h3>
+    <p><strong>Dentistry</strong> (<code>/dentistry</code>): سجل أسنان، مخطط أسنان لكل سن حسب FDI، خطط وإجراءات، صور، حالات تقويم. <strong>Physiotherapy</strong> (<code>/physiotherapy</code>): تقييمات وظيفية، خطط، جلسات، تتبع تقدم، مكتبة تمارين، ونتائج وظيفية (FIM/Barthel/TUG).</p>
+
+    <h3>الفوترة والقبول (Billing / Admissions)</h3>
+    <p><strong>Billing</strong>: فواتير بأتوازن، دفعات بقيود Idempotency، كتالوج خدمات. <strong>Admissions</strong>: إدارة الأجنحة والأسرة، تنويم وخروج، مع توليد فاتورة الغرفة عند الخروج تلقائيًا.</p>
+
+    <h3>التنسيق السريري (Care) والمهام (Tasks)</h3>
+    <p><strong>Care</strong>: إحالات بدرجة إلحاح، فريق رعاية، حالات متعددة التخصصات. <strong>Tasks</strong>: محرك مهام عام ينقل المهام بين الأقسام مع سجل نشاط <code>TaskActivity</code> — تنشأ المهام تلقائيًا عند الطلبات السريرية.</p>
+
+    <h3>البحث والخط الزمني والتنبيهات</h3>
+    <p><strong>Search</strong> (<code>/search</code>): بحث عام (Ctrl+K) وعي الحساسية للصلاحيات والوصول. <strong>Timeline</strong>: خط زمني موحّد لكل مريض يجمع أحداث كل الأقسام. <strong>Alerts</strong> (<code>/clinical</code>): محرك تنبيهات بدورة حياة (مفتوح ← مُقَرّ ← محلول) بدرجات خطورة.</p>
+
+    <h3>بوابة المريض (Patient)</h3>
+    <p>لوحة مريض تعرض المواعيد، النتائج، الوصفات، المستندات (رفع/تحميل)، الفواتير، الرسائل للطبيب، تاريخي الطبي، وحتى قسم "<strong>أشعتي</strong>" (My Radiology) لاستعراض ملف السلامة والجرعات الإشعاعية بُلغة مبسطة.</p>
+
+    <h3>الإدارة (Admin) والإدارة العليا (SuperAdmin)</h3>
+    <p><strong>Admin</strong>: لوحة إيرادات حقيقية، إدارة الموظفين والأقسام والأطباء، إحصائيات، تحسين مواعيد، ومساعد ترميز. <strong>SuperAdmin</strong>: مركز قيادة تنفيذي (~40 مؤشر)، إدارة المستخدمين/الأدوار/الصلاحيات/التدقيق/الإعدادات/النسخ الاحتياطي، فحص الوقاية، ومعاينة أدوار الآخرين.</p>
+  </div>
+</section>
+
+<!-- ============ 6. خدمات الذكاء الاصطناعي ============ -->
+<section id="sec6" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#7c3aed33;">🤖</div>
+    <div><h2>٦. خدمات الذكاء الاصطناعي (15 خدمة)</h2><div class="subtitle">كيف يعمل كل نموذج ومتى يُستخدم</div></div>
+  </div>
+  <div class="section-body">
+    <p>تقع جميع الخدمات في <code>app/services/ai/</code>، وتُدار عبر مصنع <code>get_assistant(name)</code>. نوعان من خدمات AI:</p>
+    <ul>
+      <li><span class="tag tag-gemini">Gemini LLM</span> — تعتمد على Google Gemini مع ارتداد تلقائي لقواعد eristics عند غياب المفتاح</li>
+      <li><span class="tag tag-rule">قواعد</span> — منطق حتمي بدون LLM</li>
+      <li><span class="tag tag-cv">رؤية حاسوبية</span> — نماذج صور (YOLOv8 / U-Net)</li>
+    </ul>
+
+    <h3>البنية الأساسية — GeminiBase (<code>gemini_base.py</code>)</h3>
+    <p>فئة أساسية مشتركة لكل خدمات Gemini توفر: استدعاء الـ API، تحليل JSON، <strong>جمع سياق المريض السريري</strong> (<code>_collect_patient_context</code> — الأدوية، التحاليل، العلامات الحيوية، التشخيصات)، وتسجيل كل توصية في <code>AIRecommendation</code> للتدقيق. النموذج الافتراضي <code>gemini-2.5-flash</code>.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> تشخيص تفريقي</h4>
+        <p><code>AIDiagnosisSupport.suggest_diagnoses(patient_id, symptoms)</code> — ينتج تشخيصات مرتبة مع ICD-10، درجة ثقة، استدلال سريري، وعلامات تحذيرية. عند غياب المفتاح يستخدم قاموسًا حتميًا من 7 أنماط أعراض.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> تفسير المختبر</h4>
+        <p><code>AILaboratoryInterpretation.interpret_result(order_id)</code> — يفسر نتيجة التحليل (الأهمية السريرية، الشدة، حالات محتملة، فحوصات متابعة). دائمًا يحسب علامة الشذوذ حتميًا ثم يعززها بالذكاء الاصطناعي.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> التنبؤ بالمخاطر</h4>
+        <p><code>AIPatientRiskPrediction.predict_risk(patient_id)</code> — تصنيف مخاطر (حرجة/عالية/متوسطة/منخفضة) مع عوامل التخفيف واحتمال إعادة التنويم. يوجد درجة أساسية حتمية كاحتياط.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> ترميز ICD-10</h4>
+        <p><code>AIMedicalCodingAssistant</code> — اقتراح أكواد ICD-10 من نص حر أو من التشخيصات المسجلة، مع ملاحظات التخصيص.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> ملاحظات SOAP</h4>
+        <p><code>AIClinicalNotes.generate_soap(patient_id)</code> — ينتج ملاحظة سريرية منظمة (Subjective/Objective/Assessment/Plan) من البيانات المسجلة.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> مجموعات أوامر ذكية</h4>
+        <p><code>AISmartOrders.generate_order_set(patient_id)</code> — مقترح مجموعة أوامر قائمة على الأدلة (تحاليل، أشعة، أدوية، متابعة) مع الأولوية.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> تواصل مع المريض</h4>
+        <p><code>AIPatientCommunication</code> — ينتج ملخصات وتعليمات رعاية ذاتية بلغة مبسطة (<strong>عربية وإنجليزية</strong>).</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-gemini">Gemini</span> صيدلي سريري</h4>
+        <p><code>AIClinicalPharmacist.review(patient)</code> — مراجعة دوائية شاملة (تفاعلات، جرعات، بدائل آمنة) عبر 16 قسمًا.</p>
+      </div>
+    </div>
+
+    <h3>الخدمات القائمة على القواعد (Rule-based)</h3>
+    <div class="grid-2">
+      <div class="card"><h4>المساعد السريري</h4><p>تلخيص التاريخ الطبي وتحليل المريض (حساسية، أمراض مزمنة).</p></div>
+      <div class="card"><h4>فحص الوصفة</h4><p>تحقق من صحة الوصفة ومشكلاتها.</p></div>
+      <div class="card"><h4>محرك التفاعلات الدوائية</h4><p>كشف التفاعلات من جدول <code>DrugInteraction</code>.</p></div>
+      <div class="card"><h4>مساعد الأشعة</h4><p>مسودة تقرير أشعة.</p></div>
+      <div class="card"><h4>تحسين المواعيد</h4><p>اقتراح مواعيد متاحة لطبيب.</p></div>
+      <div class="card"><h4>تحليلات المستشفى</h4><p>توقعات إشغال/عمليات.</p></div>
+      <div class="card"><h4>مساعد التأهيل</h4><p>تحليل تقدم، تمارين، توقع تعافٍ.</p></div>
+    </div>
+
+    <h3>محرك التنبيهات السريرية</h3>
+    <p><code>AIClinicalAlertEngine</code> يفحص كل مريض نشط لاكتشاف: <strong>قيم مختبر حرجة</strong> (غلو/بوتاسيوم/صوديوم/هيموجلوبين...)، <strong>تدهور العلامات الحيوية</strong> (تسرّع قلب، أزمة فرط ضغط، نقص أكسجين، حمى)، <strong>تفاعلات دوائية</strong> (شديدة/موانع)، و<strong>خطر إعادة التنويم خلال 30 يومًا</strong>. يمكن تشغيله يدويًا للإشارة لكل المرضى النشطين.</p>
+
+    <div class="callout warn">
+      <strong>ماذا يحدث عند غياب GEMINI_API_KEY؟</strong>
+      النظام يعمل دائمًا: الخدمات التي لها احتياط قواعد ترتد إليه تلقائيًا، والخدمات التي لا تحتاجه (ملاحظات SOAP مثلًا) تُرجع رسالة "غير متاح" بنظافة بدل أن تتعطل — لا يوجد أي طريق <code>500</code>.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. كيف يعمل جيميناي ============ -->
+<section id="sec7" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#0b1120;color:#34d399;">🔁</div>
+    <div><h2>٧. آلية عمل Gemini LLM بالتفصيل</h2><div class="subtitle">من الطلب حتى التوصية النهائية</div></div>
+  </div>
+  <div class="section-body">
+    <h3>خط سير العمل (Pipeline)</h3>
+    <ol>
+      <li><strong>التحقق من التوفر</strong> — تتحقق <code>gemini_available()</code> من وجود <code>GEMINI_API_KEY</code>.</li>
+      <li><strong>جمع السياق</strong> — يجمع <code>_collect_patient_context()</code> الأدوية النشطة، آخر التحاليل، العلامات الحيوية، والتشخيصات، ويصيغها نصيًا.</li>
+      <li><strong>بناء الـ Prompt</strong> — تدمج الخدمة نظام prompt (System Prompt) مع سياق المريض + تنسيق الإخراج المطلوب (JSON).</li>
+      <li><strong>استدعاء الـ API</strong> — تُرسل عبر HTTP إلى <code>generativelanguage.googleapis.com</code> بدرجة حرارة محددة لكل ميزة.</li>
+      <li><strong>تحليل JSON</strong> — <code>_call_gemini_json()</code> تزيل فواصل markdown وتوزّع JSON.</li>
+      <li><strong>دمج الحقائق الحتمية</strong> — مثل علامة الشذوذ للمختبر تُحسب دائمًا محليًا ولا تُترك للـ LLM.</li>
+      <li><strong>التسجيل والتدقيق</strong> — تسجل <code>_log_call()</code> في سجل النشاط وتخزَّن في <code>AIRecommendation</code>.</li>
+    </ol>
+
+    <h3>نظام Prompt (System Prompt)</h3>
+    <p>لكل خدمة شخصية محددة بوضوح وتوجيهات سريرية، مثل: "أنت طبيب معتمد متخصص في التشخيص" أو "أنت مبرمِز طبي خبير في ICD-10-CM" أو "أنت أخصائي تثقيف مريض". جميع الـ Prompts تؤكد: <strong>دعم القرار فقط، ولا تُغني عن حكم الطبيب، وتذكر أن الذكاء الاصطناعي لا يحل محل الاستشارة</strong>.</p>
+
+    <h3>تنسيق الإخراج القياسي (مثال: التشخيص التفريقي)</h3>
+    <p>يُطلب من النموذج إرجاع JSON بهذا الهيكل العام:</p>
+    <ul>
+      <li><code>differentials</code> — قائمة مرتبة (rank, diagnosis, icd10, confidence, reasoning, next_steps, urgency)</li>
+      <li><code>clinical_reasoning</code> — الاستدلال السريري</li>
+      <li><code>red_flags</code> — العلامات التحذيرية</li>
+      <li><code>disclaimer</code> — تنويه</li>
+    </ul>
+
+    <h3>الاحتياط (Fallback) — متعدد الطبقات</h3>
+    <table>
+      <tr><th>الطبقة</th><th>الوصف</th></tr>
+      <tr><td>1. البيانات الحتمية</td><td>تُحسب دائمًا محليًا (شذوذ، عتبات، درجات أساسية)</td></tr>
+      <tr><td>2. قواعد eristics</td><td>عند غياب المفتاح أو فشل الاستدعاء — قواميس/درجات مكتوبة يدويًا</td></tr>
+      <tr><td>3. إخراج منظم</td><td>عند خطأ JSON يُرجع النص الخام كنص قابل للعرض</td></tr>
+      <tr><td>4. خطأ نظيف</td><td><code>{'available': False, 'error': ...}</code> بدون أي 500</td></tr>
+    </table>
+
+    <div class="callout info">
+      <strong>خصوصية البيانات</strong>
+      تُطبّق "تقليل البيانات" (Data Minimization): لا يُرسل اسم المريض الكامل أو رقم MRN إلى Gemini، بل فقط البيانات اللازمة سريريًا (العمر، الجنس، الأدوية، الحساسيات، التشخيصات، التحاليل).
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. الرؤية الحاسوبية ============ -->
+<section id="sec8" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#b4530933;">👁️</div>
+    <div><h2>٨. نماذج الرؤية الحاسوبية (صور)</h2><div class="subtitle">كشف الكسور وتجزئة الأسنان</div></div>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="card">
+        <h4><span class="tag tag-cv">YOLOv8</span> كاشف الكسور</h4>
+        <p>ملف <code>app/services/ai/fracture_detection.py</code> + نموذج <code>best.pt</code> (مضبوط بدقة، YOLOv8-nano). يكتشف أصنافًا: كسر، يد، مثبتات معدنية، فخذ، ساق، كتف.</p>
+        <ul>
+          <li><code>detect_fracture(upload_file)</code> — يرفع الصورة ويرجع النتائج: هل يوجد كسر؟، اكتشافات (تسمية + ثقة + نسبة)، توزيع الأصناف.</li>
+          <li>يحفظ الصورة الأصلية ونسخة موسومة بنتائج الكشف.</li>
+          <li>يحمّل النموذج <strong>بشكل كسول وخيط آمن</strong> (lazy singleton).</li>
+        </ul>
+        <p>النهاية: <code>/ai/fracture-detection</code> — متاح لأطباء الأشعة والأطباء والممرضين والعلاج الطبيعي وطب الأسنان والإدارة.</p>
+      </div>
+      <div class="card">
+        <h4><span class="tag tag-cv">U-Net</span> تجزئة الأسنان</h4>
+        <p>ملف <code>app/services/ai/tooth_segmentation.py</code> + نموذج <code>best_unet.keras</code> (قالب RGB 256×256، دقة Dice 84.76% / IoU 73.56%).</p>
+        <ul>
+          <li><code>segment_tooth(upload_file)</code> — يقسّم صورة الأسنان وينتج قناع (Mask) فاصلًا مع نسبة التغطية.</li>
+          <li>يدعم تنسيقين للنموذج (RGB أو رمادي+CLAHE) ويختار المعالجة تلقائيًا حسب شكل المدخل.</li>
+          <li>تخزين خاص داخل <code>var/uploads/ai/tooth/</code>.</li>
+        </ul>
+        <p>النهاية: <code>/ai/tooth-segmentation</code> — متاح لأطباء الأسنان والأشعة والممرضين والإدارة.</p>
+      </div>
+    </div>
+
+    <h3>خصوصية الصور الطبية</h3>
+    <ul>
+      <li>جميع الصور المرفوعة تُحفظ في مجلد <strong>خاص</strong> (<code>var/uploads/</code>) وليس في المجلد العام.</li>
+      <li>الطريق العام <code>/static/ai_models/</code> و <code>/static/uploads/</code> <strong>محجوب</strong> (يعيد 404) لحماية بيانات المرضى.</li>
+      <li>تصل إلى الصور عبر نقطة <code>/ai/media/...</code> الخاصة المقيّدة بالأدوار، مع حماية ضد path traversal.</li>
+      <li>فحص نوع الملف والسماح فقط بالصيغ الآمنة (png/jpg/jpeg).</li>
+    </ul>
+
+    <div class="callout warn">
+      <strong>سلوك Graceful</strong>
+      إذا لم يكن النموذج مثبتًا على الخادم، تُرجع الدالة رسالة واضحة ("النموذج غير مثبت") بدلًا من التعطل — تم التحقق منه بالاختبارات.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. سلامة الأشعة ============ -->
+<section id="sec9" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#b91c1c22;">☢️</div>
+    <div><h2>٩. وحدة سلامة الأشعة والجرعة الإشعاعية</h2><div class="subtitle">سلامة المريض أثناء التصوير الطبي</div></div>
+  </div>
+  <div class="section-body">
+
+    <div class="callout danger">
+      <strong>مبادئ السلامة غير القابلة للتفاوض</strong>
+      ① <strong>MRI لا يستخدم إشعاعًا مؤينًا</strong> — النظام يميّز بوضوح بين ما يشعّ وما لا يشعّ. ② سجلات الجرعة <strong>لا تُزيّف أبدًا</strong>. ③ العتبات المرجعية المؤسسية <strong>ليست حدود جرعة مطلقة</strong> للمريض. ④ الذكاء الاصطناعي <strong>لا يرفض التصوير تلقائيًا</strong> أبدًا.
+    </div>
+
+    <h3>خدمتا السلامة (في <code>app/services/radiology/</code>)</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>خدمة السلامة</h4>
+        <p><code>RadiologySafetyService</code> — تقييم سلامة CT/MRI/التباين. ترجع دائمًا <code>{safety_status, warnings, profile}</code>.</p>
+        <ul>
+          <li><strong>CT</strong>: تفاعل تباين سابق، وظائف الكلى (eGFR)، الحمل، الحساسية.</li>
+          <li><strong>MRI</strong>: حالة الفحص، مصنف أمان الغرسات (MR Unsafe/Conditional/Unknown)، تباين الجادولينيوم.</li>
+          <li><strong>الفحص الآمن للتباين</strong> حسب النوع.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>خدمة الجرعة</h4>
+        <p><code>RadiationDoseService</code> — حساب جرعات الإشعاع.</p>
+        <ul>
+          <li>ملخص سنوي/تراكمي حسب الطريقة ومنطقة الجسم.</li>
+          <li>تمييز الجرعة <strong>المقاسة</strong> عن <strong>المقدّرة</strong> (بتقديرات ICRP-103/AAPM مرجعية).</li>
+          <li>مقارنة مع المستويات المرجعية + تنبيهات الجرعة.</li>
+          <li>تصحيح السجل مع الاحتفاظ بالأصل.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>النماذج الجديدة (10)</h3>
+    <ul>
+      <li><strong>PatientImagingSafetyProfile</strong> — الملف الرئيسي لكل مريض</li>
+      <li><strong>MRIImplantRegistry</strong> — سجل الغرسات</li>
+      <li><strong>ImagingDoseRecord</strong> — سجلات الجرعات</li>
+      <li><strong>ContrastAdministration</strong> — إعطاء التباين</li>
+      <li><strong>ImagingSafetyScreening</strong> — شيكات السلامة</li>
+      <li><strong>ImagingPreparationProtocol</strong> — بروتوكولات التحضير (قابلة للإعداد)</li>
+      <li><strong>ImagingReferenceLevel</strong> — مستويات مرجعية</li>
+      <li><strong>ImagingStudyRecord</strong> — سجلات الدراسات</li>
+      <li><strong>CriticalFindingNotification</strong> — النتائج الحرجة</li>
+      <li><strong>RadiologyReportVersion</strong> — نسخ التقارير</li>
+    </ul>
+
+    <h3>الواجهات (Templates)</h3>
+    <table>
+      <tr><th>الصفحة</th><th>الوصف</th></tr>
+      <tr><td>dose_dashboard.html</td><td>لوحة جرعات الإشعاع (سنوي/تراكمي، حسب الطريقة، تنبيهات)</td></tr>
+      <tr><td>safety_profile.html</td><td>ملف سلامة المريض (CT/MRI/تباين/جرعة/غرسات)</td></tr>
+      <tr><td>edit_safety_profile.html</td><td>تعديل الملف</td></tr>
+      <tr><td>safety_screening.html</td><td>قائمة فحص السلامة لكل طلب (9 بنود)</td></tr>
+      <tr><td>critical_findings.html</td><td>جدول النتائج الحرجة مع زر إقرار</td></tr>
+      <tr><td>protocols.html</td><td>بروتوكولات التحضير</td></tr>
+      <tr><td>reference_levels.html</td><td>المستويات المرجعية مع إضافة</td></tr>
+    </table>
+
+    <h3>التكامل مع بوابة المريض</h3>
+    <p>أُضيف قسم "<strong>أشعتي</strong>" (My Radiology) في بوابة المريض: بطاقة سلامة MRI، سجل رمق التباين، ملخص الإشعاع السنوي، وتاريخ الدراسات — بعرض مبسّط يناسب المريض.</p>
+
+    <div class="callout primary">
+      <strong>متى يُطبق فحص السلامة؟</strong>
+      عند <strong>إنشاء طلب أشعة</strong> جديد (CT أو MRI)، تُشغَّل تلقائيًا دالة تقييم السلامة وتُعرض تحذيرات Critical/Important — قبل تقديم الخدمة، كأداة دعم قرار للطبيب.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. التصميم ============ -->
+<section id="sec10" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#0f6b50;color:#fff;">🎨</div>
+    <div><h2>١٠. نظام التصميم والهوية البصرية</h2><div class="subtitle">Premium Enterprise Healthcare — v3.0</div></div>
+  </div>
+  <div class="section-body">
+    <p>تم بناء نظام تصميم مخصص (Design System v3.0) في <code>app/static/css/style.css</code> (أكثر من 2,463 سطرًا) ليعطي إحساس المنصة الاحترافية المؤسسية.</p>
+
+    <h3>الرموز التصميمية (CSS Variables)</h3>
+    <div class="grid-3">
+      <div class="mini-stat"><span class="num" style="color:#0f6b50;">#0f6b50</span><span class="lbl">اللون الأساسي (أخضر)</span></div>
+      <div class="mini-stat"><span class="num" style="color:#0b1120;">#0b1120</span><span class="lbl">الشريط الجانبي (كحلي)</span></div>
+      <div class="mini-stat"><span class="num" style="color:#34d399;">#34d399</span><span class="lbl">العنصر النشط</span></div>
+    </div>
+    <ul>
+      <li>مقاييس مسافات (4px base)، زوايا مستديرة متدرجة، وتسلسل ظلال</li>
+      <li>درجات ألوان دلالية (نجاح/تحذير/خطر/معلومة) مع متغيرات فاتحة/داكنة</li>
+      <li>خط <strong>Inter</strong> للإنجليزية و <strong>Cairo</strong> للعربية RTL</li>
+    </ul>
+
+    <h3>مكونات رئيسية</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>القوائم الجانبية والتخطيط</h4>
+        <ul>
+          <li>تنقّل جانبي مجمّع بأقسام (مركز القيادة، السريري، العمليات، التشخيص، الدواء، التخصصات، المالية، الذكاء، الإدارة)</li>
+          <li>شريط علوي بخبز التنقل (Breadcrumb)، زر التنقل للجوال</li>
+          <li>تذييل مستخدم مع تبديل الوضع الليلي وتسجيل الخروج</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>الذكاء والإنتاجية</h4>
+        <ul>
+          <li><strong>لوحة أوامر</strong> باختصار Ctrl+K بحث سريع</li>
+          <li><strong>لافتة عرض المسؤول العام</strong> (فقط لـ SuperAdmin الحقيقي) مع قائمة "معاينة كدور"</li>
+          <li><strong>لافتة وضع المعاينة</strong> البرتقالية عند استكشاف دور</li>
+          <li>نظام إشعارات Toast عبر JS</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>المساعدات (Context Processors)</h3>
+    <p>يوفّر <code>app/__init__.py</code> معالجات سياق تمد القوالب بـ: قوائم التنقّل حسب الدور، حالة <code>is_superadmin_real()</code> (يميّز المستخدم الحقيقي عن المعاينة)، <code>is_previewing()</code>، اسم الدور الفعّال، وعدد الإشعارات غير المقروءة والمهام المعلّقة.</p>
+
+    <h3>إمكانية الوصول (Accessibility)</h3>
+    <ul>
+      <li>رابط تخطٍّ (Skip Link) للوصول السريع للمحتوى</li>
+      <li>دعم <code>prefers-reduced-motion</code> (تعطيل الحركة لمن يفضلها)</li>
+      <li>تنسيق <code>:focus-visible</code> واضح للوحة المفاتيح</li>
+      <li>أنماط طباعة (فصل الشريط الجانبي)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 11. الأمان والحماية ============ -->
+<section id="sec11" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#b91c1c22;">🛡️</div>
+    <div><h2>١١. الأمان والحماية للإنتاج</h2><div class="subtitle">48 مرحلة من التجهيز للإنتاج</div></div>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="card">
+        <h4>الإعدادات والبنية (Config)</h4>
+        <ul>
+          <li>رفض <code>SECRET_KEY</code> الضعيف أو غيابه في الإنتاج</li>
+          <li>رفض استخدام SQLite في الإنتاج (يتطلب PostgreSQL)</li>
+          <li>منع طول كلمة مرور ثابتة (12+ في الإنتاج)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>الشبكة والرؤوس (HTTP)</h4>
+        <ul>
+          <li>HSTS، X-Content-Type-Options، X-Frame-Options، Referrer-Policy</li>
+          <li>قواعد nginx للحد من المعدل (rate limit)</li>
+          <li>معالجة أخطاء JSON-aware لـ /api/</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>التسجيل والتتبّع</h4>
+        <ul>
+          <li>تسجيل منظم مع معرف طلب (request_id) لتتبّع الارتباط</li>
+          <li>سجل تدقيق كامل لكل عملية تعديل</li>
+          <li>سجل محاولات الدخول الناجحة/الفاشلة</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>حماية البيانات</h4>
+        <ul>
+          <li>حجب الملفات الخاصة (PHI)</li>
+          <li>فحص Magic Bytes للرفع</li>
+          <li>تجزئة كلمات المرور (bcrypt) + قفل الحسابات</li>
+          <li>نسخ احتياطي مع SHA-256 وفحص <code>--verify</code></li>
+        </ul>
+      </div>
+    </div>
+    <h3>وثائق الإنتاج</h3>
+    <p>يوجد في <code>docs/</code> أكثر من 15 وثيقة: معمارية، API، نشر (Heroku/PythonAnywhere)، فحص جاهزية الإنتاج، مصفوفة النشر، تدوير الأسرار، عمليات الأمان، النسخ الاحتياطي والاسترداد، وخطة الذهاب المباشر (Go-Live).</p>
+  </div>
+</section>
+
+<!-- ============ 12. الاختبارات ============ -->
+<section id="sec12" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:#0f766e22;">✅</div>
+    <div><h2>١٢. الاختبارات والتحقق</h2><div class="subtitle">148 اختبارًا ناجحًا، 0 فشل</div></div>
+  </div>
+  <div class="section-body">
+    <p>تقع مجموعة الاختبارات في <code>tests/</code> بـ 25 ملفًا. أمر التشغيل:</p>
+    <div class="callout info"><code>$env:FLASK_CONFIG = "testing"; venv\Scripts\python.exe -m pytest tests/ -q</code></div>
+
+    <div class="grid-3">
+      <div class="mini-stat"><span class="num">148</span><span class="lbl">اختبار ناجح</span></div>
+      <div class="mini-stat"><span class="num">0</span><span class="lbl">فشل</span></div>
+      <div class="mini-stat"><span class="num">25</span><span class="lbl">ملف اختبار</span></div>
+    </div>
+
+    <h3>ما الذي تغطيه الاختبارات؟</h3>
+    <table>
+      <tr><th>مجموعة الاختبارات</th><th>ما تغطيه</th></tr>
+      <tr><td>test_hospital_simulation</td><td>رحلة مريض شاملة عبر كل الأدوار (حجز ← زيارة ← مختبر ← وصفة ← صرف ← تسوية)</td></tr>
+      <tr><td>test_radiology_safety</td><td>وحدة سلامة الأشعة الكاملة (ملف أمان، تقييم CT/MRI، جرعات، نتائج حرجة)</td></tr>
+      <tr><td>test_clinical_engine</td><td>المحرك السريري: التسوية الدوائية، التدخلات، الأدوار</td></tr>
+      <tr><td>test_negative_authz</td><td>رفض الوصول غير المصرح (403) لمستخدم غير مخوّل</td></tr>
+      <tr><td>test_production_hardening</td><td>معالجات الأخطاء، رؤوس الأمان، الحد من الطلبات، إعدادات الإنتاج</td></tr>
+      <tr><td>test_ai_resilience / test_ai_media_privacy</td><td>عدم تعطل النظام عند غياب المفتاح، حماية الملفات الخاصة</td></tr>
+      <tr><td>test_inventory_concurrency</td><td>سلامة عدّ المخزون في حالات التزامن</td></tr>
+      <tr><td>test_billing / test_billing_security</td><td>الفوترة والدفعات وسلامتها</td></tr>
+      <tr><td>وغيرها من العمل</td><td>التمريض، الصيدلة، القبول، الطب الوقائي، المهام، التقارير</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 13. الخلاصة ============ -->
+<section id="sec13" class="dim">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--navy);color:#34d399;">🏁</div>
+    <div><h2>١٣. الخلاصة والرؤية</h2><div class="subtitle">منها إلى أين</div></div>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="card">
+        <h4>ما تم إنجازه</h4>
+        <ul>
+          <li>منصة مستشفى متكاملة تغطي 13 دورًا و 83 نموذجًا و 22 وحدة</li>
+          <li>نظام أمان صارم على مستويين (صلاحيات + حاجة للمعرفة)</li>
+          <li>15 خدمة ذكاء اصطناعي (8 Gemini LLM + 4 قواعد + 2 رؤية حاسوبية)</li>
+          <li>وحدة سلامة/جرعة الأشعة كاملة وفق أفضل الممارسات</li>
+          <li>حوالي 40 مؤشرًا تنفيذيًا في مركز قيادة SuperAdmin</li>
+          <li>148 اختبارًا ناجحًا + توثيق إنتاج شامل</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>الرؤية المستقبلية (فرص التطوير)</h4>
+        <ul>
+          <li>تكامل التصوير الطبي الحقيقي (DICOM/PACS)</li>
+          <li>نماذج توقع مخصّصة مُدرّبة على بيانات المستشفى</li>
+          <li>التطبيقات العملية للرؤية الحاسوبية على صور المرضى الفعلية</li>
+          <li>تكامل المدفوعات الإلكترونية والرسائل النصية للمرضى</li>
+          <li>نسخة سحابية متعددة المستشفيات</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout primary">
+      <strong>الرسالة الختامية</strong>
+      iHIS ليست مجرد مجموعة شاشات — إنها <strong>نظام تشغيل مستشفى واحد متصل</strong> حيث كل قسم يغذي نفس السجل، وكل حدث سريري يولّد المهمة والتنبيه والفاتورة المناسبة تلقائيًا، مع ذكاء اصطناعي داعم للقرار يحترم دائمًا الحكم الطبي البشري وسلامة المريض.
+    </div>
+
+    <p style="text-align:center;margin-top:30px;color:var(--muted);">
+      أُعدّ هذا التقرير لتوثيق وعرض مشروع نظام iHIS للمعلومات الصحية — يمكن عرضه مباشرة في المتصفح.
+    </p>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <strong>نظام iHIS للمعلومات الصحية</strong>
+  <span>منصة مستشفى متكاملة مع ذكاء اصطناعي متقدم وأمان صارم</span>
+  <span class="cv">Flask · SQLAlchemy · Bootstrap 5.3.3 · Google Gemini · YOLOv8 · U-Net</span>
+</footer>
+
+<script>
+// ظهور الأقسام عند التمرير
+const sections = document.querySelectorAll('section.dim');
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('fade-in'); io.unobserve(e.target); } });
+},{threshold:0.08});
+sections.forEach(s=>io.observe(s));
+
+// أزرار الفهرس
+document.querySelectorAll('nav.toc button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const t = document.getElementById(btn.dataset.target);
+    if(t){ t.scrollIntoView({behavior:'smooth',block:'start'}); }
+  });
+});
+</script>
+
+</body>
+</html>

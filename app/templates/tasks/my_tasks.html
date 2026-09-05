@@ -1,62 +1,83 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-tasks text-primary"></i> My Tasks</h4>
-
-{% if not tasks and not completed %}
-<div class="alert alert-info">No tasks assigned to you yet.</div>
-{% endif %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-list-check" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ t('my_tasks') }}</h1>
+        <p class="page-subtitle">{{ 'مهامك المفتوحة والمكتملة' if g.lang == 'ar' else 'Your open and completed tasks' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('tasks.new_task') }}"><i class="fas fa-plus"></i> {{ 'مهمة جديدة' if g.lang == 'ar' else 'New Task' }}</a>
+    </div>
+</div>
 
 {% if tasks %}
-<div class="card card-shadow mb-4">
-    <div class="card-header fw-bold">Open Tasks</div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Priority</th><th>Title</th><th>Type</th>
-                    <th>Patient</th><th>Due</th><th>Status</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for t in tasks %}
-                <tr>
-                    <td>
-                        <span class="badge bg-{{ 'danger' if t.priority in ('URGENT','CRITICAL') else ('warning' if t.priority=='HIGH' else 'secondary' if t.priority in ('Low','NORMAL') else 'info') }}">
-                            {{ t.priority }}
-                        </span>
-                    </td>
-                    <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
-                    <td>{{ t.task_type }}</td>
-                    <td>{{ t.patient.user.full_name if t.patient and t.patient.user else '-' }}</td>
-                    <td>{{ t.due_at.strftime('%Y-%m-%d %H:%M') if t.due_at else '-' }}</td>
-                    <td><span class="badge bg-secondary">{{ t.status }}</span></td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('tasks.detail', task_id=t.id) }}">View</a>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title">{{ t('open_tasks') }} <span class="notif-badge">{{ tasks|length }}</span></div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'أولوية' if g.lang == 'ar' else 'Priority' }}</th>
+                        <th>{{ t('title') }}</th>
+                        <th>{{ 'نوع' if g.lang == 'ar' else 'Type' }}</th>
+                        <th>{{ t('patient') }}</th>
+                        <th>{{ 'الموعد' if g.lang == 'ar' else 'Due' }}</th>
+                        <th>{{ t('status') }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in tasks %}
+                    <tr>
+                        <td><span class="status-badge {{ 's-cancelled' if t.priority in ('URGENT','CRITICAL') else ('s-hold' if t.priority=='HIGH' else 's-pending') }}">{{ t.priority }}</span></td>
+                        <td class="cell-primary"><a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="link-ihs">{{ t.title }}</a></td>
+                        <td class="cell-secondary">{{ t.task_type }}</td>
+                        <td class="cell-secondary">{{ t.patient.user.full_name if t.patient and t.patient.user else '-' }}</td>
+                        <td class="cell-secondary">{{ t.due_at.strftime('%d %b %H:%M') if t.due_at else '-' }}</td>
+                        <td><span class="status-badge s-{{ 'completed' if t.status=='COMPLETED' else ('cancelled' if t.status in ('CANCELLED','REJECTED') else 'in-progress' if t.status=='IN_PROGRESS' else 'draft') }}">{{ t.status }}</span></td>
+                        <td class="text-end"><a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('tasks.detail', task_id=t.id) }}"><i class="fas fa-eye"></i></a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card-premium mb-4">
+    <div class="card-body">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-list-check"></i></div>
+            <div class="empty-title">{{ 'لا توجد مهام مفتوحة' if g.lang == 'ar' else 'No open tasks' }}</div>
+            <div class="empty-desc">{{ 'حاليًا لا توجد مهام مخصصة لك' if g.lang == 'ar' else 'You have no tasks assigned at the moment' }}</div>
+        </div>
     </div>
 </div>
 {% endif %}
 
 {% if completed %}
-<div class="card card-shadow">
-    <div class="card-header">Recently Completed</div>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Title</th><th>Completed</th><th></th></tr></thead>
-            <tbody>
-            {% for t in completed %}
-                <tr>
-                    <td>{{ t.title }}</td>
-                    <td>{{ t.completed_at.strftime('%Y-%m-%d %H:%M') if t.completed_at else '-' }}</td>
-                    <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tasks.detail', task_id=t.id) }}">View</a></td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title">{{ 'مكتملة مؤخرًا' if g.lang == 'ar' else 'Recently Completed' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr><th>{{ t('title') }}</th><th>{{ 'الاكتمال' if g.lang == 'ar' else 'Completed' }}</th><th></th></tr></thead>
+                <tbody>
+                {% for t in completed %}
+                    <tr>
+                        <td class="cell-primary">{{ t.title }}</td>
+                        <td class="cell-secondary">{{ t.completed_at.strftime('%d %b %Y') if t.completed_at else '-' }}</td>
+                        <td class="text-end"><a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('tasks.detail', task_id=t.id) }}"><i class="fas fa-eye"></i></a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endif %}

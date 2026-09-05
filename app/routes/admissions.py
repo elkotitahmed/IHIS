@@ -6,9 +6,11 @@ When a patient is discharged the accrued room charge (ward.room_charge_per_day
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
-from app.models import (Admission, Ward, Bed, Patient, Doctor, Bill, BillItem)
+from app.models import (Admission, Ward, Bed, Patient, Doctor, Bill, BillItem,
+                        ClinicalAlert)
 from app.routes.decorators import roles_required, permissions_required, log_activity
 from app.utils import utcnow
+from app.services.timeline import record_event
 
 admissions_bp = Blueprint('admissions', __name__)
 
@@ -28,12 +30,56 @@ def dashboard():
     beds_total = Bed.query.count()
     beds_occupied = Bed.query.filter_by(status='Occupied').count()
     wards = Ward.query.count()
+    beds_available = Bed.query.filter_by(status='Available').count()
     current = Admission.query.filter_by(status='Admitted').order_by(
         Admission.admitted_at.desc()).all()
-    beds_available = Bed.query.filter_by(status='Available').count()
+
+    # ---- Ward census (per-ward occupancy board) ----
+    ward_census = []
+    for w in Ward.query.order_by(Ward.name.asc()).all():
+        beds = list(w.beds)
+        total = len(beds)
+        occupied = sum(1 for b in beds if b.status == 'Occupied')
+        available = sum(1 for b in beds if b.status == 'Available')
+        ward_census.append({
+            'ward': w,
+            'total': total, 'occupied': occupied, 'available': available,
+            'pct': round((occupied / total) * 100) if total else 0,
+            'full': total > 0 and occupied >= total,
+        })
+
+    # ---- Needs attention: overstays + open high/critical alerts ----
+    now = utcnow()
+    overstay_pids = {a.patient_id for a in current
+                     if a.expected_discharge and a.expected_discharge < now}
+    open_alert_counts = {}
+    if current:
+        rows = (ClinicalAlert.query
+                .filter(ClinicalAlert.patient_id.in_([a.patient_id for a in current]),
+                        ClinicalAlert.status == 'OPEN',
+                        ClinicalAlert.severity.in_(['HIGH', 'CRITICAL']))
+                .all())
+        for r in rows:
+            open_alert_counts[r.patient_id] = open_alert_counts.get(r.patient_id, 0) + 1
+
+    attention = []
+    for a in current:
+        flags = []
+        days_over = 0
+        if a.patient_id in overstay_pids:
+            flags.append('overstay')
+            days_over = max(0, (now - a.expected_discharge).days)
+        if a.patient_id in open_alert_counts:
+            flags.append('alert')
+        if flags:
+            attention.append({'admission': a, 'flags': flags, 'days_over': days_over,
+                              'alerts': open_alert_counts.get(a.patient_id, 0)})
+
     return render_template('admissions/dashboard.html', title='Admissions Dashboard',
                            beds_total=beds_total, beds_occupied=beds_occupied,
-                           beds_available=beds_available, wards=wards, current=current)
+                           beds_available=beds_available, wards=wards, current=current,
+                           ward_census=ward_census, attention=attention,
+                           critical_alerts=sum(open_alert_counts.values()))
 
 
 @admissions_bp.route('/admissions')
@@ -110,6 +156,11 @@ def admit():
     db.session.flush()
     log_activity('ADMIT_PATIENT', 'admission', admission.id,
                  f'patient={patient.id} bed={bed.id}')
+    record_event(patient.id, 'ADMISSION',
+                 f'Admitted to {bed.ward.name if bed.ward else "ward"} — Bed {bed.bed_no}',
+                 f'{admission.admission_no} · {reason or "—"}',
+                 source_type='admission', source_id=admission.id,
+                 department='Admissions')
     from app.services.notifications import notify_patient
     notify_patient(patient, 'Admission confirmed',
                    f'You have been admitted to {bed.ward.name if bed.ward else "ward"} (bed {bed.bed_no}). Admission: {admission.admission_no}.')
@@ -155,6 +206,11 @@ def discharge(id):
                                 quantity=1, unit_price=charge))
     log_activity('DISCHARGE_PATIENT', 'admission', admission.id,
                  f'notes={"yes" if notes else "no"}')
+    record_event(admission.patient_id, 'DISCHARGE',
+                 'Patient discharged',
+                 f'{admission.days_stayed()} day(s) · {admission.discharge_summary[:140] if admission.discharge_summary else "—"}',
+                 source_type='admission', source_id=admission.id,
+                 department='Admissions')
     from app.services.notifications import notify_patient
     notify_patient(admission.patient, 'Discharged',
                    f'You have been discharged from {admission.ward.name if admission.ward else "the hospital"} '

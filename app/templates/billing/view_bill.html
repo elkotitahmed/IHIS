@@ -1,110 +1,150 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4">
-    <i class="fas fa-file-invoice text-primary"></i> Bill {{ bill.bill_no }}
-    <span class="badge bg-{% if bill.status=='Paid' %}success{% elif bill.status=='PartiallyPaid' %}warning{% elif bill.status=='Voided' %}secondary{% else %}danger{% endif %}">{{ bill.status }}</span>
-</h4>
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="fas fa-file-invoice" style="color:var(--ihis-primary)"></i> {{ bill.bill_no }}
+      <span class="status-badge {% if bill.status=='Paid' %}s-completed{% elif bill.status=='PartiallyPaid' %}s-in-progress{% elif bill.status=='Voided' %}s-cancelled{% else %}s-pending{% endif %}" style="margin-left:var(--sp-2)">{{ bill.status }}</span>
+    </h1>
+    <p class="page-subtitle">{{ 'تفاصيل الفاتورة وتسجيل المدفوعات' if g.lang == 'ar' else 'Invoice details and payment recording' }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn-ihs btn-ihs-outline" href="{{ url_for('billing.bills') }}"><i class="fas fa-arrow-left"></i> {{ 'الروابط' if g.lang == 'ar' else 'Back' }}</a>
+    <button class="btn-ihs btn-ihs-ghost" onclick="window.print()"><i class="fas fa-print"></i> {{ 'طباعة' if g.lang == 'ar' else 'Print' }}</button>
+  </div>
+</div>
 
-<div class="row">
-    <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent d-flex justify-content-between">
-                <h6 class="mb-0"><i class="fas fa-user"></i> {{ bill.patient.user.full_name }}</h6>
-                <a class="btn btn-sm btn-outline-secondary" href="javascript:window.print()"><i class="fas fa-print"></i> Print</a>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted mb-1">Patient: {{ bill.patient.user.email }} &middot; Source: {{ bill.source_type or 'Manual' }} &middot; Issued: {{ bill.issued_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% if bill.notes %}<p class="small mb-3">{{ bill.notes }}</p>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card-premium">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-user" style="color:var(--ihis-primary)"></i> {{ bill.patient.user.full_name }}</div>
+      </div>
+      <div class="card-body">
+        <p class="cell-muted" style="margin-bottom:var(--sp-3)">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}: {{ bill.patient.user.email }} &middot; {{ 'المصدر' if g.lang == 'ar' else 'Source' }}: {{ bill.source_type or 'Manual' }} &middot; {{ 'صدر في' if g.lang == 'ar' else 'Issued' }}: {{ bill.issued_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        {% if bill.notes %}<p class="cell-secondary" style="margin-bottom:var(--sp-3)">{{ bill.notes }}</p>{% endif %}
 
-                <table class="table table-sm align-middle">
-                    <thead><tr><th>#</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
-                    <tbody>
-                    {% for i in bill.items %}
-                        <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>{{ i.description }}</td>
-                            <td class="text-end">{{ i.quantity }}</td>
-                            <td class="text-end">{{ "%.2f"|format(i.unit_price) }}</td>
-                            <td class="text-end">{{ "%.2f"|format(i.total()) }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-
-                <div class="text-end small">
-                    <p class="mb-0">Subtotal: {{ "%.2f"|format(bill.subtotal()) }}</p>
-                    {% if bill.tax_percent %}<p class="mb-0">Tax ({{ bill.tax_percent|int }}%): {{ "%.2f"|format(bill.tax_amount()) }}</p>{% endif %}
-                    {% if bill.discount %}<p class="mb-0">Discount: -{{ "%.2f"|format(bill.discount) }}</p>{% endif %}
-                    <hr>
-                    <h5 class="mb-0">Total: {{ "%.2f"|format(bill.total()) }}</h5>
-                    <p class="mb-0 text-success">Paid: {{ "%.2f"|format(bill.paid_amount()) }}</p>
-                    <p class="mb-0 {% if bill.balance()>0 %}text-danger fw-bold{% else %}text-muted{% endif %}">Balance: {{ "%.2f"|format(bill.balance()) }}</p>
-                </div>
-            </div>
+        <div class="table-wrapper">
+          <table class="table-ihs">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                <th style="text-align:right">{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}</th>
+                <th style="text-align:right">{{ 'سعر الوحدة' if g.lang == 'ar' else 'Unit Price' }}</th>
+                <th style="text-align:right">{{ 'المجموع' if g.lang == 'ar' else 'Total' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for i in bill.items %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ i.description }}</td>
+                <td style="text-align:right"><span class="t-num">{{ i.quantity }}</span></td>
+                <td style="text-align:right"><span class="t-num">{{ "%.2f"|format(i.unit_price) }}</span></td>
+                <td style="text-align:right"><span class="t-num cell-primary">{{ "%.2f"|format(i.total()) }}</span></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
         </div>
+
+        <div style="text-align:right;margin-top:var(--sp-4)">
+          <p class="cell-muted" style="margin-bottom:var(--sp-1)">{{ 'المجموع الفرعي' if g.lang == 'ar' else 'Subtotal' }}: <span class="t-num">{{ "%.2f"|format(bill.subtotal()) }}</span></p>
+          {% if bill.tax_percent %}<p class="cell-muted" style="margin-bottom:var(--sp-1)">{{ 'الضريبة' if g.lang == 'ar' else 'Tax' }} ({{ bill.tax_percent|int }}%): <span class="t-num">{{ "%.2f"|format(bill.tax_amount()) }}</span></p>{% endif %}
+          {% if bill.discount %}<p class="cell-muted" style="margin-bottom:var(--sp-1)">{{ 'الخصم' if g.lang == 'ar' else 'Discount' }}: <span class="t-num">-{{ "%.2f"|format(bill.discount) }}</span></p>{% endif %}
+          <hr style="border-color:var(--ihis-border)">
+          <p style="font-size:1.25rem;font-weight:700;margin-bottom:var(--sp-1)">{{ 'الإجمالي' if g.lang == 'ar' else 'Total' }}: <span class="t-num">{{ "%.2f"|format(bill.total()) }}</span></p>
+          <p class="cell-primary" style="margin-bottom:var(--sp-1)">{{ 'المدفوع' if g.lang == 'ar' else 'Paid' }}: <span class="t-num">{{ "%.2f"|format(bill.paid_amount()) }}</span></p>
+          <p class="{% if bill.balance()>0 %}style='color:var(--ihis-danger);font-weight:700'{% else %}cell-muted{% endif %}" style="margin-bottom:0">{{ 'الرصيد' if g.lang == 'ar' else 'Balance' }}: <span class="t-num">{{ "%.2f"|format(bill.balance()) }}</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if bill.status != 'Voided' and bill.balance() > 0 %}
+    <div class="card-premium" style="margin-bottom:var(--sp-4)">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-credit-card" style="color:var(--ihis-success)"></i> {{ 'تسجيل الدفع' if g.lang == 'ar' else 'Record Payment' }}</div>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('billing.record_payment', bill_id=bill.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label class="form-label-ihs">{{ 'المبلغ' if g.lang == 'ar' else 'Amount' }} <span class="required">*</span></label>
+            <input class="form-control" type="number" step="0.01" name="amount" value="{{ "%.2f"|format(bill.balance()) }}" max="{{ bill.balance() }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-ihs">{{ 'طريقة الدفع' if g.lang == 'ar' else 'Method' }}</label>
+            <select class="form-control" name="method">
+              {% for m in ['Cash','Card','Insurance','BankTransfer','Other'] %}
+              <option>{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label-ihs">{{ 'المرجع (اختياري)' if g.lang == 'ar' else 'Reference (optional)' }}</label>
+            <input class="form-control" name="reference" placeholder="{{ 'رقم البطاقة / المطالبة' if g.lang == 'ar' else 'card / claim no' }}">
+          </div>
+          <button class="btn-ihs btn-ihs-success" style="width:100%"><i class="fas fa-check-circle"></i> {{ 'تسجيل الدفع' if g.lang == 'ar' else 'Record Payment' }}</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card-premium">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-history" style="color:var(--ihis-primary)"></i> {{ 'سجل المدفوعات' if g.lang == 'ar' else 'Payment History' }}</div>
+      </div>
+      <div class="card-body flush">
+        <div class="table-wrapper">
+          <table class="table-ihs">
+            <thead>
+              <tr>
+                <th>{{ 'الإيصال' if g.lang == 'ar' else 'Receipt' }}</th>
+                <th>{{ 'المبلغ' if g.lang == 'ar' else 'Amount' }}</th>
+                <th>{{ 'الطريقة' if g.lang == 'ar' else 'Method' }}</th>
+                <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for p in bill.payments %}
+              <tr>
+                <td><span class="cell-primary">{{ p.receipt_no }}</span></td>
+                <td><span class="t-num cell-primary">{{ "%.2f"|format(p.amount) }}</span></td>
+                <td><span class="tag-ihs">{{ p.method }}</span></td>
+                <td><span class="cell-muted">{{ p.received_at.strftime('%Y-%m-%d %H:%M') }}</span></td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="4">
+                  <div class="empty-state" style="padding:var(--sp-4) 0">
+                    <div class="empty-icon"><i class="fas fa-credit-card"></i></div>
+                    <div class="empty-title">{{ 'لا توجد مدفوعات' if g.lang == 'ar' else 'No payments recorded' }}</div>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
-    <div class="col-lg-5">
-        {% if bill.status != 'Voided' and bill.balance() > 0 %}
-        <div class="card card-shadow mb-3">
-            <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-credit-card"></i> Record Payment</h6></div>
-            <div class="card-body">
-                <form method="post" action="{{ url_for('billing.record_payment', bill_id=bill.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-2">
-                        <label class="form-label small">Amount</label>
-                        <input class="form-control" type="number" step="0.01" name="amount" value="{{ "%.2f"|format(bill.balance()) }}" max="{{ bill.balance() }}" required>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small">Method</label>
-                        <select class="form-select" name="method">
-                            {% for m in ['Cash','Card','Insurance','BankTransfer','Other'] %}
-                            <option>{{ m }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small">Reference (optional)</label>
-                        <input class="form-control" name="reference" placeholder="card / claim no">
-                    </div>
-                    <button class="btn btn-success w-100"><i class="fas fa-check-circle"></i> Record Payment</button>
-                </form>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-list"></i> Payment History</h6></div>
-            <div class="card-body p-0">
-                <table class="table table-sm align-middle mb-0">
-                    <thead><tr><th>Receipt</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
-                    <tbody>
-                    {% for p in bill.payments %}
-                        <tr>
-                            <td>{{ p.receipt_no }}</td>
-                            <td class="text-success">{{ "%.2f"|format(p.amount) }}</td>
-                            <td>{{ p.method }}</td>
-                            <td class="small">{{ p.received_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        </tr>
-                    {% else %}
-                        <tr><td colspan="4" class="text-center text-muted py-3">No payments recorded.</td></tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {% if bill.status != 'Voided' and bill.paid_amount() == 0 and (current_user.has_role('Admin') or current_user.has_role('SuperAdmin')) %}
-        <div class="card card-shadow mt-3 border-danger">
-            <div class="card-body">
-                <form method="post" action="{{ url_for('billing.void_bill', bill_id=bill.id) }}" onsubmit="return confirm('Void this bill? This cannot be undone.')">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input class="form-control form-control-sm mb-2" name="reason" placeholder="Reason for voiding">
-                    <button class="btn btn-sm btn-outline-danger w-100">Void Bill</button>
-                </form>
-            </div>
-        </div>
-        {% endif %}
+    {% if bill.status != 'Voided' and bill.paid_amount() == 0 and (current_user.has_role('Admin') or current_user.has_role('SuperAdmin')) %}
+    <div class="card-premium" style="margin-top:var(--sp-4);border:1px solid var(--ihis-danger)">
+      <div class="card-body">
+        <form method="post" action="{{ url_for('billing.void_bill', bill_id=bill.id) }}" onsubmit="return confirm('Void this bill? This cannot be undone.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label class="form-label-ihs" style="color:var(--ihis-danger)">{{ 'سبب الإلغاء' if g.lang == 'ar' else 'Reason for voiding' }}</label>
+            <input class="form-control" name="reason" placeholder="{{ 'أدخل السبب' if g.lang == 'ar' else 'Reason for voiding' }}">
+          </div>
+          <button class="btn-ihs btn-ihs-danger" style="width:100%;margin-top:var(--sp-2)"><i class="fas fa-ban"></i> {{ 'إلغاء الفاتورة' if g.lang == 'ar' else 'Void Bill' }}</button>
+        </form>
+      </div>
     </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

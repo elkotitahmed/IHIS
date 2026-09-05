@@ -1,62 +1,94 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-file-invoice-dollar text-success"></i> My Bills &amp; Receipts</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'الفواتير والإيصالات' if g.lang == 'ar' else 'Bills & Receipts' }}</h1>
+        <p class="page-subtitle">{{ 'عرض فواتيرك وسجلات الدفع' if g.lang == 'ar' else 'View your invoices and payment records' }}</p>
+    </div>
+</div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-4">
-        <div class="card text-white bg-info card-shadow">
-            <div class="card-body"><h5 class="card-title">Total Billed</h5>
-            <p class="display-6 mb-0">{{ "%.2f"|format(total_billed) }}</p></div>
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-icon info"><i class="fas fa-file-invoice-dollar"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'إجمالي الفواتير' if g.lang == 'ar' else 'Total Billed' }}</div>
+            <div class="kpi-value"><span class="t-num">{{ "%.2f"|format(total_billed) }}</span></div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-danger card-shadow">
-            <div class="card-body"><h5 class="card-title">Outstanding</h5>
-            <p class="display-6 mb-0">{{ "%.2f"|format(total_balance) }}</p></div>
+    <div class="kpi-card">
+        <div class="kpi-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'المستحق' if g.lang == 'ar' else 'Outstanding' }}</div>
+            <div class="kpi-value"><span class="t-num">{{ "%.2f"|format(total_balance) }}</span></div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-success card-shadow">
-            <div class="card-body"><h5 class="card-title">Paid</h5>
-            <p class="display-6 mb-0">{{ "%.2f"|format(total_paid) }}</p></div>
+    <div class="kpi-card">
+        <div class="kpi-icon success"><i class="fas fa-check-circle"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'المدفوع' if g.lang == 'ar' else 'Paid' }}</div>
+            <div class="kpi-value"><span class="t-num">{{ "%.2f"|format(total_paid) }}</span></div>
         </div>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body">
-        {% for b in items %}
-        <div class="border rounded p-3 mb-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>{{ b.bill_no }}</strong>
-                    <span class="badge bg-{% if b.status=='Paid' %}success{% elif b.status=='PartiallyPaid' %}warning{% elif b.status=='Voided' %}secondary{% else %}danger{% endif %} ms-2">{{ b.status }}</span>
-                    <span class="text-muted small ms-2">{{ b.issued_at.strftime('%Y-%m-%d') }}</span>
-                </div>
-                <div class="text-end">
-                    <div class="fw-bold mb-1">Total: {{ "%.2f"|format(b.total()) }}</div>
-                    <div class="small text-muted">Paid {{ "%.2f"|format(b.paid_amount()) }} · Balance <span class="{% if b.balance()>0 %}text-danger{% else %}text-success{% endif %}">{{ "%.2f"|format(b.balance()) }}</span></div>
-                </div>
-            </div>
-            <table class="table table-sm mb-0 mt-2">
-                <thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Total</th></tr></thead>
+{% for b in items %}
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-file-invoice" style="color:var(--ihis-primary)"></i>
+            {{ b.bill_no }}
+            <span class="status-badge s-{{ 'completed' if b.status=='Paid' else 'pending' if b.status=='PartiallyPaid' else 'cancelled' if b.status=='Voided' else 'rejected' }} ms-2" style="font-size:0.75rem">{{ b.status }}</span>
+            <span class="cell-muted" style="font-size:0.75rem;margin-left:var(--sp-2)">{{ b.issued_at.strftime('%Y-%m-%d') }}</span>
+        </div>
+        <div style="text-align:right">
+            <div class="cell-mono" style="font-weight:600;font-size:0.9375rem">{{ 'الإجمالي' if g.lang == 'ar' else 'Total' }}: <span class="t-num">{{ "%.2f"|format(b.total()) }}</span></div>
+            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'المدفوع' if g.lang == 'ar' else 'Paid' }} <span class="t-num">{{ "%.2f"|format(b.paid_amount()) }}</span> · {{ 'الرصيد' if g.lang == 'ar' else 'Balance' }} <span class="t-num" style="color:{{ 'var(--ihis-danger)' if b.balance()>0 else 'var(--ihis-success)' }}">{{ "%.2f"|format(b.balance()) }}</span></div>
+        </div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                        <th style="text-align:right">{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}</th>
+                        <th style="text-align:right">{{ 'السعر' if g.lang == 'ar' else 'Unit' }}</th>
+                        <th style="text-align:right">{{ 'الإجمالي' if g.lang == 'ar' else 'Total' }}</th>
+                    </tr>
+                </thead>
                 <tbody>
-                {% for i in b.items %}
-                    <tr><td>{{ i.description }}</td><td class="text-end">{{ i.quantity }}</td><td class="text-end">{{ "%.2f"|format(i.unit_price) }}</td><td class="text-end">{{ "%.2f"|format(i.total()) }}</td></tr>
-                {% endfor %}
+                    {% for i in b.items %}
+                    <tr>
+                        <td>{{ i.description }}</td>
+                        <td style="text-align:right"><span class="t-num">{{ i.quantity }}</span></td>
+                        <td style="text-align:right"><span class="t-num">{{ "%.2f"|format(i.unit_price) }}</span></td>
+                        <td style="text-align:right"><span class="t-num">{{ "%.2f"|format(i.total()) }}</span></td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
-            {% if b.payments %}
-            <div class="small text-muted mt-1">
-                {% for p in b.payments %}
-                <span class="badge bg-light text-dark me-2">Receipt {{ p.receipt_no }} — {{ "%.2f"|format(p.amount) }} ({{ p.method }}) {{ p.received_at.strftime('%Y-%m-%d') }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
         </div>
-        {% else %}
-        <div class="text-center text-muted py-4">No bills for your account yet.</div>
+    </div>
+    {% if b.payments %}
+    <div class="card-body" style="border-top:1px solid var(--ihis-border-light);padding:var(--sp-3) var(--sp-4)">
+        {% for p in b.payments %}
+        <span class="tag-ihs" style="margin-right:var(--sp-1)">
+            <i class="fas fa-receipt" style="font-size:0.625rem"></i>
+            {{ p.receipt_no }} — <span class="t-num">{{ "%.2f"|format(p.amount) }}</span> ({{ p.method }}) {{ p.received_at.strftime('%Y-%m-%d') }}
+        </span>
         {% endfor %}
     </div>
+    {% endif %}
 </div>
+{% else %}
+<div class="card-premium">
+    <div class="card-body">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="empty-title">{{ 'لا توجد فواتير' if g.lang == 'ar' else 'No bills for your account yet' }}</div>
+            <div class="empty-desc">{{ 'ستظهر فواتيرك هنا بمجرد إنشائها' if g.lang == 'ar' else 'Your invoices will appear here once generated' }}</div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

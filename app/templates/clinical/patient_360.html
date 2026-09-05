@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- ============================================================
+     PATIENT 360 — Premium Header
+     ============================================================ -->
+<div class="patient-header">
+    <div class="patient-header-top">
+        <div class="patient-identity">
+            <div class="patient-avatar-lg">{{ patient.user.full_name[0]|upper if patient.user else 'P' }}</div>
+            <div>
+                <h1 class="patient-name">{{ patient.user.full_name if patient.user else 'Patient' }}</h1>
+                <div class="patient-meta">
+                    <span class="meta-item"><i class="fas fa-hashtag" style="font-size:0.7rem"></i> {{ 'الرقم الطبي' if g.lang == 'ar' else 'MRN' }}: <strong>{{ patient.mrn or '-' }}</strong></span>
+                    {% if patient.gender %}<span class="meta-item"><i class="fas fa-venus-mars" style="font-size:0.7rem"></i> {{ patient.gender }}</span>{% endif %}
+                    {% if patient.date_of_birth %}<span class="meta-item"><i class="fas fa-cake-candles" style="font-size:0.7rem"></i> {{ patient.date_of_birth.strftime('%d %b %Y') }}</span>{% endif %}
+                    {% if patient.blood_type %}<span class="meta-item"><i class="fas fa-droplet" style="font-size:0.7rem"></i> {{ patient.blood_type }}</span>{% endif %}
+                    {% if patient.phone %}<span class="meta-item"><i class="fas fa-phone" style="font-size:0.7rem"></i> {{ patient.phone }}</span>{% endif %}
+                    {% if active_admission %}
+                    <span class="meta-item" style="color:var(--ihis-success)"><i class="fas fa-bed" style="font-size:0.7rem"></i> {{ 'يستشفى' if g.lang == 'ar' else 'Admitted' }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="patient-actions">
+            <a href="{{ url_for('clinical.workbench') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+            </a>
+            <a href="{{ url_for('clinical.patient_summary', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                <i class="fas fa-file-medical"></i> {{ 'الملخص الطبي' if g.lang == 'ar' else 'Summary' }}
+            </a>
+            <a href="{{ url_for('fhir.patient_view', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                <i class="fas fa-cloud-arrow-down"></i> FHIR
+            </a>
+            {% if active_admission %}
+            <a href="{{ url_for('admissions.view', admission_id=active_admission.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+                <i class="fas fa-bed-pulse"></i> {{ 'متابعة الاستشفاء' if g.lang == 'ar' else 'View Admission' }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if open_alerts %}
+    <div class="patient-alerts">
+        {% for a in open_alerts %}
+        <span class="patient-alert {{ 'allergy' if a.severity in ('HIGH','CRITICAL') else 'chronic' }}">
+            <i class="fas fa-triangle-exclamation"></i>
+            <strong>{{ a.severity }} {{ a.alert_type|replace('_',' ') }}:</strong> {{ a.title }}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Reusable safety strip: allergies + active problems + open alerts -->
+{% include "clinical/_patient_safety_strip.html" %}
+
+<!-- ============================================================
+     CARE STRIP — Latest Vitals Snapshot
+     ============================================================ -->
+{% if latest_vitals %}
+<div class="care-strip">
+    {% set v = latest_vitals[0] %}
+    {% if v.temperature is not none %}
+    <div class="care-item">
+        <div class="care-icon" style="background:var(--ihis-danger-bg);color:var(--ihis-danger)"><i class="fas fa-temperature-half"></i></div>
+        <div class="care-body">
+            <div class="care-label">{{ 'حرارة' if g.lang == 'ar' else 'Temp' }}</div>
+            <div class="care-value">{{ v.temperature }} °C</div>
+            <div class="care-status">{{ v.recorded_at.strftime('%H:%M') if v.recorded_at }}</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if v.blood_pressure_systolic %}
+    <div class="care-item">
+        <div class="care-icon" style="background:var(--ihis-primary-bg);color:var(--ihis-primary)"><i class="fas fa-heart-pulse"></i></div>
+        <div class="care-body">
+            <div class="care-label">{{ 'ضغط الدم' if g.lang == 'ar' else 'BP' }}</div>
+            <div class="care-value">{{ v.blood_pressure_systolic }}/{{ v.blood_pressure_diastolic }}</div>
+            <div class="care-status">mmHg</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if v.heart_rate %}
+    <div class="care-item">
+        <div class="care-icon" style="background:var(--ihis-info-bg);color:var(--ihis-info)"><i class="fas fa-heart"></i></div>
+        <div class="care-body">
+            <div class="care-label">{{ 'نبض' if g.lang == 'ar' else 'HR' }}</div>
+            <div class="care-value">{{ v.heart_rate }}</div>
+            <div class="care-status">bpm</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if v.respiratory_rate %}
+    <div class="care-item">
+        <div class="care-icon" style="background:var(--ihis-teal-bg);color:var(--ihis-teal)"><i class="fas fa-lungs"></i></div>
+        <div class="care-body">
+            <div class="care-label">{{ 'تنفس' if g.lang == 'ar' else 'RR' }}</div>
+            <div class="care-value">{{ v.respiratory_rate }}</div>
+            <div class="care-status">/min</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if v.oxygen_saturation is not none %}
+    <div class="care-item">
+        <div class="care-icon" style="background:var(--ihis-success-bg);color:var(--ihis-success)"><i class="fas fa-droplet"></i></div>
+        <div class="care-body">
+            <div class="care-label">{{ 'أكسجين' if g.lang == 'ar' else 'SpO2' }}</div>
+            <div class="care-value">{{ v.oxygen_saturation }}%</div>
+            <div class="care-status">O2 sat</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if v.pain_score is not none %}
+    <div class="care-item">
+        <div class="care-icon" style="background:var(--ihis-warning-bg);color:var(--ihis-warning)"><i class="fas fa-face-grimace"></i></div>
+        <div class="care-body">
+            <div class="care-label">{{ 'ألم' if g.lang == 'ar' else 'Pain' }}</div>
+            <div class="care-value">{{ v.pain_score }}/10</div>
+            <div class="care-status">{{ 'مقياس الألم' if g.lang == 'ar' else 'pain score' }}</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- ============================================================
+         COLUMN 1 — Structured Clinical Records
+         ============================================================ -->
+    <div class="col-lg-4">
+        {% if current_user.has_permission('ALLERGY_VIEW') %}
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-allergies" style="color:var(--ihis-danger)"></i> {{ 'الحساسية' if g.lang == 'ar' else 'Allergies' }}</div>
+                {% if allergies %}<span class="status-badge s-pending" style="font-size:0.6875rem">{{ allergies|length }}</span>{% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for al in allergies %}
+                    <div class="list-item">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">
+                                <i class="fas fa-allergies" style="color:var(--ihis-danger);font-size:0.75rem;margin-inline-end:6px"></i>{{ al.substance }}
+                            </div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ al.reaction or '' }} &middot; {{ al.severity }}</div>
+                        </div>
+                        <span class="status-badge {{ 's-cancelled' if al.severity == 'Severe' else 's-pending' }}" style="font-size:0.6875rem">{{ al.status }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+                {% if current_user.has_permission('ALLERGY_CREATE') %}
+                <form method="post" action="{{ url_for('clinical.new_allergy', patient_id=patient.id) }}" style="padding:var(--sp-3);border-top:1px solid var(--ihis-border)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" name="substance" class="form-control" placeholder="{{ 'المادة' if g.lang == 'ar' else 'Substance' }}" required>
+                        <input type="text" name="reaction" class="form-control" placeholder="{{ 'رد الفعل' if g.lang == 'ar' else 'Reaction' }}">
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" name="onset" class="form-control" placeholder="{{ 'بداية التفاعل' if g.lang == 'ar' else 'Onset' }}">
+                        <input type="text" name="notes" class="form-control" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
+                    </div>
+                    <select name="severity" class="form-select form-select-sm mb-2">
+                        <option value="Mild">Mild</option><option value="Moderate" selected>Moderate</option><option value="Severe">Severe</option>
+                    </select>
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm w-100"><i class="fas fa-plus"></i> {{ 'إضافة' if g.lang == 'ar' else 'Add' }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.has_permission('PROBLEM_VIEW') %}
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i> {{ 'المشاكل' if g.lang == 'ar' else 'Problem List' }}</div>
+                {% if problems %}<span class="status-badge s-completed" style="font-size:0.6875rem">{{ problems|length }}</span>{% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for pr in problems %}
+                    <div class="list-item">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">
+                                {% if pr.icd10_code %}<span class="chip" style="font-size:0.65rem">{{ pr.icd10_code }}</span>{% endif %}
+                                {{ pr.description }}
+                            </div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ pr.severity }}</div>
+                        </div>
+                        <span class="status-badge {{ 's-completed' if pr.status == 'Resolved' else 's-pending' }}" style="font-size:0.6875rem">{{ pr.status }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+                {% if current_user.has_permission('PROBLEM_CREATE') %}
+                <form method="post" action="{{ url_for('clinical.new_problem', patient_id=patient.id) }}" style="padding:var(--sp-3);border-top:1px solid var(--ihis-border)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" name="icd10_code" class="form-control" placeholder="ICD-10" style="max-width:110px">
+                        <input type="text" name="description" class="form-control" placeholder="{{ 'الوصف' if g.lang == 'ar' else 'Description' }}" required>
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                        <select name="status" class="form-select form-select-sm" style="max-width:130px">
+                            <option value="Active" selected>{{ 'نشط' if g.lang == 'ar' else 'Active' }}</option>
+                            <option value="Inactive">{{ 'خامل' if g.lang == 'ar' else 'Inactive' }}</option>
+                        </select>
+                        <input type="text" name="notes" class="form-control" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
+                    </div>
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm w-100"><i class="fas fa-plus"></i> {{ 'إضافة' if g.lang == 'ar' else 'Add' }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.has_permission('IMMUNIZATION_VIEW') %}
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-syringe" style="color:var(--ihis-info)"></i> {{ 'التطعيمات' if g.lang == 'ar' else 'Immunizations' }}</div>
+                {% if immunizations %}<span class="status-badge s-pending" style="font-size:0.6875rem">{{ immunizations|length }}</span>{% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for im in immunizations %}
+                    <div class="list-item">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">{{ im.vaccine_name }}</div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">Dose {{ im.dose_number }} &middot; {{ im.administered_at.strftime('%d %b %Y') }}</div>
+                        </div>
+                        {% if im.next_due %}
+                        <span class="status-badge s-pending" style="font-size:0.6875rem">{{ 'التالي' if g.lang == 'ar' else 'Next' }} {{ im.next_due.strftime('%d %b') }}</span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+                {% if current_user.has_permission('IMMUNIZATION_CREATE') %}
+                <form method="post" action="{{ url_for('clinical.new_immunization', patient_id=patient.id) }}" style="padding:var(--sp-3);border-top:1px solid var(--ihis-border)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" name="vaccine_name" class="form-control" placeholder="{{ 'اللقاح' if g.lang == 'ar' else 'Vaccine' }}" required>
+                        <input type="number" name="dose_number" class="form-control" value="1" style="max-width:70px">
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" name="lot_number" class="form-control" placeholder="{{ 'رقم الدفعة' if g.lang == 'ar' else 'Lot' }}">
+                        <input type="text" name="site" class="form-control" placeholder="{{ 'الموقع' if g.lang == 'ar' else 'Site' }}">
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="date" name="next_due" class="form-control" title="{{ 'الجرعة التالية' if g.lang == 'ar' else 'Next due' }}">
+                        <input type="text" name="notes" class="form-control" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
+                    </div>
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm w-100"><i class="fas fa-plus"></i> {{ 'تسجيل' if g.lang == 'ar' else 'Record' }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ============================================================
+         COLUMN 2 — Alerts / Follow-ups / Documents
+         ============================================================ -->
+    <div class="col-lg-4">
+        {% if current_user.has_permission('ALERT_VIEW') %}
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-bell" style="color:var(--ihis-danger)"></i> {{ 'الإنذارات' if g.lang == 'ar' else 'Alerts' }}</div>
+                {% if open_alerts %}<span class="status-badge {{ 's-cancelled' if open_alerts|selectattr('severity','equalto','HIGH')|list or open_alerts|selectattr('severity','equalto','CRITICAL')|list else 's-pending' }}" style="font-size:0.6875rem">{{ open_alerts|length }}</span>{% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for a in open_alerts %}
+                    <div class="list-item" style="align-items:flex-start">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">
+                                <span class="status-badge {{ 's-cancelled' if a.severity in ('HIGH','CRITICAL') else 's-pending' }}" style="font-size:0.625rem">{{ a.severity }}</span>
+                                {{ a.title }}
+                            </div>
+                            {% if a.message %}<div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ a.message }}</div>{% endif %}
+                            <div style="font-size:0.6875rem;color:var(--ihis-text-muted);margin-top:2px">{{ a.created_at.strftime('%d %b %Y %H:%M') }}</div>
+                        </div>
+                        {% if current_user.has_permission('ALERT_ACK') and a.status == 'OPEN' %}
+                        <form method="post" action="{{ url_for('clinical.alert_action', patient_id=patient.id, alert_id=a.id, action='ack') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn-ihs btn-ihs-outline btn-ihs-sm" title="{{ 'إقرار' if g.lang == 'ar' else 'Acknowledge' }}"><i class="fas fa-check"></i></button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا إنذارات مفتوحة' if g.lang == 'ar' else 'No open alerts' }}</div>
+                    {% endfor %}
+                </div>
+                {% if current_user.has_permission('ALERT_ACK') %}
+                {% for a in open_alerts %}
+                {% if a.status == 'ACKNOWLEDGED' %}
+                <form method="post" action="{{ url_for('clinical.alert_action', patient_id=patient.id, alert_id=a.id, action='resolve') }}" style="padding:var(--sp-2) var(--sp-3);border-top:1px solid var(--ihis-border)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="note" class="form-control" placeholder="{{ 'ملاحظة الحل' if g.lang == 'ar' else 'Resolution note' }}">
+                        <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check-double"></i> {{ 'حل' if g.lang == 'ar' else 'Resolve' }}</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.has_permission('FOLLOWUP_VIEW') %}
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-calendar-check" style="color:var(--ihis-success)"></i> {{ 'المتابعات' if g.lang == 'ar' else 'Follow-ups' }}</div>
+                {% if follow_ups %}<span class="status-badge s-pending" style="font-size:0.6875rem">{{ follow_ups|length }}</span>{% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for f in follow_ups %}
+                    <div class="list-item">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem">
+                                <i class="fas fa-calendar-day" style="color:var(--ihis-success);font-size:0.75rem;margin-inline-end:6px"></i>{{ f.scheduled_for.strftime('%d %b %Y %H:%M') }}
+                            </div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ f.reason or '' }}</div>
+                        </div>
+                        <span class="status-badge {{ 's-completed' if f.status == 'Completed' else 's-pending' }}" style="font-size:0.6875rem">{{ f.status }}</span>
+                        {% if f.status == 'Scheduled' and current_user.has_permission('FOLLOWUP_COMPLETE') %}
+                        <form method="post" action="{{ url_for('clinical.complete_followup', patient_id=patient.id, followup_id=f.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn-ihs btn-ihs-outline btn-ihs-sm" title="Complete"><i class="fas fa-check"></i></button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+                {% if current_user.has_permission('FOLLOWUP_CREATE') %}
+                <form method="post" action="{{ url_for('clinical.new_followup', patient_id=patient.id) }}" style="padding:var(--sp-3);border-top:1px solid var(--ihis-border)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="datetime-local" name="scheduled_for" class="form-control" required>
+                        <input type="text" name="reason" class="form-control" placeholder="{{ 'السبب' if g.lang == 'ar' else 'Reason' }}">
+                    </div>
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm w-100"><i class="fas fa-plus"></i> {{ 'جدولة' if g.lang == 'ar' else 'Schedule' }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.has_permission('PATIENT_DOCUMENT_VIEW') %}
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-folder-open" style="color:var(--ihis-warning)"></i> {{ 'المستندات' if g.lang == 'ar' else 'Documents' }}</div>
+                {% if documents %}<span class="status-badge s-completed" style="font-size:0.6875rem">{{ documents|length }}</span>{% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for d in documents %}
+                    {% set is_img = d.file_url and d.file_url.lower().endswith(('.png', '.jpg', '.jpeg')) %}
+                    <div class="list-item">
+                        <i class="fas {{ 'fa-image' if is_img else 'fa-file' }}" style="color:var(--ihis-warning)"></i>
+                        <span style="flex:1;font-size:0.8125rem">{{ d.title or d.document_type or 'Document' }}</span>
+                        {% if is_img %}
+                        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" style="gap:4px" href="{{ url_for('patient.download_document', doc_id=d.id, inline=1) }}">
+                            <i class="fas fa-eye"></i>{{ 'عرض' if g.lang == 'ar' else 'View' }}
+                        </a>
+                        {% if ai_tools %}
+                        <details style="position:relative">
+                            <summary class="tag-ihs" style="cursor:pointer;list-style:none;white-space:nowrap">
+                                <i class="fas fa-wand-magic-sparkles"></i> {{ 'AI' if g.lang == 'ar' else 'AI' }}
+                            </summary>
+                            <div class="card-premium" style="position:absolute;right:0;top:calc(100% + 6px);z-index:50;min-width:230px;padding:10px;box-shadow:var(--ihis-shadow)">
+                                <div class="t-h4 mb-2">{{ 'تحليل الصورة بالذكاء الاصطناعي' if g.lang == 'ar' else 'Analyze image with AI' }}</div>
+                                {% for t in ai_tools %}
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm w-100 mb-1" style="justify-content:flex-start"
+                                   href="{{ url_for(t.endpoint, doc=d.id) }}">
+                                    <i class="fas {{ t.icon }} me-2"></i>{{ t.label_ar if g.lang == 'ar' else t.label }}
+                                </a>
+                                {% endfor %}
+                                <p class="cell-muted mb-0" style="font-size:.6875rem">
+                                    <i class="fas fa-shield-halved"></i>
+                                    {{ 'مربوطة بسرية المريض وامتيازات دورك' if g.lang == 'ar' else 'Tied to patient confidentiality and your role' }}
+                                </p>
+                            </div>
+                        </details>
+                        {% endif %}
+                        {% endif %}
+                        <span class="status-badge s-completed" style="font-size:0.625rem">{{ d.uploaded_at.strftime('%d %b %Y') }}</span>
+                    </div>
+                    {% if is_img %}
+                    <div class="list-item" style="justify-content:flex-start;gap:.5rem;padding-top:0">
+                        <img src="{{ url_for('patient.download_document', doc_id=d.id, inline=1) }}"
+                             class="rounded" alt="{{ d.title or 'image' }}"
+                             style="max-width:72px;max-height:72px;object-fit:cover;border:1px solid var(--ihis-border)">
+                        <a href="{{ url_for('patient.download_document', doc_id=d.id) }}" class="cell-muted" style="font-size:.75rem">
+                            <i class="fas fa-download"></i> {{ d.file_url.split('/')[-1] }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ============================================================
+         COLUMN 3 — Consolidated Timeline
+         ============================================================ -->
+    <div class="col-lg-4">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-timeline" style="color:var(--ihis-primary)"></i> {{ 'الخط الزمني' if g.lang == 'ar' else 'Timeline' }}</div>
+                <span class="status-badge s-pending" style="font-size:0.6875rem">{{ timeline|length }} {{ 'حدث' if g.lang == 'ar' else 'events' }}</span>
+            </div>
+            <div class="card-body scroll-area" style="max-height:560px">
+                <div class="timeline-ihs">
+                    {% for ev in timeline %}
+                    <div class="timeline-entry">
+                        <div class="tl-dot dot-{{ 'danger' if ev.event_type == 'LAB' else 'primary' }}"></div>
+                        <div class="tl-time">{{ ev.occurred_at.strftime('%d %b %Y, %H:%M') }}</div>
+                        <div class="tl-label">{{ ev.title }}</div>
+                        {% if ev.description %}<div class="tl-detail">{{ ev.description }}</div>{% endif %}
+                        {% if ev.department %}<span class="tl-dept"><i class="fas fa-building"></i> {{ ev.department }}</span>{% endif %}
+                    </div>
+                    {% else %}
+                    <div style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">
+                        <i class="fas fa-timeline" style="font-size:2rem;opacity:0.3;margin-bottom:0.5rem;display:block"></i>
+                        {{ 'لا نشاط مسجل بعد' if g.lang == 'ar' else 'No activity recorded yet' }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

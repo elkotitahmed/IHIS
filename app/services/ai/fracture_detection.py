@@ -22,11 +22,16 @@ _model = None
 
 
 def _upload_dir():
-    return os.path.join(current_app.static_folder, 'ai_models', 'uploads')
+    """Private directory for uploaded (input) fracture images. Never under
+    static/, so raw PHI radiology uploads are not publicly served."""
+    base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
+    return os.path.join(base, 'ai', 'fracture', 'uploads')
 
 
 def _result_dir():
-    return os.path.join(current_app.static_folder, 'ai_models', 'results')
+    """Private directory for annotated fracture output images."""
+    base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
+    return os.path.join(base, 'ai', 'fracture', 'results')
 
 
 def fracture_model_available():
@@ -110,14 +115,17 @@ def detect_fracture(upload_file):
         detected = len(detections) > 0
         avg_conf = int((total_conf / len(detections)) * 100) if detections else 0
 
-        static_dir = 'ai_models'
+        # These map to the protected AI media endpoint (see routes/ai.py
+        # `ai_media`) which requires an authenticated session and the feature's
+        # roles. Files are never placed under static/, so no public URL exists.
         return {
             'detected': detected,
             'detections': detections,
             'count_by_class': count_by_class,
             'avg_confidence': avg_conf,
-            'orig_url': '%s/uploads/%s' % (static_dir, stored_name),
-            'result_url': '%s/results/%s' % (static_dir, result_img_name),
+            'feature': 'fracture',
+            'orig_key': stored_name,
+            'result_key': result_img_name,
         }
     except FileNotFoundError as e:
         return {'error': str(e)}

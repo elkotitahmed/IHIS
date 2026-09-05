@@ -1,94 +1,103 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4">
-    <i class="fas fa-clipboard-list me-2"></i>Treatment Plans
-    <small class="text-muted">- {{ patient.user.full_name }}</small>
-</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'خطط العلاج' if g.lang == 'ar' else 'Treatment Plans' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }}</p>
+    </div>
+</div>
 
 <div class="row g-4">
     <div class="col-lg-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fas fa-plus text-primary me-2"></i>New Treatment Plan</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-plus" style="color:var(--ihis-primary)"></i> {{ 'خطة علاج جديدة' if g.lang == 'ar' else 'New Treatment Plan' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('physiotherapy.plan', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label class="form-label">Title</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'العنوان' if g.lang == 'ar' else 'Title' }} <span class="required">*</span></label>
                         <input class="form-control" name="title" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Goals</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الأهداف' if g.lang == 'ar' else 'Goals' }}</label>
                         <textarea class="form-control" name="goals" rows="2"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Objectives</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الغايات' if g.lang == 'ar' else 'Objectives' }}</label>
                         <textarea class="form-control" name="objectives" rows="2"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Interventions</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التدخلات' if g.lang == 'ar' else 'Interventions' }}</label>
                         <textarea class="form-control" name="interventions" rows="2"></textarea>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Start Date</label>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label-ihs">{{ 'تاريخ البدء' if g.lang == 'ar' else 'Start Date' }}</label>
                             <input class="form-control" type="date" name="start_date" value="{{ today }}">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">End Date</label>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label-ihs">{{ 'تاريخ الانتهاء' if g.lang == 'ar' else 'End Date' }}</label>
                             <input class="form-control" type="date" name="end_date">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Status</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</label>
                         <select class="form-select" name="status">
-                            <option value="Active">Active</option>
-                            <option value="Completed">Completed</option>
-                            <option value="On Hold">On Hold</option>
-                            <option value="Cancelled">Cancelled</option>
+                            <option value="Active">{{ 'نشطة' if g.lang == 'ar' else 'Active' }}</option>
+                            <option value="Completed">{{ 'مكتملة' if g.lang == 'ar' else 'Completed' }}</option>
+                            <option value="On Hold">{{ 'معلقة' if g.lang == 'ar' else 'On Hold' }}</option>
+                            <option value="Cancelled">{{ 'ملغاة' if g.lang == 'ar' else 'Cancelled' }}</option>
                         </select>
                     </div>
-                    <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>Create Plan</button>
-                    <a class="btn btn-outline-secondary" href="{{ url_for('physiotherapy.patients') }}">Back to Patients</a>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                        <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-save"></i>{{ 'إنشاء الخطة' if g.lang == 'ar' else 'Create Plan' }}</button>
+                        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('physiotherapy.patients') }}">{{ 'رجوع للمرضى' if g.lang == 'ar' else 'Back to Patients' }}</a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fas fa-list text-info me-2"></i>Existing Plans</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-info)"></i> {{ 'الخطط الحالية' if g.lang == 'ar' else 'Existing Plans' }}</div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
                             <tr>
-                                <th>Title</th>
-                                <th>Start</th>
-                                <th>End</th>
-                                <th>Status</th>
-                                <th>Sessions</th>
+                                <th>{{ 'العنوان' if g.lang == 'ar' else 'Title' }}</th>
+                                <th>{{ 'البدء' if g.lang == 'ar' else 'Start' }}</th>
+                                <th>{{ 'النهاية' if g.lang == 'ar' else 'End' }}</th>
+                                <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                                <th>{{ 'الجلسات' if g.lang == 'ar' else 'Sessions' }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in plans %}
                             <tr>
-                                <td>{{ p.title }}</td>
-                                <td>{{ p.start_date.strftime('%d %b %Y') if p.start_date else '-' }}</td>
-                                <td>{{ p.end_date.strftime('%d %b %Y') if p.end_date else '-' }}</td>
+                                <td class="cell-primary">{{ p.title }}</td>
+                                <td class="cell-muted">{{ p.start_date.strftime('%d %b %Y') if p.start_date else '-' }}</td>
+                                <td class="cell-muted">{{ p.end_date.strftime('%d %b %Y') if p.end_date else '-' }}</td>
                                 <td>
-                                    <span class="badge bg-{{ 'success' if p.status == 'Active' else 'secondary' }}">{{ p.status }}</span>
+                                    <span class="status-badge {{ 's-active' if p.status == 'Active' else ('s-completed' if p.status == 'Completed' else ('s-on-hold' if p.status == 'On Hold' else 's-cancelled')) }}">{{ p.status }}</span>
                                 </td>
                                 <td>
-                                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('physiotherapy.session', plan_id=p.id) }}">
-                                        <i class="fas fa-calendar-day me-1"></i>Sessions
+                                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.session', plan_id=p.id) }}">
+                                        <i class="fas fa-calendar-day"></i>{{ 'الجلسات' if g.lang == 'ar' else 'Sessions' }}
                                     </a>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="5" class="text-center text-muted py-3">No plans yet</td></tr>
+                            <tr><td colspan="5">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+                                    <div class="empty-title">{{ 'لا توجد خطط بعد' if g.lang == 'ar' else 'No plans yet' }}</div>
+                                </div>
+                            </td></tr>
                             {% endfor %}
                         </tbody>
                     </table>

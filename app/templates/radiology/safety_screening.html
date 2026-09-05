@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-clipboard-check" style="color:var(--ihis-primary)"></i> {{ 'فحص السلامة' if g.lang == 'ar' else 'Safety Screening' }}</h1>
+        <p class="page-subtitle">{{ order.imaging_type.name if order.imaging_type else 'Study' }} — {{ order.patient.user.full_name if order.patient and order.patient.user else 'Patient' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.orders') }}">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
+</div>
+
+<!-- Existing Warnings -->
+{% if ct_eval.warnings or mri_eval.warnings %}
+<div class="mb-4">
+    <h6 class="fw-bold">{{ 'تحذيرات السلامة' if g.lang == 'ar' else 'Safety Warnings' }}</h6>
+    {% for w in ct_eval.warnings + mri_eval.warnings %}
+    <div class="alert alert-{% if w.severity == 'Critical' %}danger{% elif w.severity in ['Important', 'Review Required'] %}warning{% else %}info{% endif %} py-2 mb-1 small">
+        <strong>{{ w.title }}</strong> — {{ w.message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Screening Form -->
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header"><div class="card-title"><i class="fas fa-user-shield" style="color:var(--ihis-primary)"></i> {{ '_form' if g.lang == 'ar' else 'Complete Safety Screening' }}</div></div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">{{ 'نوع الفحص' if g.lang == 'ar' else 'Screening Type' }}</label>
+                    <select class="form-select" name="screening_type">
+                        <option value="General">General</option>
+                        <option value="CT">CT</option>
+                        <option value="MRI">MRI</option>
+                        <option value="Contrast">Contrast</option>
+                        <option value="Nuclear">Nuclear Medicine</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <h6 class="fw-bold">{{ 'عناصر الفحص' if g.lang == 'ar' else 'Screening Checklist' }}</h6>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="allergy_confirmed" id="ac"><label class="form-check-label" for="ac">{{ 'تم تأكيد حالة الحساسية' if g.lang == 'ar' else 'Allergy status confirmed' }}</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="pregnancy_confirmed" id="pc"><label class="form-check-label" for="pc">{{ 'تم تأكيد حالة الحمل' if g.lang == 'ar' else 'Pregnancy status confirmed' }}</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="renal_confirmed" id="rc"><label class="form-check-label" for="rc">{{ 'تم تأكيد الوظيفة الكلوية' if g.lang == 'ar' else 'Renal function confirmed' }}</label></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="contrast_reaction_confirmed" id="crc"><label class="form-check-label" for="crc">{{ 'تم تأكيد تفاعل التعقيد' if g.lang == 'ar' else 'Contrast reaction history confirmed' }}</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="pacemaker_screened" id="ps"><label class="form-check-label" for="ps">{{ 'فحصحساس' if g.lang == 'ar' else 'Pacemaker/ICD screened' }}</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="implant_screened" id="is"><label class="form-check-label" for="is">{{ 'فحص الغرسات' if g.lang == 'ar' else 'Implant screened' }}</label></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="metallic_screened" id="ms"><label class="form-check-label" for="ms">{{ 'فحص الأجسام المعدنية' if g.lang == 'ar' else 'Metallic foreign body screened' }}</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="claustrophobia_screened" id="cs"><label class="form-check-label" for="cs">{{ 'فحص الرهاب المكاني' if g.lang == 'ar' else 'Claustrophobia screened' }}</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="sedation_required" id="sr"><label class="form-check-label" for="sr">{{ 'يحتاج تسكين' if g.lang == 'ar' else 'Sedation required' }}</label></div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold">{{ 'ملاحظات' if g.lang == 'ar' else 'Screening Notes' }}</label>
+                    <textarea class="form-control" name="screening_notes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-check"></i> {{ 'إكمال الفحص' if g.lang == 'ar' else 'Complete Screening' }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Previous Screenings -->
+{% if screenings %}
+<h6 class="fw-bold">{{ 'الفحوصات السابقة' if g.lang == 'ar' else 'Previous Screenings' }}</h6>
+{% for s in screenings %}
+<div class="card-premium mb-2">
+    <div class="card-body py-2 small">
+        <span class="badge bg-primary">{{ s.screening_type }}</span>
+        <span class="badge {% if s.screening_status == 'Cleared' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ s.screening_status }}</span>
+        — {{ s.screening_notes or 'No notes' }}
+        {% if s.screener %}<span class="cell-muted">by {{ s.screener.full_name }}</span>{% endif %}
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

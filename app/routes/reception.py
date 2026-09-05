@@ -5,6 +5,7 @@ from app import db
 from app.models import Appointment, Patient, Doctor, User, NursingNote, Role
 from app.routes.decorators import roles_required, log_activity
 from app.utils import has_appointment_conflict
+from app.services.timeline import record_event
 
 reception_bp = Blueprint('reception', __name__)
 
@@ -71,6 +72,11 @@ def book_appointment():
         db.session.flush()
         log_activity('BOOK_APPOINTMENT', 'appointment', appointment.id,
                      f'Appointment booked by receptionist {current_user.id}')
+        record_event(patient_id, 'APPOINTMENT', 'Appointment booked',
+                     f'With Dr. {appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else "doctor"} on '
+                     f'{scheduled_at.strftime("%d %b %Y %H:%M")}',
+                     source_type='appointment', source_id=appointment.id,
+                     department='Reception')
         pat = Patient.query.get(patient_id)
         if pat:
             from app.services.notifications import notify_patient
@@ -96,6 +102,11 @@ def checkin(id):
     appointment.status = 'CheckedIn'
     log_activity('CHECKIN_APPOINTMENT', 'appointment', appointment.id,
                  f'Patient checked in by receptionist {current_user.id}')
+    record_event(appointment.patient_id, 'VISIT', 'Patient checked in',
+                 f'Appointment #{appointment.id} · waiting for '
+                 + (appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else 'the doctor'),
+                 source_type='appointment', source_id=appointment.id,
+                 department='Reception')
     db.session.commit()
     flash(f'Appointment #{appointment.id} checked in.', 'success')
     return redirect(url_for('reception.appointments'))
@@ -118,6 +129,12 @@ def set_status(id):
             log_activity('AUTO_BILL_CONSULTATION', 'bill', bill.id,
                          f'appointment={appointment.id}')
         log_activity('COMPLETE_APPOINTMENT', 'appointment', appointment.id)
+        record_event(appointment.patient_id, 'VISIT',
+                     'Visit completed',
+                     f'Appointment #{appointment.id} · Dr. '
+                     + (appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else 'doctor'),
+                     source_type='appointment', source_id=appointment.id,
+                     department='Reception')
         db.session.commit()
         flash('Visit completed; consultation bill generated.', 'success')
     else:
@@ -183,13 +200,19 @@ def register():
             except ValueError:
                 dob_date = None
 
-        db.session.add(Patient(
+        new_patient = Patient(
             user_id=user.id, phone=phone or None, gender=gender,
             date_of_birth=dob_date, blood_type=blood_type,
             address=address, allergies=None,
-        ))
+        )
+        db.session.add(new_patient)
+        db.session.flush()
         log_activity('REGISTER_PATIENT', 'user', user.id,
                      f'Registered by receptionist {current_user.id}')
+        record_event(new_patient.id, 'VISIT', 'Patient registered',
+                     f'New patient record · MRN {new_patient.mrn or "-"}',
+                     source_type='patient', source_id=new_patient.id,
+                     department='Reception')
         db.session.commit()
         flash(f'Patient {full_name} registered successfully.', 'success')
         return redirect(url_for('reception.dashboard'))

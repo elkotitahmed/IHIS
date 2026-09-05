@@ -1,43 +1,88 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Medical Record</h3>
-    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'إضافة سجل طبي' if g.lang == 'ar' else 'Add Medical Record' }}</h1>
+        <p class="page-subtitle">{{ 'إنشاء سجل طبي جديد' if g.lang == 'ar' else 'Create a new clinical record' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'العودة للمريض' if g.lang == 'ar' else 'Back to Patient' }}
+        </a>
+    </div>
 </div>
 
-<div class="row">
+{% include 'clinical/_patient_header.html' %}
+
+<div class="row g-4">
     <div class="col-lg-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">New Medical Record for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-secondary)"></i> {{ 'قالب نموذج' if g.lang == 'ar' else 'Form Template' }}</div>
+            </div>
+            <div class="card-body">
+                {% if templates %}
+                <div class="form-group mb-0">
+                    <label class="form-label-ihs" for="tpl-pick">{{ 'اختر قالباً لبناء السجل' if g.lang == 'ar' else 'Pick a template to structure this record' }}</label>
+                    <select class="form-control" id="tpl-pick" onchange="if(this.value){location.href='{{ url_for('doctor.add_emr', patient_id=patient.id) }}?template='+this.value}">
+                        <option value="">{{ 'بدون قالب (نموذج حر)' if g.lang == 'ar' else 'No template (free-form)' }}</option>
+                        {% for t in templates %}
+                        <option value="{{ t.id }}" {{ 'selected' if template and template.id == t.id }}>{{ t.title }} ({{ t.template_type }})</option>
+                        {% endfor %}
+                    </select>
+                    {% if template %}
+                    <p style="font-size:0.75rem;color:var(--ihis-text-muted);margin-top:var(--sp-1)">
+                        <i class="fas fa-info-circle"></i> {{ template.description or '' }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="color:var(--ihis-text-muted);font-size:0.8125rem">{{ 'لا توجد قوالب مفعلة لهذه الفئة حالياً.' if g.lang == 'ar' else 'No active templates available for your role yet.' }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'سجل جديد لـ' if g.lang == 'ar' else 'New Record for' }} {{ patient.user.full_name if patient and patient.user else 'Patient' }}</div>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('doctor.add_emr', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if template %}
+                    <input type="hidden" name="template_id" value="{{ template.id }}">
+                    {% endif %}
 
-                    <div class="mb-3">
-                        <label for="diagnosis" class="form-label">Diagnosis</label>
-                        <input type="text" class="form-control" id="diagnosis" name="diagnosis" required placeholder="Enter diagnosis">
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="diagnosis">{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }} <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="diagnosis" name="diagnosis" required placeholder="{{ 'أدخل التشخيص' if g.lang == 'ar' else 'Enter diagnosis' }}">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="icd10" class="form-label">ICD-10 Code</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="icd10">{{ 'رمز ICD-10' if g.lang == 'ar' else 'ICD-10 Code' }}</label>
                         <input type="text" class="form-control" id="icd10" name="icd10" placeholder="e.g. J06.9">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="treatment_plan" class="form-label">Treatment Plan</label>
-                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" rows="4" placeholder="Describe the treatment plan..."></textarea>
+                    {% if template and sections %}
+                    <div style="border-top:1px dashed var(--ihis-border);margin:var(--sp-3) 0"></div>
+                    {% from 'doctor/_emr_template_fields.html' import render_template_fields %}
+                    {{ render_template_fields(sections) }}
+                    <div style="border-top:1px dashed var(--ihis-border);margin:var(--sp-3) 0"></div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="treatment_plan">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</label>
+                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" rows="4" placeholder="{{ 'صِف خطة العلاج...' if g.lang == 'ar' else 'Describe the treatment plan...' }}"></textarea>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="clinical_notes" class="form-label">Clinical Notes</label>
-                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" rows="4" placeholder="Additional clinical notes..."></textarea>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="clinical_notes">{{ 'ملاحظات سريرية' if g.lang == 'ar' else 'Clinical Notes' }}</label>
+                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" rows="4" placeholder="{{ 'ملاحظات سريرية إضافية...' if g.lang == 'ar' else 'Additional clinical notes...' }}"></textarea>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Record</button>
-                        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-4)">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'حفظ السجل' if g.lang == 'ar' else 'Save Record' }}</button>
+                        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">{{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</a>
                     </div>
                 </form>
             </div>

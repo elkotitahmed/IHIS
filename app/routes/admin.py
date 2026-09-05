@@ -60,7 +60,28 @@ def dashboard():
     )
 
 
-# ─── Staff List ─────────────────────────────────────────────────────
+# ─── AI Appointment Optimization ────────────────────────────────────
+@admin_bp.route('/ai/appointment-optimization')
+@login_required
+@roles_required('Admin', 'SuperAdmin')
+def appointment_optimization():
+    """Reconnaissance view wiring AIAppointmentOptimization so that capacity
+    recommendations are reflected per-doctor on-screen."""
+    from app.services.ai import AIAppointmentOptimization
+    engine = AIAppointmentOptimization()
+    doctors = Doctor.query.order_by(Doctor.user_id).all()
+    rows = []
+    for doc in doctors:
+        rec = engine.recommend_slots(doc.id)
+        rows.append({'doctor': doc, **rec})
+    return render_template(
+        'admin/appointment_optimization.html',
+        title='Appointment Optimization (AI)',
+        rows=rows,
+    )
+
+
+# ─── Code staff list remains below ──────────────────────────────────
 @admin_bp.route('/staff')
 @login_required
 @roles_required('Admin', 'SuperAdmin')
@@ -166,6 +187,26 @@ def departments():
         doctors=doctors,
         doctor_map=doctor_map,
     )
+
+
+# ─── AI ICD-10 Coding Assistant ─────────────────────────────────────
+@admin_bp.route('/ai/coding-assistant', methods=['GET', 'POST'])
+@login_required
+@roles_required('Admin', 'SuperAdmin')
+def coding_assistant():
+    """ICD-10 coding support wiring AIMedicalCodingAssistant to suggest codes
+    from free text (diagnosis/discussion notes)."""
+    from app.services.ai import AIMedicalCodingAssistant
+    result = None
+    text = ''
+    if request.method == 'POST':
+        text = (request.form.get('text') or '').strip()
+        if text:
+            result = AIMedicalCodingAssistant().suggest_code(text)
+            log_activity('CODING_ASSISTANT', resource='admin',
+                         details=f'text_len={len(text)} matches={len(result.get("matches", {}))}')
+    return render_template('admin/coding_assistant.html', title='ICD-10 Coding Assistant (AI)',
+                           text=text, result=result)
 
 
 # ─── Doctors ────────────────────────────────────────────────────────

@@ -1,55 +1,68 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-users me-2"></i>Patients</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'مرضى العلاج الطبيعي' if g.lang == 'ar' else 'Physiotherapy Patients' }}</h1>
+        <p class="page-subtitle">{{ 'بحث وعرض مرضى العلاج الطبيعي' if g.lang == 'ar' else 'Search and manage physiotherapy patients' }}</p>
+    </div>
+</div>
 
 <form class="row g-2 mb-3" method="get" action="{{ url_for('physiotherapy.patients') }}">
     <div class="col-md-6">
-        <input class="form-control" type="search" name="q" value="{{ search }}" placeholder="Search patients by name or email...">
+        <input class="form-control" type="search" name="q" value="{{ search }}" placeholder="{{ 'ابحث بالاسم أو البريد الإلكتروني...' if g.lang == 'ar' else 'Search patients by name or email...' }}">
     </div>
     <div class="col-auto">
-        <button class="btn btn-primary" type="submit"><i class="fas fa-search me-1"></i>Search</button>
+        <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-search"></i>{{ 'بحث' if g.lang == 'ar' else 'Search' }}</button>
     </div>
 </form>
 
-<div class="card card-shadow">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+<div class="card-premium">
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Gender</th>
-                        <th>Date of Birth</th>
-                        <th>Phone</th>
-                        <th>Actions</th>
+                        <th>{{ 'الاسم' if g.lang == 'ar' else 'Name' }}</th>
+                        <th>{{ 'البريد الإلكتروني' if g.lang == 'ar' else 'Email' }}</th>
+                        <th>{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}</th>
+                        <th>{{ 'تاريخ الميلاد' if g.lang == 'ar' else 'Date of Birth' }}</th>
+                        <th>{{ 'الهاتف' if g.lang == 'ar' else 'Phone' }}</th>
+                        <th>{{ 'إجراءات' if g.lang == 'ar' else 'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in patients %}
                     <tr>
-                        <td>{{ p.user.full_name }}</td>
-                        <td>{{ p.user.email }}</td>
+                        <td class="cell-primary">{{ p.user.full_name }}</td>
+                        <td class="cell-secondary">{{ p.user.email }}</td>
                         <td>{{ p.gender or '-' }}</td>
-                        <td>{{ p.date_of_birth.strftime('%d %b %Y') if p.date_of_birth else '-' }}</td>
-                        <td>{{ p.phone or '-' }}</td>
+                        <td class="cell-muted">{{ p.date_of_birth.strftime('%d %b %Y') if p.date_of_birth else '-' }}</td>
+                        <td class="cell-mono">{{ p.phone or '-' }}</td>
                         <td>
-                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('physiotherapy.assessment', patient_id=p.id) }}">
-                                <i class="fas fa-stethoscope me-1"></i>Assessment
-                            </a>
-                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('physiotherapy.plan', patient_id=p.id) }}">
-                                <i class="fas fa-clipboard-list me-1"></i>Plan
-                            </a>
-                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('physiotherapy.progress', patient_id=p.id) }}">
-                                <i class="fas fa-chart-line me-1"></i>Progress
-                            </a>
-                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('ai.rehab', patient_id=p.id) }}">
-                                <i class="fas fa-brain me-1"></i>AI Rehab
-                            </a>
+                            <div style="display:flex;gap:0.25rem;flex-wrap:wrap">
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.assessment', patient_id=p.id) }}">
+                                    <i class="fas fa-stethoscope"></i>{{ 'تقييم' if g.lang == 'ar' else 'Assessment' }}
+                                </a>
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.plan', patient_id=p.id) }}">
+                                    <i class="fas fa-clipboard-list"></i>{{ 'خطة' if g.lang == 'ar' else 'Plan' }}
+                                </a>
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('physiotherapy.progress', patient_id=p.id) }}">
+                                    <i class="fas fa-chart-line"></i>{{ 'تقدم' if g.lang == 'ar' else 'Progress' }}
+                                </a>
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.rehab', patient_id=p.id) }}">
+                                    <i class="fas fa-brain"></i>{{ 'تأهيل ذكي' if g.lang == 'ar' else 'AI Rehab' }}
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="text-center text-muted py-3">No patients found</td></tr>
+                    <tr><td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-users"></i></div>
+                            <div class="empty-title">{{ 'لا يوجد مرضى' if g.lang == 'ar' else 'No patients found' }}</div>
+                            <div class="empty-desc">{{ 'لم يتم العثور على مرضى مطابقين.' if g.lang == 'ar' else 'No matching patients were found.' }}</div>
+                        </div>
+                    </td></tr>
                     {% endfor %}
                 </tbody>
             </table>

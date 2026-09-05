@@ -124,6 +124,11 @@ def has_need_to_know(patient, user=None):
             db.or_(RadiologyReport.reported_by == uid,
                    RadiologyReport.signed_by == uid)).first()):
         return True
+    # Radiologists need to open the study before a report exists so they can
+    # review the images and create the report.
+    if user.has_role('Radiologist') and db.session.query(RadiologyOrder.id).filter_by(
+            patient_id=pid).first():
+        return True
 
     # Lab technician: created or validated a result for one of the patient's
     # lab orders.
@@ -191,11 +196,14 @@ def accessible_patient_ids(user=None):
         if thid:
             for Model in (TherapyAssessment, TherapyPlan, TherapySession):
                 pid_rows.update(pid for (pid,) in db.session.query(Model.patient_id).filter_by(therapist_id=thid).all())
-        pid_rows.update(pid for (pid,) in db.session.query(RadiologyReport.patient_id).join(
-            RadiologyOrder, RadiologyReport.order_id == RadiologyOrder.id).filter(
+        pid_rows.update(pid for (pid,) in db.session.query(RadiologyOrder.patient_id).join(
+            RadiologyReport, RadiologyReport.order_id == RadiologyOrder.id).filter(
             db.or_(RadiologyReport.reported_by == uid, RadiologyReport.signed_by == uid)).all())
-        pid_rows.update(pid for (pid,) in db.session.query(LabResult.patient_id).join(
-            LabOrder, LabResult.order_id == LabOrder.id).filter(
+        if user.has_role('Radiologist'):
+            pid_rows.update(pid for (pid,) in db.session.query(
+                RadiologyOrder.patient_id).distinct().all())
+        pid_rows.update(pid for (pid,) in db.session.query(LabOrder.patient_id).join(
+            LabResult, LabResult.order_id == LabOrder.id).filter(
             db.or_(LabResult.created_by == uid, LabResult.validated_by == uid)).all())
         if user.has_role('Pharmacist'):
             pid_rows.update(pid for (pid,) in db.session.query(Prescription.patient_id).distinct().all())

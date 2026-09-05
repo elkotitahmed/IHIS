@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-comments" style="color:var(--ihis-primary)"></i> {{ 'تواصل المريض بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Patient Communication' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }} — {{ 'ملخصات المرض بلغة بسيطة + تعليمات ما بعد العلاج' if g.lang == 'ar' else 'Patient-friendly condition summaries and post-treatment instructions' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.ai_dashboard') }}">
+            <i class="fas fa-arrow-left"></i> {{ 'لوحة AI' if g.lang == 'ar' else 'AI Dashboard' }}</a>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user" style="color:var(--ihis-primary)"></i> {{ patient.user.full_name }} <span class="tag-ihs">COMM</span></div>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">{{ 'الموضوع' if g.lang == 'ar' else 'Topic' }}</label>
+                    <select class="form-select" name="topic">
+                        <option value="full_summary">{{ 'ملف شامل' if g.lang == 'ar' else 'Full Health Summary' }}</option>
+                        <option value="medications">{{ 'شرح الأدوية' if g.lang == 'ar' else 'Medication Guide' }}</option>
+                        <option value="diagnosis_explanation">{{ 'شرح التشخيص' if g.lang == 'ar' else 'Diagnosis Explanation' }}</option>
+                        <option value="post_visit">{{ 'تعليمات ما بعد الزيارة' if g.lang == 'ar' else 'Post-Visit Instructions' }}</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">{{ 'اللغة' if g.lang == 'ar' else 'Language' }}</label>
+                    <select class="form-select" name="language">
+                        <option value="en">English</option>
+                        <option value="ar">العربية</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn-ihs btn-ihs-primary w-100" type="submit" {% if not available %}disabled{% endif %}>
+                        <i class="fas fa-brain"></i> {{ 'توليد التواصل' if g.lang == 'ar' else 'Generate' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not available %}
+<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i>
+    {{ 'يتطلب تواصل المريض بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI patient communication requires' }} <strong>GEMINI_API_KEY</strong>.
+</div>
+{% endif %}
+
+{% if communication and communication.get('available') %}
+<div class="card-premium mb-3" style="border-top:3px solid var(--ihis-success)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-check-circle" style="color:var(--ihis-success)"></i> {{ 'تواصل المريض جاهز' if g.lang == 'ar' else 'Patient Communication Ready' }} <span class="tag-ihs">AI</span></div>
+    </div>
+    <div class="card-body">
+        {% if communication.get('patient_friendly_title') %}
+        <h5 class="fw-bold mb-3">{{ communication.patient_friendly_title }}</h5>
+        {% endif %}
+
+        {% if communication.get('condition_summary') %}
+        <div class="mb-3 p-3 rounded" style="background:var(--ihis-surface)">
+            <h6 class="fw-bold"><i class="fas fa-heartbeat" style="color:var(--ihis-danger)"></i> {{ 'ملخص الحالة' if g.lang == 'ar' else 'Condition Summary' }}</h6>
+            <p class="mb-0 small">{{ communication.condition_summary }}</p>
+        </div>
+        {% endif %}
+
+        {% if communication.get('treatment_explanation') %}
+        <div class="mb-3 p-3 rounded" style="background:var(--ihis-surface)">
+            <h6 class="fw-bold"><i class="fas fa-pills" style="color:var(--ihis-primary)"></i> {{ 'شرح العلاج' if g.lang == 'ar' else 'Treatment Explanation' }}</h6>
+            <p class="mb-0 small">{{ communication.treatment_explanation }}</p>
+        </div>
+        {% endif %}
+
+        {% if communication.get('medication_guide') %}
+        <div class="mb-3">
+            <h6 class="fw-bold"><i class="fas fa-tablets" style="color:var(--ihis-success)"></i> {{ 'دليل الأدوية' if g.lang == 'ar' else 'Medication Guide' }}</h6>
+            {% for med in communication.medication_guide %}
+            <div class="p-2 mb-2 rounded small" style="background:var(--ihis-surface)">
+                <strong>{{ med.name }}</strong> — {{ med.purpose }}<br>
+                <span class="cell-muted">{{ med.instructions }}</span>
+                {% if med.get('side_effects_to_watch') %}
+                <br><span class="text-warning"><i class="fas fa-exclamation-triangle"></i> {{ med.side_effects_to_watch }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if communication.get('self_care_instructions') %}
+        <div class="mb-3 p-3 rounded" style="background:var(--ihis-surface)">
+            <h6 class="fw-bold"><i class="fas fa-hand-holding-heart" style="color:#10b981"></i> {{ 'تعليمات العناية الذاتية' if g.lang == 'ar' else 'Self-Care Instructions' }}</h6>
+            <ul class="small mb-0">{% for item in communication.self_care_instructions %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+
+        {% if communication.get('warning_signs') %}
+        <div class="alert alert-danger small">
+            <h6 class="fw-bold"><i class="fas fa-exclamation-triangle"></i> {{ 'علامات تحذيرية — اطلب العناية الفورية' if g.lang == 'ar' else 'Warning Signs — Seek Immediate Care' }}</h6>
+            <ul class="mb-0">{% for item in communication.warning_signs %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+
+        <hr>
+        <p class="cell-muted small mb-0"><i class="fas fa-info-circle"></i> {{ communication.disclaimer|default('This information does not replace professional medical advice.') }}</p>
+    </div>
+</div>
+{% elif communication and communication.get('error') %}
+<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ communication.error }}</div>
+{% endif %}
+{% endblock %}

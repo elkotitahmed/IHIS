@@ -1,83 +1,92 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-pills me-2 text-primary"></i>AI Prescription Check</h4>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pharmacy.prescriptions') }}">
-        <i class="fas fa-arrow-left me-1"></i>Back</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'فحص الوصفات الطبية بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Prescription Check' }}</h1>
+        <p class="page-subtitle">{{ 'وصفة رقم #' if g.lang == 'ar' else 'Prescription #' }}{{ rx.id }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescriptions') }}">
+            <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
 </div>
+
+{% include 'clinical/_patient_header.html' %}
 
 <div class="row g-4">
     <div class="col-lg-5">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-white fw-bold">Prescription #{{ rx.id }}</div>
+        <div class="card-premium h-100">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-success)"></i> {{ 'وصفة رقم #' if g.lang == 'ar' else 'Prescription #' }}{{ rx.id }}</div>
+            </div>
             <div class="card-body">
-                <p><strong>Patient:</strong> {{ rx.patient.user.full_name if rx.patient else '-' }}</p>
-                <p><strong>Status:</strong>
+                <p class="cell-secondary"><strong>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}:</strong> {{ rx.patient.user.full_name if rx.patient else '-' }}</p>
+                <p class="cell-secondary"><strong>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}:</strong>
                     {% if rx.status == 'Active' %}
-                    <span class="badge bg-success">{{ rx.status }}</span>
+                    <span class="status-badge s-completed">{{ rx.status }}</span>
                     {% else %}
-                    <span class="badge bg-secondary">{{ rx.status }}</span>
+                    <span class="status-badge s-draft">{{ rx.status }}</span>
                     {% endif %}</p>
                 {% if rx.items %}
-                <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th></tr></thead>
-                    <tbody>
-                        {% for i in rx.items %}
-                        <tr>
-                            <td>{{ i.medication.generic_name if i.medication else '-' }}</td>
-                            <td>{{ i.dosage or '-' }}</td>
-                            <td>{{ i.frequency or '-' }}</td>
-                            <td>{{ i.duration or '-' }}</td>
-                            <td>{{ i.quantity or 1 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead><tr><th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th><th>{{ 'الجرعة' if g.lang == 'ar' else 'Dosage' }}</th><th>{{ 'التكرار' if g.lang == 'ar' else 'Frequency' }}</th><th>{{ 'المدة' if g.lang == 'ar' else 'Duration' }}</th><th>{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}</th></tr></thead>
+                        <tbody>
+                            {% for i in rx.items %}
+                            <tr>
+                                <td class="cell-primary">{{ i.medication.generic_name if i.medication else '-' }}</td>
+                                <td>{{ i.dosage or '-' }}</td>
+                                <td>{{ i.frequency or '-' }}</td>
+                                <td>{{ i.duration or '-' }}</td>
+                                <td><span class="t-num">{{ i.quantity or 1 }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                <p class="text-muted mb-0">No medication lines.</p>
+                <p class="cell-muted mb-0">{{ 'لا توجد أسطر أدوية.' if g.lang == 'ar' else 'No medication lines.' }}</p>
                 {% endif %}
             </div>
         </div>
     </div>
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <span class="fw-bold">Compliance Check</span>
+        <div class="card-premium" style="border-top:3px solid {{ 'var(--ihis-success)' if check.ok else 'var(--ihis-warning)' }}">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clipboard-check" style="color:var(--ihis-primary)"></i> {{ 'فحص الاكتمال' if g.lang == 'ar' else 'Compliance Check' }} <span class="tag-ihs">AI</span></div>
                 {% if check.ok %}
-                <span class="badge bg-success float-end">No warnings</span>
+                <span class="status-badge s-completed">{{ 'لا تحذيرات' if g.lang == 'ar' else 'No warnings' }}</span>
                 {% else %}
-                <span class="badge bg-warning text-dark float-end">Review required</span>
+                <span class="status-badge s-pending">{{ 'يلزم مراجعة' if g.lang == 'ar' else 'Review required' }}</span>
                 {% endif %}
             </div>
             <div class="card-body">
                 {% for issue in check.issues %}
-                <div class="alert
-                    {% if issue.level == 'warning' %}alert-warning
-                    {% elif issue.level == 'info' %}alert-info
-                    {% else %}alert-secondary{% endif %} py-2 mb-2">
+                <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;margin-bottom:0.5rem;border-radius:var(--radius-sm);background:{{ 'var(--ihis-warning-light)' if issue.level == 'warning' else ('var(--ihis-info-light)' if issue.level == 'info' else 'var(--ihis-surface-inset)') }}">
+                    <i class="fas {{ 'fa-exclamation-triangle' if issue.level=='warning' else 'fa-info-circle' }}" style="color:{{ 'var(--ihis-warning)' if issue.level=='warning' else 'var(--ihis-info)' }}"></i>
                     {{ issue.item }}
                 </div>
                 {% else %}
-                <p class="text-muted mb-0">No completeness issues detected.</p>
+                <p class="cell-muted mb-0">{{ 'لا توجد مشاكل اكتمال مكتشفة.' if g.lang == 'ar' else 'No completeness issues detected.' }}</p>
                 {% endfor %}
                 <hr>
-                <p class="text-muted small mb-0">{{ check.disclaimer }}</p>
+                <p class="cell-muted small mb-0">{{ check.disclaimer }}</p>
             </div>
         </div>
-        <div class="card card-shadow mt-3">
-            <div class="card-header bg-white fw-bold">
-                Drug Interaction Engine
-                <span class="badge bg-secondary float-end">{{ interactions.count }} found</span>
+        <div class="card-premium mt-3" style="border-top:3px solid var(--ihis-primary)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-exchange-alt" style="color:var(--ihis-warning)"></i> {{ 'محرك تفاعلات الأدوية' if g.lang == 'ar' else 'Drug Interaction Engine' }} <span class="tag-ihs">AI</span></div>
+                <span class="status-badge s-pending"><span class="t-num">{{ interactions.count }}</span> {{ 'تم العثور' if g.lang == 'ar' else 'found' }}</span>
             </div>
             <div class="card-body">
                 {% for i in interactions.interactions %}
-                <div class="alert alert-danger py-2 mb-2">
+                <div style="padding:0.5rem 0.75rem;margin-bottom:0.5rem;border-radius:var(--radius-sm);background:var(--ihis-danger-light)">
                     <strong>{{ i.a }}</strong> + <strong>{{ i.b }}</strong>
-                    <span class="badge bg-danger">{{ i.severity }}</span><br>
+                    <span class="status-badge s-cancelled">{{ i.severity }}</span><br>
                     <small>{{ i.description }}</small>
                 </div>
                 {% else %}
-                <p class="text-muted mb-0">No interactions detected for this medication.</p>
+                <p class="cell-muted mb-0">{{ 'لا توجد تفاعلات مكتشفة لهذا الدواء.' if g.lang == 'ar' else 'No interactions detected for this medication.' }}</p>
                 {% endfor %}
             </div>
         </div>

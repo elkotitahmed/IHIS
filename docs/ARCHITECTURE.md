@@ -110,6 +110,51 @@ Rule-based clinical decision-support modules (no external model dependency):
 Exposed via the `/ai` blueprint; each portal whose data is consumed by AI
 links to the relevant AI screen.
 
+## Clinical Workbench (`app/routes/clinical.py`)
+
+Native reimplementation of high-value reference EHR features (harvested from the
+OpenMRS / Bahmni / OpenEMR / fhir-ui benchmark — see
+`docs/OPEN_SOURCE_BENCHMARK.md` and `docs/FEATURE_GAP_MATRIX.md`). No reference
+code was copied; patterns only.
+
+- **Order sets** (`/clinical/order-sets*`) — reusable bundles of lab / imaging /
+  medication / referral items. New sets are created **inactive** and must be
+  explicitly activated before they can be applied to a patient (safety default:
+  an unreviewed set is never applicable). Applying materialises real
+  `LabOrder`, `RadiologyOrder`, `Prescription` and `Referral` records plus
+  `Task` rows, then redirects to the patient 360 page. Access is guarded by
+  `patient_access_required` (need-to-know).
+- **Clinical templates** (`/clinical/templates*`) — SOAP / CONSULT / DISCHARGE /
+  PROCEDURE / NURSING note structures stored as JSON sections
+  (`ClinicianTemplate.sections`), scoped by specialty, so faster charting never
+  bypasses documentation quality.
+- **Clinical Inbox** (`/clinical/inbox`) — one place for unreviewed lab results,
+  radiology reports, open alerts, referrals, interventions, drafts and reminders.
+  Results are acknowledged via `ResultAcknowledgement` (idempotent upsert keyed
+  on `result_type` + `result_id` + user); ack kind is `CRITICAL` for critical
+  labs, else `REVIEW`.
+- **Clinical Reminders** (`/clinical/reminders*)` — recall engine
+  (`app/services/reminders.py`) that materialises due/overdue reminders from real
+  records (follow-ups, immunizations due, monitoring/review items). Idempotent
+  dedupe per patient/type/source; ack via `reminder_done`.
+- **Verified Clinical Summary** (`/clinical/summary/<patient_id>`) — consolidated
+  allergies, problems, active prescriptions, latest vitals, lab results,
+  radiology, admissions, immunizations and open alerts, with need-to-know gating.
+- **Smart patient header / safety strip** — the reusable
+  `_patient_header.html` partial (banner with name/MRN/gender/DOB/blood type,
+  active admission, latest vitals, active-medication chips) backed by the
+  `PatientSafetyContext` service (`app/services/patient_safety.py`), which
+  returns active allergies, open problems, open alerts and active medications
+  (deduped, excluding cancelled items). It is included at the top of every
+  single-patient clinical page across doctor, AI, pharmacy, nursing and
+  dentistry blueprints so clinicians see allergy / problem / alert chips before
+  acting (harvest: OpenMRS chart banner / FHIR PatientBanner, native). The
+  Patient 360 page additionally renders the shared `_patient_safety_strip.html`.
+
+New permissions: `ORDER_SET_VIEW/CREATE/EDIT`, `TEMPLATE_VIEW/CREATE/EDIT`,
+`INBOX_VIEW`, `RESULT_ACK`, `REMINDER_VIEW`, `REMINDER_ACK`,
+`CLINICAL_SUMMARY_VIEW` (see `app/permissions.py`).
+
 ## Security
 
 - Global CSRF protection (Flask-WTF `CSRFProtect`); the JSON REST API is `csrf.exempt`.

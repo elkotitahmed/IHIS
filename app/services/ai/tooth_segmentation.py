@@ -1,10 +1,21 @@
 """AI Tooth Segmentation service — U-Net dental segmentation.
 
-Ports the standalone "Tooth Segmentation" project (U-Net, ~7.8M params, trained
-on TUFTS panoramic radiographs) into iHIS. The heavy TensorFlow model is
-lazy-loaded once. Preprocessing matches training exactly (grayscale -> CLAHE ->
-256x256 -> normalize). Falls back gracefully when TensorFlow or the model file
-is unavailable.
+Ports the standalone "Tooth Segmentation" project into iHIS. Two checkpoints are
+supported; the module prefers the updated ``best_unet.keras`` when present and
+otherwise falls back to the original ``dental_unet_model.keras``:
+
+* ``best_unet.keras`` — 256x256 **RGB** input normalized by /255, single-channel
+  binary mask output, threshold 0.5.
+    Reference test performance: Accuracy = 96.16% | Dice = 84.76% |
+    IoU = 73.56% | Loss = 0.1155
+* ``dental_unet_model.keras`` — 256x256 **grayscale** input with CLAHE
+  contrast enhancement, single-channel binary mask output.
+
+The input pipeline (channels + normalization) is selected automatically from
+the loaded model's declared input shape, so both checkpoints feed correctly.
+
+The heavy TensorFlow model is lazy-loaded once (thread-safe). Falls back
+gracefully when TensorFlow or no model file is available.
 """
 import io
 import os
@@ -15,34 +26,49 @@ import werkzeug
 
 from flask import current_app
 
-MODEL_NAME = 'dental_unet_model.keras'
+MODEL_NAMES = ('best_unet.keras', 'dental_unet_model.keras')
 IMG_SIZE = (256, 256)
 
 _lock = threading.Lock()
 _loaded = False
 _model = None
+_channels = 1  # input channels of the loaded model (1=grayscale, 3=RGB)
 
 
 def tooth_model_available():
-    path = os.path.join(current_app.static_folder, 'ai_models', MODEL_NAME)
-    return os.path.exists(path)
+    """True when at least one supported U-Net checkpoint is installed."""
+    base = os.path.join(current_app.static_folder, 'ai_models')
+    return any(os.path.exists(os.path.join(base, n)) for n in MODEL_NAMES)
+
+
+def _model_path():
+    """Return the preferred installed model path, or None if none present."""
+    base = os.path.join(current_app.static_folder, 'ai_models')
+    for name in MODEL_NAMES:
+        p = os.path.join(base, name)
+        if os.path.exists(p):
+            return p
+    return None
 
 
 def _upload_dir():
-    return os.path.join(current_app.static_folder, 'ai_models', 'uploads')
+    # Private directory for PAN/input and generated mask images. Never under
+    # static/, so patient panoramic radiographs are not publicly served.
+    base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
+    return os.path.join(base, 'ai', 'tooth', 'uploads')
 
 
 def _get_model():
     """Lazy-load the U-Net Keras model once (thread-safe)."""
-    global _loaded, _model
+    global _loaded, _model, _channels
     if _loaded:
         return _model
     with _lock:
         if _loaded:
             return _model
-        path = os.path.join(current_app.static_folder, 'ai_models', MODEL_NAME)
-        if not os.path.exists(path):
-            raise FileNotFoundError(f'U-Net model not found: {path}')
+        path = _model_path()
+        if not path:
+            raise FileNotFoundError('U-Net model not found')
         try:
             import tensorflow as tf
             from tensorflow.keras import backend as K
@@ -63,13 +89,24 @@ def _get_model():
             bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
             return tf.reduce_mean(bce) + dice_loss(y_true, y_pred)
 
+        def iou(y_true, y_pred, smooth=1e-6):
+            """Intersection-over-Union metric referenced by the checkpoint."""
+            y_true_f = K.flatten(y_true)
+            y_pred_f = K.flatten(y_pred)
+            intersection = K.sum(y_true_f * y_pred_f)
+            union = K.sum(y_true_f) + K.sum(y_pred_f) - intersection
+            return (intersection + smooth) / (union + smooth)
+
         try:
             _model = tf.keras.models.load_model(
                 path,
                 custom_objects={'dice_loss': dice_loss, 'dice_coef': dice_coef,
-                                'bce_dice_loss': bce_dice_loss})
+                                'bce_dice_loss': bce_dice_loss,
+                                'iou': iou})
         except Exception as e:  # pragma: no cover - env-specific
             raise RuntimeError(f'Failed to load U-Net model: {e}')
+        shape = getattr(_model, 'input_shape', None) or _model.inputs[0].shape
+        _channels = int(shape[-1]) if shape and len(shape) >= 4 else 1
         _loaded = True
         return _model
 
@@ -82,17 +119,30 @@ def safe_filename(filename):
 
 
 def preprocess(image_bytes):
-    """Grayscale -> CLAHE -> resize 256x256 -> normalize -> (1,256,256,1)."""
-    import cv2
+    """Preprocess the uploaded X-ray to match the loaded model's input.
+
+    Uses the channel count detected from the loaded model:
+
+    * 3 channels (``best_unet.keras``) -> RGB, no CLAHE, normalize /255 ->
+      (1, 256, 256, 3).
+    * 1 channel (``dental_unet_model.keras``) -> grayscale + CLAHE, normalize
+      /255 -> (1, 256, 256, 1).
+    """
     from PIL import Image
+    if _channels >= 3:
+        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        image = image.resize(IMG_SIZE)
+        arr = np.asarray(image, dtype=np.float32) / 255.0
+        return np.expand_dims(arr, axis=0)
+
+    import cv2
     image = Image.open(io.BytesIO(image_bytes)).convert('L')
-    image = np.array(image)
+    arr = np.array(image)
     clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-    image = clahe.apply(image)
-    image = cv2.resize(image, IMG_SIZE) / 255.0
-    image = np.expand_dims(image, axis=0)
-    image = np.expand_dims(image, axis=-1)
-    return image
+    arr = clahe.apply(arr)
+    arr = cv2.resize(arr, IMG_SIZE) / 255.0
+    arr = np.expand_dims(arr, axis=0)
+    return np.expand_dims(arr, axis=-1)
 
 
 def postprocess(mask):
@@ -147,9 +197,12 @@ def segment_tooth(upload_file):
 
     coverage = int(np.mean(mask > 0) * 100)
 
-    static_dir = 'ai_models'
+    # These map to the protected AI media endpoint (see routes/ai.py
+    # `ai_media`) which requires an authenticated session and the feature's
+    # roles. Files are never placed under static/, so no public URL exists.
     return {
-        'orig_url': '%s/uploads/%s' % (static_dir, stored_name),
-        'mask_url': '%s/uploads/%s' % (static_dir, mask_name),
+        'feature': 'tooth',
+        'orig_key': stored_name,
+        'mask_key': mask_name,
         'coverage_percent': coverage,
     }

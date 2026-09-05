@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-ruler" style="color:var(--ihis-primary)"></i> {{ 'عتبات المرجعية للمؤسسة' if g.lang == 'ar' else 'Institutional Reference Levels' }}</h1>
+        <p class="page-subtitle">{{ 'عتبات مرجعية قابلة للتكوين — ليست حدوداً عالمية' if g.lang == 'ar' else 'Configurable reference thresholds — NOT universal patient dose limits' }}</p>
+    </div>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    {{ 'هذه العتبات مرجعية للمؤسسة فقط. لا يعني تجاوزها أن التصوير غير آمن أو محظور. القرار النهائي يبقى للطبيب المسؤول.' if g.lang == 'ar' else 'These thresholds are institutional reference levels only. Exceeding a threshold does NOT mean imaging is unsafe or prohibited. The final decision remains with the responsible clinician.' }}
+</div>
+
+<!-- Add New Level Form -->
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header"><div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-primary)"></i> {{ 'إضافة مستوى مرجعي' if g.lang == 'ar' else 'Add Reference Level' }}</div></div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-2">
+                <div class="col-md-3"><input class="form-control form-control-sm" name="name" required placeholder="{{ 'الاسم' if g.lang == 'ar' else 'Name' }}"></div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="modality">
+                        <option value="CT">CT</option>
+                        <option value="X-ray">X-ray</option>
+                        <option value="Fluoroscopy">Fluoroscopy</option>
+                        <option value="Mammography">Mammography</option>
+                        <option value="Nuclear Medicine">Nuclear Medicine</option>
+                        <option value="PET-CT">PET-CT</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><input class="form-control form-control-sm" type="number" step="0.1" name="effective_dose_threshold" placeholder="mSv"></div>
+                <div class="col-md-2"><input class="form-control form-control-sm" type="number" step="1" name="dlp_threshold" placeholder="DLP mGy·cm"></div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="age_group">
+                        <option value="All">{{ 'الكل' if g.lang == 'ar' else 'All' }}</option>
+                        <option value="Pediatric">{{ 'طفل' if g.lang == 'ar' else 'Pediatric' }}</option>
+                        <option value="Adult">{{ 'بالغ' if g.lang == 'ar' else 'Adult' }}</option>
+                    </select>
+                </div>
+                <div class="col-auto"><button class="btn-ihs btn-ihs-primary btn-ihs-sm" type="submit"><i class="fas fa-save"></i></button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Existing Levels -->
+{% if levels %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr>
+            <th>{{ 'الاسم' if g.lang == 'ar' else 'Name' }}</th>
+            <th>{{ 'النوع' if g.lang == 'ar' else 'Modality' }}</th>
+            <th>{{ 'الجرعة الفعالة' if g.lang == 'ar' else 'Eff. Dose (mSv)' }}</th>
+            <th>DLP</th>
+            <th>{{ 'الفئة' if g.lang == 'ar' else 'Age Group' }}</th>
+            <th>{{ 'الحمل' if g.lang == 'ar' else 'Pregnancy' }}</th>
+            <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+        </tr></thead>
+        <tbody>
+        {% for l in levels %}
+        <tr>
+            <td><strong>{{ l.name }}</strong></td>
+            <td><span class="badge bg-primary">{{ l.modality }}</span></td>
+            <td>{{ l.effective_dose_threshold_msv or '—' }}</td>
+            <td>{{ l.dlp_threshold_mgycm or '—' }}</td>
+            <td>{{ l.age_group or 'All' }}</td>
+            <td>{% if l.is_pregnancy_specific %}<span class="badge bg-info">Yes</span>{% else %}—{% endif %}</td>
+            <td><span class="badge {% if l.is_active %}bg-success{% else %}bg-secondary{% endif %}">{{ 'نشط' if g.lang == 'ar' else 'Active' if l.is_active else 'معطل' if g.lang == 'ar' else 'Disabled' }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card-premium">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-ruler fa-3x mb-3" style="color:var(--ihis-info)"></i>
+        <h5>{{ 'لا توجد عتبات مرجعية' if g.lang == 'ar' else 'No Reference Levels Configured' }}</h5>
+        <p class="cell-muted">{{ 'لا توجد عتبات مرجعية مؤسسية مكونة. أضف مستوى مرجعياً أعلاه.' if g.lang == 'ar' else 'No institutional reference thresholds are configured. Add a reference level above.' }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

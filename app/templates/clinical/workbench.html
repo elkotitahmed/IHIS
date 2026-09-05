@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-stethoscope" style="color:var(--ihis-primary)"></i>
+            {{ 'منصة سريرية' if g.lang == 'ar' else 'Clinical Workbench' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'كل مريض في منظمة الرعاية، مع إنذاراته والمتابعات القادمة.' if g.lang == 'ar' else 'Every patient in your care, with their alerts and upcoming follow-ups.' }}
+        </p>
+    </div>
+</div>
+
+{% if open_alert_count > 0 %}
+<div class="alert alert-warning" style="border-radius:var(--radius-md)">
+    <i class="fas fa-triangle-exclamation me-2"></i>
+    <strong>{{ open_alert_count }}</strong>
+    {{ 'إنذار مفتوح عبر مرضاك.' if g.lang == 'ar' else 'open alerts across your patients.' }}
+    <a href="{{ url_for('clinical.alerts_all') }}" style="float:right;font-weight:600">
+        {{ 'عرض الكل' if g.lang == 'ar' else 'View all' }} <i class="fas fa-arrow-right"></i>
+    </a>
+</div>
+{% endif %}
+
+<!-- Upcoming follow-ups -->
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-calendar-check" style="color:var(--ihis-primary)"></i>
+            {{ 'متابعات قادمة' if g.lang == 'ar' else 'Upcoming Follow-ups' }}</div>
+    </div>
+    <div class="card-body flush">
+        {% if upcoming %}
+        <div class="list-compact">
+            {% for f in upcoming %}
+            <div class="list-item">
+                <i class="fas fa-calendar-day" style="color:var(--ihis-primary)"></i>
+                <div style="flex:1">
+                    <div style="font-size:0.8125rem;font-weight:500">
+                        {{ f.patient.user.full_name if f.patient and f.patient.user else 'Patient' }}
+                        <span class="text-muted" style="font-weight:400">({{ f.patient.mrn if f.patient else '' }})</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ f.reason or '' }}</div>
+                </div>
+                <span class="status-badge s-pending" style="font-size:0.6875rem">{{ f.scheduled_for.strftime('%d %b %Y %H:%M') }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:1.5rem;color:var(--ihis-text-muted)">
+            {{ 'لا توجد متابعات مجدولة.' if g.lang == 'ar' else 'No follow-ups scheduled.' }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Patient cards -->
+<div class="row g-4">
+    {% for row in rows %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card-premium h-100">
+            <div style="padding:var(--sp-3) var(--sp-4)">
+                <div style="display:flex;align-items:center;gap:var(--sp-3)">
+                    <div class="patient-avatar-lg">{{ row.patient.user.full_name[0]|upper if row.patient.user else 'P' }}</div>
+                    <div style="flex:1;min-width:0">
+                        <a href="{{ url_for('clinical.patient_360', patient_id=row.patient.id) }}"
+                           style="font-weight:600;color:var(--ihis-primary);text-decoration:none">
+                            {{ row.patient.user.full_name if row.patient.user else 'Patient' }}
+                        </a>
+                        <div class="text-muted" style="font-size:0.75rem">MRN {{ row.patient.mrn or '-' }}
+                            {% if row.patient.allergies %} &middot; <span class="status-badge s-cancelled" style="font-size:0.625rem">{{ 'حساسية' if g.lang == 'ar' else 'Allergy' }}</span>{% endif %}
+                        </div>
+                    </div>
+                    {% if row.top_alert %}
+                    <span class="status-badge s-{{ 'cancelled' if row.top_alert.severity in ('HIGH','CRITICAL') else 'pending' }}" style="font-size:0.6875rem">
+                        {{ row.top_alert.severity }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-3);flex-wrap:wrap">
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=row.patient.id) }}">
+                        <i class="fas fa-timeline"></i> {{ 'السجل' if g.lang == 'ar' else 'Record' }}
+                    </a>
+                    {% if current_user.has_permission('ALERT_VIEW') %}
+                    <span class="btn-ihs btn-ihs-sm btn-ihs-secondary" style="cursor:default">
+                        <i class="fas fa-bell"></i> {{ row.open_alerts }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div style="text-align:center;padding:3rem;color:var(--ihis-text-muted)">
+            <i class="fas fa-user-injured" style="font-size:2.5rem;opacity:0.3;margin-bottom:1rem;display:block"></i>
+            {{ 'لا يوجد مرضى في نطاق وصولك بعد.' if g.lang == 'ar' else 'No patients in your access scope yet.' }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

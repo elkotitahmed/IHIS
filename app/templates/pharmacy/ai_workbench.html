@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-user-doctor" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ 'منصة الصيدلاني السريري' if g.lang == 'ar' else 'Clinical Pharmacist AI Workbench' }}</h1>
+        <p class="page-subtitle">{{ 'مراجعة العلاج الدوائي بمساعدة الذكاء الاصطناعي (Gemini)' if g.lang == 'ar' else 'AI-assisted medication therapy review (Gemini)' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.drug_check') }}"><i class="fas fa-dna"></i> {{ 'فحص التفاعلات' if g.lang == 'ar' else 'Drug Interaction Check' }}</a>
+    </div>
+</div>
+
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-icon primary"><i class="fas fa-prescription"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'روشتات قيد الصرف' if g.lang == 'ar' else 'Pending Prescriptions' }}</div>
+            <div class="kpi-value">{{ total_active }}</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon info"><i class="fas fa-user-injured"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'مرضى للفحص' if g.lang == 'ar' else 'Patients to Review' }}</div>
+            <div class="kpi-value">{{ cases|length }}</div>
+        </div>
+    </div>
+    {% for case in cases[:1] %}
+    <div class="kpi-card">
+        <div class="kpi-icon success"><i class="fas fa-pills"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'آخر مريض مواد نشطة' if g.lang == 'ar' else 'Latest Active Items' }}</div>
+            <div class="kpi-value">{{ case.active_items }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i> {{ 'مرضى بعلاج قيد المراجعة' if g.lang == 'ar' else 'Patients with Active Therapy' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr>
+                    <th>{{ t('patient') }}</th>
+                    <th>MRN</th>
+                    <th>{{ 'الأدوية النشطة' if g.lang == 'ar' else 'Active Items' }}</th>
+                    <th>{{ 'روشتات قيد الصرف' if g.lang == 'ar' else 'Pending Rx' }}</th>
+                    <th>{{ 'آخر وصفة' if g.lang == 'ar' else 'Latest Rx' }}</th>
+                    <th></th>
+                </tr></thead>
+                <tbody>
+                {% for case in cases %}
+                    <tr>
+                        <td class="cell-primary">{{ case.patient.user.full_name }}</td>
+                        <td class="cell-mono">{{ case.patient.mrn or '-' }}</td>
+                        <td><span class="status-badge s-active">{{ case.active_items }}</span></td>
+                        <td class="cell-secondary">{{ case.pending_prescriptions }}</td>
+                        <td class="cell-secondary">#{{ case.latest_rx.id }} ({{ case.latest_rx.prescribed_date.strftime('%d %b %Y') if case.latest_rx.prescribed_date else '-' }})</td>
+                        <td>
+                            <div style="display:flex;gap:0.25rem;flex-wrap:wrap">
+                                <a href="{{ url_for('ai.medication_review', patient_id=case.patient.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+                                    <i class="fas fa-brain"></i> {{ 'مراجعة AI' if g.lang == 'ar' else 'AI Review' }}
+                                </a>
+                                <a href="{{ url_for('ai.prescription', prescription_id=case.latest_rx.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                                    <i class="fas fa-shield-halved"></i> {{ 'فحص الوصفة' if g.lang == 'ar' else 'Rx Check' }}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-prescription-bottle-medical"></i></div>
+                                <div class="empty-title">{{ 'لا توجد وصفات قيد المراجعة' if g.lang == 'ar' else 'No prescriptions awaiting review' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

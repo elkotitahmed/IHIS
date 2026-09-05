@@ -4,11 +4,14 @@ import os
 from app import db
 from app.models import RadiologyOrder, RadiologyReport, ImagingType, Patient, User
 from app.routes.decorators import roles_required, permissions_required, log_activity, log_change, save_upload
-from app.access import require_patient_access
+from app.access import require_patient_access, accessible_patient_ids
 from app.utils import utcnow, is_clinical_locked
 from app.services.status import assert_transition, StatusTransitionError
 from app.services.notifications import notify_doctor, notify_patient, notify_role
 from app.services import tasks as task_svc
+from app.services.timeline import record_event
+from app.services import alerts as alert_svc
+from app.services.radiology.safety_service import RadiologySafetyService
 
 radiology_bp = Blueprint('radiology', __name__)
 
@@ -71,6 +74,8 @@ def new_order():
         if not Patient.query.get(patient_id) or not ImagingType.query.get(imaging_type_id):
             flash('Please select a valid patient and imaging type.', 'danger')
             return redirect(url_for('radiology.new_order'))
+        patient = db.session.get(Patient, patient_id)
+        require_patient_access(patient)
         order = RadiologyOrder(
             patient_id=patient_id,
             doctor_id=current_user.doctor_profile.id if current_user.doctor_profile else None,
@@ -83,6 +88,19 @@ def new_order():
         log_activity('CREATE_RADIOLOGY_ORDER', 'radiology_order', order.id,
                      f'patient={patient_id}')
         db.session.commit()
+        # --- Safety evaluation for the imaging type ---
+        safety_svc = RadiologySafetyService()
+        imaging_name = (order.imaging_type.name if order.imaging_type else '').lower()
+        safety_warnings = []
+        if 'ct' in imaging_name or 'computed tomography' in imaging_name:
+            ct_eval = safety_svc.evaluate_ct_safety(patient_id)
+            safety_warnings = ct_eval.get('warnings', [])
+        elif 'mri' in imaging_name or 'magnetic' in imaging_name:
+            mri_eval = safety_svc.evaluate_mri_safety(patient_id)
+            safety_warnings = mri_eval.get('warnings', [])
+        for sw in safety_warnings:
+            if sw.get('severity') in ('Critical', 'Important'):
+                flash(f"Safety: {sw.get('title', '')} — {sw.get('message', '')}", 'warning')
         task_svc.create_task(
             title=f'Perform study #{order.id}: {order.imaging_type.name if order.imaging_type else ""}',
             description='Schedule, capture, and prepare the study for reporting.',
@@ -95,11 +113,18 @@ def new_order():
                     f'New radiology order #{order.id}',
                     f'A new imaging order ({order.imaging_type.name if order.imaging_type else ""}) has been created for patient #{order.patient_id}.',
                     entity_type='radiology_order', entity_id=order.id)
+        record_event(patient_id, 'RADIOLOGY',
+                     f'Imaging ordered: {order.imaging_type.name if order.imaging_type else "Study"}',
+                     f'Priority {order.priority}',
+                     source_type='radiology_order', source_id=order.id,
+                     department='Radiology')
         db.session.commit()
         flash('Radiology order created; study workflow started.', 'success')
         return redirect(url_for('radiology.orders'))
 
-    patients = Patient.query.all()
+    patients = Patient.query.filter(
+        Patient.id.in_(accessible_patient_ids(current_user) or [-1])
+    ).order_by(Patient.id).all()
     imaging = ImagingType.query.all()
     return render_template('radiology/new_order.html', title='New Radiology Order',
                            patients=patients, imaging=imaging)
@@ -274,6 +299,31 @@ def enter_report(order_id):
         if order.status not in ('Reported', 'Signed', 'Finalized'):
             order.status = 'Reported'
         log_activity('ENTER_RADIOLOGY_REPORT', 'radiology_order', order.id)
+        record_event(order.patient_id, 'RADIOLOGY',
+                     f'Report entered: {order.imaging_type.name if order.imaging_type else "Study"}',
+                     f'Impression: {impression or ""}',
+                     source_type='radiology_order', source_id=order.id,
+                     department='Radiology')
+        ai_result = None
+        try:
+            from app.services.radiology_critical_ai import RadiologyCriticalAI
+            ai_result = RadiologyCriticalAI().analyze(
+                findings=findings,
+                impression=impression,
+                study_type=order.imaging_type.name if order.imaging_type else '')
+        except (FileNotFoundError, ImportError, OSError, ValueError) as exc:
+            current_app.logger.warning('Radiology critical AI unavailable: %s', exc)
+
+        if ai_result and ai_result.get('critical_finding'):
+            priority = ai_result.get('priority', 'URGENT')
+            severity = 'CRITICAL' if priority == 'CRITICAL' else 'HIGH'
+            alert_svc.ensure_open_alert(
+                order.patient_id, 'CRITICAL_RADIOLOGY', severity=severity,
+                title=f'{priority.title()} finding on {order.imaging_type.name if order.imaging_type else "study"}',
+                message=(f'Order #{order.id} — {ai_result.get("finding_type", "critical finding")}. '
+                        f'AI confidence: {ai_result.get("confidence", 0) * 100:.1f}%. '
+                        f'{ai_result.get("message", "")}'),
+                source_type='radiology_order', source_id=order.id)
         db.session.commit()
         return redirect(url_for('radiology.orders'))
 
@@ -334,3 +384,312 @@ def cancel_order(order_id):
     db.session.commit()
     flash('Radiology order cancelled.', 'success')
     return redirect(url_for('radiology.orders'))
+
+
+# ---------------------------------------------------------------------------
+# RADIATION DOSE & IMAGING SAFETY ROUTES
+# ---------------------------------------------------------------------------
+
+@radiology_bp.route('/dose-dashboard')
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+def dose_dashboard():
+    """Radiation dose dashboard — annual exposure summary + alerts."""
+    from app.services.radiology.dose_service import RadiationDoseService
+    dose_svc = RadiationDoseService()
+    pid = request.args.get('patient_id', type=int)
+    patient = None
+    annual = None
+    cumulative = None
+    alerts = []
+    if pid:
+        patient = db.session.get(Patient, pid)
+        if patient:
+            require_patient_access(patient)
+            annual = dose_svc.get_patient_annual_summary(pid)
+            cumulative = dose_svc.get_patient_cumulative_summary(pid)
+            alerts = dose_svc.generate_dose_alerts(pid)
+    patients = Patient.query.all() if current_user.has_any_role('Admin', 'SuperAdmin') else []
+    return render_template('radiology/dose_dashboard.html',
+                           title='Radiation Dose Dashboard',
+                           patient=patient, annual=annual,
+                           cumulative=cumulative, alerts=alerts,
+                           patients=patients, selected_pid=pid)
+
+
+@radiology_bp.route('/safety-profile/<int:patient_id>')
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
+def safety_profile(patient_id):
+    """Patient imaging safety profile — MRI implants, contrast history, renal, pregnancy."""
+    from app.services.radiology.safety_service import RadiologySafetyService
+    from app.services.radiology.dose_service import RadiationDoseService
+    patient = db.session.get(Patient, patient_id) or abort(404)
+    require_patient_access(patient)
+    safety_svc = RadiologySafetyService()
+    profile = safety_svc.get_or_create_safety_profile(patient_id)
+    ct_eval = safety_svc.evaluate_ct_safety(patient_id)
+    mri_eval = safety_svc.evaluate_mri_safety(patient_id)
+    implants = MRIImplantRegistry.query.filter_by(
+        patient_id=patient_id, is_active=True).all()
+    contrast_history = ContrastAdministration.query.filter_by(
+        patient_id=patient_id).order_by(
+        ContrastAdministration.administration_time.desc()).limit(10).all()
+    dose_svc = RadiationDoseService()
+    annual = dose_svc.get_patient_annual_summary(patient_id)
+    return render_template('radiology/safety_profile.html',
+                           title='Imaging Safety Profile',
+                           patient=patient, profile=profile,
+                           ct_eval=ct_eval, mri_eval=mri_eval,
+                           implants=implants,
+                           contrast_history=contrast_history,
+                           annual=annual)
+
+
+@radiology_bp.route('/safety-profile/<int:patient_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+def edit_safety_profile(patient_id):
+    """Edit patient imaging safety profile."""
+    from app.services.radiology.safety_service import RadiologySafetyService
+    patient = db.session.get(Patient, patient_id) or abort(404)
+    require_patient_access(patient)
+    safety_svc = RadiologySafetyService()
+    profile = safety_svc.get_or_create_safety_profile(patient_id)
+    if request.method == 'POST':
+        profile.pregnancy_status = request.form.get('pregnancy_status', profile.pregnancy_status)
+        profile.last_creatinine = request.form.get('last_creatinine', type=float)
+        profile.last_egfr = request.form.get('last_egfr', type=float)
+        rfd_str = request.form.get('renal_function_date')
+        profile.renal_function_date = date.fromisoformat(rfd_str) if rfd_str else None
+        profile.previous_contrast_reaction = 'previous_contrast_reaction' in request.form
+        profile.contrast_reaction_details = request.form.get('contrast_reaction_details')
+        profile.previous_contrast_type = request.form.get('previous_contrast_type')
+        profile.mri_screening_status = request.form.get('mri_screening_status', profile.mri_screening_status)
+        profile.ct_contraindications = request.form.get('ct_contraindications')
+        profile.ct_precautions = request.form.get('ct_precautions')
+        profile.special_preparation_notes = request.form.get('special_preparation_notes')
+        profile.updated_at = utcnow()
+        log_activity('EDIT_IMAGING_SAFETY_PROFILE', 'patient', patient_id)
+        db.session.commit()
+        flash('Imaging safety profile updated.', 'success')
+        return redirect(url_for('radiology.safety_profile', patient_id=patient_id))
+    return render_template('radiology/edit_safety_profile.html',
+                           title='Edit Safety Profile',
+                           patient=patient, profile=profile)
+
+
+@radiology_bp.route('/safety-profile/<int:patient_id>/implant/add', methods=['POST'])
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+def add_implant(patient_id):
+    """Add an MRI implant record."""
+    from app.services.radiology.safety_service import RadiologySafetyService
+    patient = db.session.get(Patient, patient_id) or abort(404)
+    require_patient_access(patient)
+    safety_svc = RadiologySafetyService()
+    profile = safety_svc.get_or_create_safety_profile(patient_id)
+    implant = MRIImplantRegistry(
+        patient_id=patient_id,
+        profile_id=profile.id,
+        device_name=request.form.get('device_name', ''),
+        device_category=request.form.get('device_category'),
+        manufacturer=request.form.get('manufacturer'),
+        model_number=request.form.get('model_number'),
+        mr_safety_class=request.form.get('mr_safety_class', 'Unknown'),
+        verification_status=request.form.get('verification_status', 'Unverified'),
+        verification_source=request.form.get('verification_source'),
+        notes=request.form.get('notes'),
+    )
+    db.session.add(implant)
+    log_activity('ADD_MRI_IMPLANT', 'patient', patient_id,
+                 f'{implant.device_name} ({implant.mr_safety_class})')
+    db.session.commit()
+    flash(f'Implant "{implant.device_name}" added.', 'success')
+    return redirect(url_for('radiology.safety_profile', patient_id=patient_id))
+
+
+@radiology_bp.route('/implant/<int:implant_id>/verify', methods=['POST'])
+@login_required
+@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+def verify_implant(implant_id):
+    """Verify an MRI implant's safety classification."""
+    implant = db.session.get(MRIImplantRegistry, implant_id) or abort(404)
+    implant.mr_safety_class = request.form.get('mr_safety_class', implant.mr_safety_class)
+    implant.verification_status = 'Verified'
+    implant.verification_source = request.form.get('verification_source')
+    implant.verification_date = date.today()
+    implant.verified_by = current_user.id
+    log_activity('VERIFY_MRI_IMPLANT', 'patient', implant.patient_id,
+                 f'{implant.device_name} -> {implant.mr_safety_class}')
+    db.session.commit()
+    flash(f'Implant "{implant.device_name}" verified as {implant.mr_safety_class}.', 'success')
+    return redirect(url_for('radiology.safety_profile', patient_id=implant.patient_id))
+
+
+@radiology_bp.route('/orders/<int:order_id>/screening', methods=['GET', 'POST'])
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
+def safety_screening(order_id):
+    """Safety screening for a specific radiology order."""
+    from app.services.radiology.safety_service import RadiologySafetyService
+    order = _order(order_id)
+    require_patient_access(order.patient)
+    safety_svc = RadiologySafetyService()
+    screenings = ImagingSafetyScreening.query.filter_by(order_id=order_id).all()
+    ct_eval = safety_svc.evaluate_ct_safety(order.patient_id, order_id)
+    mri_eval = safety_svc.evaluate_mri_safety(order.patient_id, order_id)
+
+    if request.method == 'POST':
+        screening_type = request.form.get('screening_type', 'General')
+        screening = safety_svc.create_safety_screening(
+            order_id=order_id,
+            patient_id=order.patient_id,
+            screening_type=screening_type,
+            screening_status='Cleared',
+            pacemaker_screened='pacemaker_screened' in request.form,
+            implant_screened='implant_screened' in request.form,
+            metallic_foreign_body_screened='metallic_screened' in request.form,
+            claustrophobia_screened='claustrophobia_screened' in request.form,
+            sedation_required='sedation_required' in request.form,
+            previous_contrast_reaction_confirmed='contrast_reaction_confirmed' in request.form,
+            renal_function_confirmed='renal_confirmed' in request.form,
+            pregnancy_confirmed='pregnancy_confirmed' in request.form,
+            allergy_status_confirmed='allergy_confirmed' in request.form,
+            screening_completed_by=current_user.id,
+            screening_completed_at=utcnow(),
+            screening_notes=request.form.get('screening_notes'),
+        )
+        # Update study record
+        from app.models import ImagingStudyRecord
+        study_rec = ImagingStudyRecord.query.filter_by(order_id=order_id).first()
+        if study_rec:
+            study_rec.safety_screening_completed = True
+            study_rec.safety_screening_status = 'Cleared'
+        log_activity('SAFETY_SCREENING', 'radiology_order', order_id,
+                     f'Screening: {screening_type}')
+        db.session.commit()
+        flash('Safety screening completed.', 'success')
+        return redirect(url_for('radiology.safety_screening', order_id=order_id))
+
+    return render_template('radiology/safety_screening.html',
+                           title='Safety Screening',
+                           order=order, screenings=screenings,
+                           ct_eval=ct_eval, mri_eval=mri_eval)
+
+
+@radiology_bp.route('/orders/<int:order_id>/dose-record', methods=['POST'])
+@login_required
+@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+def record_dose(order_id):
+    """Record radiation dose for a completed study."""
+    from app.services.radiology.dose_service import RadiationDoseService
+    order = _order(order_id)
+    dose_svc = RadiationDoseService()
+    record = dose_svc.record_dose(
+        patient_id=order.patient_id,
+        order_id=order_id,
+        study_date=order.performed_at or utcnow(),
+        accession_number=order.admission_no if hasattr(order, 'admission_no') else None,
+        modality=order.imaging_type.name if order.imaging_type else 'Unknown',
+        body_region=request.form.get('body_region'),
+        study_description=request.form.get('study_description'),
+        dose_metric_type=request.form.get('dose_metric_type'),
+        dose_value=request.form.get('dose_value', type=float),
+        dose_unit=request.form.get('dose_unit'),
+        ctdi_vol=request.form.get('ctdi_vol', type=float),
+        dlp=request.form.get('dlp', type=float),
+        dap=request.form.get('dap', type=float),
+        fluoroscopy_time_min=request.form.get('fluoroscopy_time', type=float),
+        administered_activity=request.form.get('administered_activity', type=float),
+        effective_dose_est=request.form.get('effective_dose_est', type=float),
+        is_estimated='is_estimated' in request.form,
+        estimation_method=request.form.get('estimation_method'),
+        equipment=request.form.get('equipment'),
+        ordering_physician_id=order.doctor_id,
+    )
+    log_activity('RECORD_DOSE', 'radiology_order', order_id,
+                 f'Dose recorded: {record.dose_value} {record.dose_unit}')
+    db.session.commit()
+    flash('Dose information recorded.', 'success')
+    return redirect(url_for('radiology.enter_report', order_id=order_id))
+
+
+@radiology_bp.route('/critical-findings')
+@login_required
+@roles_required('Radiologist', 'Doctor', 'Admin', 'SuperAdmin')
+def critical_findings():
+    """View and manage critical radiology findings."""
+    findings = CriticalFindingNotification.query.order_by(
+        CriticalFindingNotification.created_at.desc()).limit(50).all()
+    return render_template('radiology/critical_findings.html',
+                           title='Critical Findings',
+                           findings=findings)
+
+
+@radiology_bp.route('/critical-findings/<int:finding_id>/acknowledge', methods=['POST'])
+@login_required
+@roles_required('Doctor', 'Admin', 'SuperAdmin')
+def acknowledge_finding(finding_id):
+    """Acknowledge receipt of a critical finding."""
+    finding = db.session.get(CriticalFindingNotification, finding_id) or abort(404)
+    finding.acknowledged = True
+    finding.acknowledged_by = current_user.id
+    finding.acknowledged_at = utcnow()
+    log_activity('ACKNOWLEDGE_CRITICAL_FINDING', 'radiology_order', finding.order_id)
+    db.session.commit()
+    flash('Critical finding acknowledged.', 'success')
+    return redirect(url_for('radiology.critical_findings'))
+
+
+@radiology_bp.route('/protocols')
+@login_required
+@roles_required('Radiologist', 'Admin', 'SuperAdmin')
+def protocols():
+    """View imaging preparation protocols."""
+    from app.models import ImagingPreparationProtocol
+    all_protocols = ImagingPreparationProtocol.query.filter_by(
+        is_active=True).order_by(ImagingPreparationProtocol.protocol_name).all()
+    return render_template('radiology/protocols.html',
+                           title='Imaging Protocols',
+                           protocols=all_protocols)
+
+
+@radiology_bp.route('/reference-levels', methods=['GET', 'POST'])
+@login_required
+@roles_required('Admin', 'SuperAdmin')
+def reference_levels():
+    """Manage institutional reference dose levels."""
+    from app.models import ImagingReferenceLevel
+    levels = ImagingReferenceLevel.query.filter_by(
+        is_active=True).order_by(ImagingReferenceLevel.modality).all()
+    if request.method == 'POST':
+        level = ImagingReferenceLevel(
+            name=request.form.get('name', ''),
+            description=request.form.get('description'),
+            modality=request.form.get('modality', ''),
+            body_region=request.form.get('body_region'),
+            effective_dose_threshold_msv=request.form.get('effective_dose_threshold', type=float),
+            dlp_threshold_mgycm=request.form.get('dlp_threshold', type=float),
+            ctdi_threshold_mgy=request.form.get('ctdi_threshold', type=float),
+            age_group=request.form.get('age_group', 'All'),
+            is_pregnancy_specific='is_pregnancy_specific' in request.form,
+            created_by=current_user.id,
+        )
+        db.session.add(level)
+        log_activity('ADD_REFERENCE_LEVEL', 'system', level.id,
+                     f'{level.name} ({level.modality})')
+        db.session.commit()
+        flash('Reference level added.', 'success')
+        return redirect(url_for('radiology.reference_levels'))
+    return render_template('radiology/reference_levels.html',
+                           title='Reference Dose Levels',
+                           levels=levels)
+
+
+# Import missing models at module level for the routes above
+from app.models import (ImagingDoseRecord, MRIImplantRegistry,
+                        ContrastAdministration, ImagingSafetyScreening,
+                        CriticalFindingNotification, ImagingStudyRecord,
+                        PatientImagingSafetyProfile)
+from datetime import date

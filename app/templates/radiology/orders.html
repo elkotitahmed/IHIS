@@ -1,119 +1,148 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-x-ray me-2"></i>Radiology Orders</h3>
-    <a href="{{ url_for('radiology.new_order') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Order</a>
-</div>
-
-<div class="card card-shadow mb-3">
-    <div class="card-body py-2">
-        <div class="small">Workflow:
-            <span class="badge bg-warning">Pending</span> &rarr;
-            <span class="badge bg-primary">Scheduled</span> &rarr;
-            <span class="badge bg-info">Arrived</span> &rarr;
-            <span class="badge bg-secondary">InProgress</span> &rarr;
-            <span class="badge bg-secondary">Performed</span> &rarr;
-            <span class="badge bg-success">Reported</span> &rarr;
-            <span class="badge bg-success">Signed</span>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'طلبات الأشعة' if g.lang == 'ar' else 'Radiology Orders' }}</h1>
+        <p class="page-subtitle">{{ 'متابعة وإدارة سير عمل دراسات الأشعة' if g.lang == 'ar' else 'Track and manage the radiology study workflow' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('radiology.new_order') }}" class="btn-ihs btn-ihs-primary">
+            <i class="fas fa-plus"></i> {{ 'طلب جديد' if g.lang == 'ar' else 'New Order' }}
+        </a>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-route" style="color:var(--ihis-info)"></i> {{ 'سير العمل' if g.lang == 'ar' else 'Workflow' }}</div>
+    </div>
+    <div class="card-body" style="padding:var(--sp-3) var(--sp-4);display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ihis-text-secondary)">
+        <span class="status-badge s-pending">{{ 'قيد الانتظار' if g.lang == 'ar' else 'Pending' }}</span><i class="fas fa-chevron-right cell-muted" style="font-size:0.6rem;color:var(--ihis-text-muted)"></i>
+        <span class="status-badge s-scheduled">{{ 'مجدول' if g.lang == 'ar' else 'Scheduled' }}</span><i class="fas fa-chevron-right cell-muted" style="font-size:0.6rem;color:var(--ihis-text-muted)"></i>
+        <span class="status-badge s-active">{{ 'وصل' if g.lang == 'ar' else 'Arrived' }}</span><i class="fas fa-chevron-right cell-muted" style="font-size:0.6rem;color:var(--ihis-text-muted)"></i>
+        <span class="status-badge s-in-progress">{{ 'قيد التنفيذ' if g.lang == 'ar' else 'In Progress' }}</span><i class="fas fa-chevron-right cell-muted" style="font-size:0.6rem;color:var(--ihis-text-muted)"></i>
+        <span class="status-badge s-processing">{{ 'تم التنفيذ' if g.lang == 'ar' else 'Performed' }}</span><i class="fas fa-chevron-right cell-muted" style="font-size:0.6rem;color:var(--ihis-text-muted)"></i>
+        <span class="status-badge s-completed">{{ 'تم إعداد التقرير' if g.lang == 'ar' else 'Reported' }}</span><i class="fas fa-chevron-right cell-muted" style="font-size:0.6rem;color:var(--ihis-text-muted)"></i>
+        <span class="status-badge s-signed">{{ 'تم التوقيع' if g.lang == 'ar' else 'Signed' }}</span>
+    </div>
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'قائمة الطلبات' if g.lang == 'ar' else 'Orders List' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
                     <tr>
-                        <th>Patient</th>
-                        <th>Imaging Type</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                        <th>Order Date</th>
-                        <th>Images</th>
-                        <th>Actions</th>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'نوع التصوير' if g.lang == 'ar' else 'Imaging Type' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</th>
+                        <th>{{ 'تاريخ الطلب' if g.lang == 'ar' else 'Order Date' }}</th>
+                        <th>{{ 'الصور' if g.lang == 'ar' else 'Images' }}</th>
+                        <th>{{ 'إجراءات' if g.lang == 'ar' else 'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if orders %}
                         {% for order in orders %}
                         <tr>
-                            <td>{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</td>
-                            <td>{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</td>
-                            <td><span class="badge bg-{{ status_badge(order.status or 'Pending') }}">{{ order.status or 'Pending' }}</span></td>
-                            <td>
-                                {% if order.priority in ('Urgent','High','HIGH','CRITICAL','URGENT') %}
-                                    <span class="badge bg-danger">{{ order.priority }}</span>
+                            <td class="cell-primary">
+                                {% if order.patient %}
+                                    <a href="{{ url_for('clinical.patient_360', patient_id=order.patient.id) }}" class="link-ihs">
+                                        {{ order.patient.user.full_name if order.patient.user else 'N/A' }}
+                                    </a>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ order.priority or 'Normal' }}</span>
+                                    N/A
                                 {% endif %}
                             </td>
-                            <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '-' }}</td>
+                            <td>{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</td>
+                            <td><span class="status-badge s-{{ order.status|lower|replace(' ','-') }}">{{ order.status or 'Pending' }}</span></td>
+                            <td>
+                                {% if order.priority in ('Urgent','High','HIGH','CRITICAL','URGENT') %}
+                                    <span class="priority-badge p-urgent"><i class="fas fa-exclamation-triangle"></i> {{ order.priority }}</span>
+                                {% else %}
+                                    <span class="priority-badge p-normal">{{ order.priority or 'Normal' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="cell-mono">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '-' }}</td>
                             <td>
                                 {% if order.image_urls %}
                                     {% set images = order.image_urls.split(',') %}
-                                    <span class="text-muted">{{ images|length }} file(s)</span>
+                                    <span class="cell-muted">{{ images|length }} {{ 'ملف' if g.lang == 'ar' else 'file(s)' }}</span>
                                     {% for url in images %}
                                             <a href="{{ url_for('radiology.download_image', order_id=order.id, index=loop.index0) }}" target="_blank"
-                                               class="d-inline-block me-1 badge bg-light border text-dark text-decoration-none">
+                                               class="tag-ihs link-ihs" style="background:var(--ihis-info-light);color:var(--ihis-info)">
                                                 <i class="fas fa-image"></i> {{ loop.index }}
                                             </a>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="text-muted">None</span>
+                                    <span class="cell-muted">None</span>
                                 {% endif %}
                             </td>
                             <td>
+                                <div style="display:flex;flex-direction:column;gap:var(--sp-2);align-items:flex-start">
                                 {% if order.status == 'Pending' %}
                                     <details class="d-inline">
-                                        <summary class="btn btn-sm btn-warning"><i class="fas fa-calendar-plus me-1"></i>Schedule</summary>
-                                        <form method="POST" action="{{ url_for('radiology.schedule', order_id=order.id) }}" class="d-inline-flex align-items-center mt-1 ms-1">
+                                        <summary class="btn-ihs btn-ihs-warning btn-ihs-sm"><i class="fas fa-calendar-plus"></i> {{ 'جدولة' if g.lang == 'ar' else 'Schedule' }}</summary>
+                                        <form method="POST" action="{{ url_for('radiology.schedule', order_id=order.id) }}" style="display:inline-flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-2)">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="datetime-local" name="scheduled_at" class="form-control form-control-sm me-1" style="width:170px;">
-                                            <button type="submit" class="btn btn-sm btn-primary">Go</button>
+                                            <input type="datetime-local" name="scheduled_at" class="form-control form-control-sm" style="width:180px;">
+                                            <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-sm">Go</button>
                                         </form>
                                     </details>
                                 {% elif order.status == 'Scheduled' %}
                                     <form method="POST" action="{{ url_for('radiology.arrive', order_id=order.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-user-check me-1"></i>Arrived</button>
+                                        <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-user-check"></i> {{ 'وصل المريض' if g.lang == 'ar' else 'Arrived' }}</button>
                                     </form>
                                 {% elif order.status == 'Arrived' %}
                                     <form method="POST" action="{{ url_for('radiology.perform', order_id=order.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-dark"><i class="fas fa-camera me-1"></i>Perform Study</button>
+                                        <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-camera"></i> {{ 'تنفيذ الدراسة' if g.lang == 'ar' else 'Perform Study' }}</button>
                                     </form>
                                 {% elif order.status in ('InProgress', 'Performed', 'Reported', 'Signed', 'Finalized') %}
-                                    <a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-file-medical me-1"></i>{% if order.report %}View/Edit Report{% else %}Enter Report{% endif %}
-                                    </a>
-                                    <form method="POST" enctype="multipart/form-data"
-                                          action="{{ url_for('radiology.upload_images', order_id=order.id) }}"
-                                          class="d-inline-flex align-items-center mt-1">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="file" name="images" multiple class="form-control form-control-sm me-1" style="width:160px;">
-                                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-upload me-1"></i></button>
-                                    </form>
-                                    {% if order.report and order.report.status != 'Signed' %}
-                                    <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-success"><i class="fas fa-signature me-1"></i>Sign</button>
-                                    </form>
-                                    {% endif %}
+                                    <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2)">
+                                        <a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+                                            <i class="fas fa-file-medical"></i>{% if order.report %}{{ 'عرض / تعديل' if g.lang == 'ar' else 'View/Edit Report' }}{% else %}{{ 'إدخال تقرير' if g.lang == 'ar' else 'Enter Report' }}{% endif %}
+                                        </a>
+                                        <form method="POST" enctype="multipart/form-data"
+                                              action="{{ url_for('radiology.upload_images', order_id=order.id) }}"
+                                              style="display:inline-flex;align-items:center;gap:var(--sp-2)">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="file" name="images" multiple class="form-control form-control-sm" style="width:170px;">
+                                            <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" title="Upload"><i class="fas fa-upload"></i></button>
+                                        </form>
+                                        {% if order.report and order.report.status != 'Signed' %}
+                                        <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-sm"><i class="fas fa-signature"></i> {{ 'توقيع' if g.lang == 'ar' else 'Sign' }}</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
                                     {% if order.report %}
-                                    <a class="btn btn-outline-primary btn-sm mb-1" href="{{ url_for('ai.radiology', order_id=order.id) }}"><i class="fas fa-brain me-1"></i>AI</a>
+                                    <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('ai.radiology', order_id=order.id) }}"><i class="fas fa-brain"></i> AI</a>
                                     {% endif %}
                                 {% elif order.status == 'Cancelled' %}
-                                    <span class="text-muted">Cancelled</span>
+                                    <span class="cell-muted">{{ 'ملغي' if g.lang == 'ar' else 'Cancelled' }}</span>
                                 {% else %}
-                                    <span class="text-muted">-</span>
+                                    <span class="cell-muted">-</span>
                                 {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No radiology orders found.</td>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="fas fa-x-ray"></i></div>
+                                    <div class="empty-title">{{ 'لا توجد طلبات أشعة' if g.lang == 'ar' else 'No radiology orders found' }}</div>
+                                    <div class="empty-desc">{{ 'أنشئ طلب أشعة جديداً للبدء بالعمل' if g.lang == 'ar' else 'Create a new radiology order to get started' }}</div>
+                                </div>
+                            </td>
                         </tr>
                     {% endif %}
                 </tbody>

@@ -1,56 +1,95 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-share-alt text-primary"></i> Referrals</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-share-alt" style="color:var(--ihis-primary)"></i> {{ 'التحويلات' if g.lang == 'ar' else 'Referrals' }}</h1>
+        <p class="page-subtitle">{{ 'إدارة تحويلات المرضى بين الأطباء' if g.lang == 'ar' else 'Manage patient referrals between providers' }}</p>
+    </div>
+</div>
 
 {% if current_user.has_any_role('Doctor','Admin','SuperAdmin') %}
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-white fw-bold">New Referral</div>
+<div class="card-premium" style="margin-bottom:var(--sp-4)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-primary)"></i> {{ 'تحويل جديد' if g.lang == 'ar' else 'New Referral' }}</div>
+    </div>
     <div class="card-body">
-        <form method="post" action="{{ url_for('care.new_referral') }}" class="row g-2">
+        <form method="post" action="{{ url_for('care.new_referral') }}" class="row g-3">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="col-md-4">
-                <select name="patient_id" class="form-select" required>
-                    <option value="">Select patient...</option>
-                    {% for p in patients %}
-                    <option value="{{ p.id }}">{{ p.user.full_name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'المريض' if g.lang == 'ar' else 'Patient' }} <span class="required">*</span></label>
+                    <select name="patient_id" class="form-select" required>
+                        <option value="">{{ 'اختر مريض...' if g.lang == 'ar' else 'Select patient...' }}</option>
+                        {% for p in patients %}
+                        <option value="{{ p.id }}">{{ p.user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-4">
-                <select name="to_doctor_id" class="form-select">
-                    <option value="">Referring doctor (optional)</option>
-                    {% for d in doctors %}
-                    <option value="{{ d.id }}">{{ d.user.full_name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'الطبيب المحول' if g.lang == 'ar' else 'Referring Doctor' }}</label>
+                    <select name="to_doctor_id" class="form-select">
+                        <option value="">{{ 'طبيب تحويل (اختياري)' if g.lang == 'ar' else 'Referring doctor (optional)' }}</option>
+                        {% for d in doctors %}
+                        <option value="{{ d.id }}">{{ d.user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-4">
-                <select name="to_specialty" class="form-select">
-                    <option value="">To specialty (optional)</option>
-                    {% for s in specialties %}
-                    <option value="{{ s.name }}">{{ s.name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'التخصص' if g.lang == 'ar' else 'Specialty' }}</label>
+                    <select name="to_specialty" class="form-select">
+                        <option value="">{{ 'إلى تخصص (اختياري)' if g.lang == 'ar' else 'To specialty (optional)' }}</option>
+                        {% for s in specialties %}
+                        <option value="{{ s.name }}">{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-9">
-                <input name="reason" class="form-control" required placeholder="Referral reason / clinical question">
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'السبب' if g.lang == 'ar' else 'Reason' }} <span class="required">*</span></label>
+                    <input name="reason" class="form-control" required placeholder="{{ 'سبب التحويل / السؤال السريري' if g.lang == 'ar' else 'Referral reason / clinical question' }}">
+                </div>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-primary w-100"><i class="fas fa-paper-plane me-1"></i>Create Referral</button>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'الأولوية' if g.lang == 'ar' else 'Urgency' }}</label>
+                    <select name="urgency" class="form-select">
+                        <option value="Routine">{{ 'روتيني' if g.lang == 'ar' else 'Routine' }}</option>
+                        <option value="Urgent">{{ 'عاجل' if g.lang == 'ar' else 'Urgent' }}</option>
+                        <option value="Emergency">{{ 'طارئ' if g.lang == 'ar' else 'Emergency' }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label-ihs">&nbsp;</label>
+                <button class="btn-ihs btn-ihs-primary w-100"><i class="fas fa-paper-plane me-1"></i>{{ 'إنشاء التحويل' if g.lang == 'ar' else 'Create Referral' }}</button>
             </div>
         </form>
     </div>
 </div>
 {% endif %}
 
-<div class="card card-shadow">
-    <div class="card-header bg-white fw-bold">Referral List</div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped align-middle">
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'قائمة التحويلات' if g.lang == 'ar' else 'Referral List' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
                 <thead>
                     <tr>
-                        <th>Patient</th><th>From</th><th>To</th><th>Reason</th><th>Created</th><th>Status</th><th>Action</th>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'من' if g.lang == 'ar' else 'From' }}</th>
+                        <th>{{ 'إلى' if g.lang == 'ar' else 'To' }}</th>
+                        <th>{{ 'السبب' if g.lang == 'ar' else 'Reason' }}</th>
+                        <th>{{ 'الأولوية' if g.lang == 'ar' else 'Urgency' }}</th>
+                        <th>{{ 'تاريخ الإنشاء' if g.lang == 'ar' else 'Created' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'إجراء' if g.lang == 'ar' else 'Action' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,13 +98,14 @@
                         <td>{{ r.patient.user.full_name if r.patient else '-' }}</td>
                         <td>{{ r.from_doctor.user.full_name if r.from_doctor and r.from_doctor.user else '-' }}</td>
                         <td>{{ r.to_doctor.user.full_name if r.to_doctor and r.to_doctor.user else (r.to_specialty or '-') }}</td>
-                        <td>{{ r.reason }}</td>
-                        <td>{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '-' }}</td>
-                        <td><span class="badge
-                            {% if r.status=='Pending' %}bg-warning text-dark
-                            {% elif r.status=='Accepted' %}bg-info
-                            {% elif r.status=='Completed' %}bg-success
-                            {% else %}bg-secondary{% endif %}">{{ r.status }}</span></td>
+                        <td><span class="cell-muted">{{ r.reason }}</span></td>
+                        <td>
+                            <span class="status-badge {% if r.urgency=='Emergency' %}s-cancelled{% elif r.urgency=='Urgent' %}s-in-progress{% else %}s-pending{% endif %}">{{ r.urgency or 'Routine' }}</span>
+                        </td>
+                        <td><span class="cell-mono">{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '-' }}</span></td>
+                        <td>
+                            <span class="status-badge {% if r.status=='Pending' %}s-pending{% elif r.status=='Accepted' %}s-in-progress{% elif r.status=='Completed' %}s-completed{% elif r.status=='Rejected' %}s-rejected{% else %}s-cancelled{% endif %}">{{ r.status }}</span>
+                        </td>
                         <td>
                             <form method="post" class="d-flex gap-1"
                                   action="{{ url_for('care.update_referral_status', ref_id=r.id) }}">
@@ -76,12 +116,12 @@
                                     <option value="Rejected">Rejected</option>
                                     <option value="Completed">Completed</option>
                                 </select>
-                                <button class="btn btn-sm btn-outline-primary">Update</button>
+                                <button class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'تحديث' if g.lang == 'ar' else 'Update' }}</button>
                             </form>
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="7" class="text-center text-muted">No referrals yet.</td></tr>
+                    <tr><td colspan="8"><div class="empty-state"><div class="empty-icon"><i class="fas fa-share-alt"></i></div><div class="empty-title">{{ 'لا توجد تحويلات بعد' if g.lang == 'ar' else 'No referrals yet' }}</div><div class="empty-desc">{{ 'ابدأ بإنشاء تحويل جديد' if g.lang == 'ar' else 'Start by creating a new referral' }}</div></div></td></tr>
                 {% endfor %}
                 </tbody>
             </table>

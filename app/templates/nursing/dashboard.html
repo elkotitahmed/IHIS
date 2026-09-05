@@ -1,86 +1,77 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-stethoscope text-primary"></i> Nursing Dashboard</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ t('welcome') }}, {{ 'Nurse ' }}{{ current_user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'لوحة التحكم' if g.lang == 'ar' else 'Nursing Operations' }}</p>
+    </div>
+</div>
 
-<div class="row g-3">
-    <div class="col-md-4">
-        <div class="card text-white bg-primary card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-users icon me-3"></i>
-                <div>
-                    <h5 class="card-title mb-0">Assigned Patients</h5>
-                    <p class="display-6 mb-0">{{ assigned_patients }}</p>
-                </div>
-            </div>
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-icon primary"><i class="fas fa-user-nurse"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('assigned_patients') }}</div>
+            <div class="kpi-value">{{ assigned_patients }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-info card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-pills icon me-3"></i>
-                <div>
-                    <h5 class="card-title mb-0">Medication Schedule</h5>
-                    <p class="display-6 mb-0">{{ med_count }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon info"><i class="fas fa-pills"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('medication_tasks') }}</div>
+            <div class="kpi-value">{{ med_count }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white {{ 'bg-danger' if critical_alerts > 0 else 'bg-success' }} card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle icon me-3"></i>
-                <div>
-                    <h5 class="card-title mb-0">Critical Alerts</h5>
-                    <p class="display-6 mb-0">{{ critical_alerts }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon {{ 'danger' if critical_alerts > 0 else 'success' }}"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('abnormal_observations') }}</div>
+            <div class="kpi-value">{{ critical_alerts }}</div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-user-injured"></i> Patients Overview</h5>
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ t('assigned_patients') }}</div>
+                <a href="{{ url_for('nursing.patients') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Gender</th>
-                                <th>Blood Type</th>
-                                <th>Actions</th>
+                                <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                                <th>{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}</th>
+                                <th>{{ 'نوع الدم' if g.lang == 'ar' else 'Blood Type' }}</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for patient in patients %}
                             <tr>
-                                <td>{{ patient.id }}</td>
-                                <td>{{ patient.user.full_name }}</td>
-                                <td>{{ patient.gender or 'N/A' }}</td>
-                                <td>{{ patient.blood_type or 'N/A' }}</td>
+                                <td class="cell-primary">{{ patient.user.full_name }}</td>
+                                <td class="cell-secondary">{{ patient.gender or '-' }}</td>
+                                <td>{{ patient.blood_type or '-' }}</td>
                                 <td>
-                                    <a href="{{ url_for('nursing.vitals', patient_id=patient.id) }}"
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-heartbeat"></i> Vitals
+                                    <a href="{{ url_for('nursing.vitals', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                                        <i class="fas fa-heartbeat"></i> {{ t('vitals') }}
                                     </a>
-                                    <a href="{{ url_for('nursing.notes', patient_id=patient.id) }}"
-                                       class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-file-medical"></i> Notes
-                                    </a>
-                                    <a href="{{ url_for('care.team', patient_id=patient.id) }}"
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-users"></i> Care Team
+                                    <a href="{{ url_for('nursing.notes', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">
+                                        <i class="fas fa-file-medical"></i>
                                     </a>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="5" class="text-center">No patients found.</td>
+                                <td colspan="4">
+                                    <div class="empty-state" style="padding:2rem">
+                                        <div class="empty-icon"><i class="fas fa-user-nurse"></i></div>
+                                        <div class="empty-title">{{ 'لا يوجد مرضى معينون' if g.lang == 'ar' else 'No assigned patients' }}</div>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -89,30 +80,22 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-bolt"></i> Quick Links</h5>
+
+    <div class="col-lg-4">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات سريعة' if g.lang == 'ar' else 'Quick Actions' }}</div>
             </div>
             <div class="card-body">
-                <div class="list-group">
-                    <a href="{{ url_for('nursing.patients') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-users text-primary"></i> All Patients
+                <div style="display:flex;flex-direction:column;gap:0.5rem">
+                    <a href="{{ url_for('nursing.medication_schedule') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-pills"></i> {{ 'جدول الأدوية' if g.lang == 'ar' else 'Medication Schedule' }}
                     </a>
-                    <a href="{{ url_for('nursing.medication_schedule') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-pills text-success"></i> Medication Schedule
+                    <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-share-nodes"></i> {{ t('referrals') }}
                     </a>
-                    <a href="{{ url_for('care.referrals') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-share-alt text-primary"></i> Referrals
-                    </a>
-                    <a href="{{ url_for('care.cases') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-users text-primary"></i> MD Cases
-                    </a>
-                    <a href="{{ url_for('ai.fracture_detection') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-bone text-danger"></i> AI Fracture Detection
-                    </a>
-                    <a href="{{ url_for('ai.tooth_segmentation') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-tooth text-primary"></i> AI Tooth Segmentation
+                    <a href="{{ url_for('care.cases') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-people-group"></i> {{ 'حالات' if g.lang == 'ar' else 'Cases' }}
                     </a>
                 </div>
             </div>

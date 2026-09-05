@@ -6,6 +6,7 @@ flow into bills automatically so the front desk never re-keys pricing.
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 from datetime import date, timedelta
 from app import db
 from app.models import (
@@ -190,20 +191,41 @@ def record_payment(bill_id):
         flash('Payment exceeds the outstanding balance.', 'danger')
         return redirect(url_for('billing.view_bill', bill_id=bill.id))
     method = request.form.get('method') or 'Cash'
-    reference = request.form.get('reference')
+    reference = (request.form.get('reference') or '').strip() or None
+    # Idempotency: reject a replayed payment carrying the same reference for the
+    # same bill (e.g. a duplicate card/insurance reference, or a double submit).
+    if reference and Payment.query.filter_by(bill_id=bill.id,
+                                             reference=reference).first():
+        flash('A payment with this reference already exists for the bill. '
+              'Double submission prevented.', 'danger')
+        return redirect(url_for('billing.view_bill', bill_id=bill.id))
     last_pay = Payment.query.order_by(Payment.id.desc()).first()
     receipt_no = f'RCT-{10000 + (last_pay.id + 1 if last_pay else 1)}'
     db.session.add(Payment(bill_id=bill.id, amount=amount, method=method,
                            reference=reference, received_by=current_user.id,
                            receipt_no=receipt_no,
                            notes=request.form.get('notes')))
-    bill.status = 'Paid' if amount + 0.001 >= bill.balance() else 'PartiallyPaid'
+    db.session.flush()
+    # Compute the new status from the running total (explicitly includes the
+    # newly-added payment) rather than bill.balance(), whose lazy `payments`
+    # collection may already be cached from the earlier balance() check.
+    paid_now = bill.paid_amount() + amount
+    bill.status = 'Paid' if paid_now + 0.001 >= bill.total() else 'PartiallyPaid'
     log_activity('RECORD_PAYMENT', 'bill', bill.id,
                  f'amount={amount} method={method}')
     from app.services.notifications import notify_patient
     notify_patient(bill.patient, 'Payment received',
-                   f'Payment of {amount:.2f} received on {bill.bill_no}. Remaining balance: {bill.balance():.2f}.')
-    db.session.commit()
+                   f'Payment of {amount:.2f} received on {bill.bill_no}. '
+                   f'Remaining balance: {max(0.0, bill.total() - paid_now):.2f}.')
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # A concurrent double-submit hit the bill_id+reference unique constraint.
+        db.session.rollback()
+        flash('This payment could not be recorded because it duplicates an '
+              'existing payment on this bill (double submission prevented).',
+              'danger')
+        return redirect(url_for('billing.view_bill', bill_id=bill.id))
     flash(f'Payment of {amount:.2f} recorded (receipt {receipt_no}).', 'success')
     return redirect(url_for('billing.view_bill', bill_id=bill.id))
 

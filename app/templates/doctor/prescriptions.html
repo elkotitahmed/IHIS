@@ -1,31 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-pills me-2"></i>Prescriptions</h3>
-    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'الوصفة الطبية' if g.lang == 'ar' else 'Prescriptions' }}</h1>
+        <p class="page-subtitle">{{ 'إدارة وصفات الأدوية' if g.lang == 'ar' else 'Manage and prescribe medications' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'العودة للمريض' if g.lang == 'ar' else 'Back to Patient' }}
+        </a>
+    </div>
 </div>
+
+{% include 'clinical/_patient_header.html' %}
 
 <div class="row g-4">
     <div class="col-lg-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">New Prescription for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-prescription" style="color:var(--ihis-success)"></i> {{ 'وصفة جديدة لـ' if g.lang == 'ar' else 'New Prescription for' }} {{ patient.user.full_name if patient and patient.user else 'Patient' }}</div>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                        <label class="form-label mb-0">Medication Lines</label>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="addMedLine"><i class="fas fa-plus me-1"></i>Add line</button>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-3)">
+                        <label class="form-label-ihs" style="margin-bottom:0">{{ 'خطوط الدواء' if g.lang == 'ar' else 'Medication Lines' }}</label>
+                        <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="addMedLine"><i class="fas fa-plus"></i> {{ 'إضافة' if g.lang == 'ar' else 'Add line' }}</button>
                     </div>
 
                     <div id="medLines">
-                        <div class="med-line border rounded p-2 mb-2">
+                        <div class="med-line" style="border:1px solid var(--ihis-border);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-2)">
                             <div class="row g-2">
                                 <div class="col-12">
-                                    <select class="form-select form-select-sm" name="medication_id" required>
-                                        <option value="" selected disabled>Select medication...</option>
+                                    <select class="form-control" name="medication_id" required style="font-size:0.8125rem">
+                                        <option value="" selected disabled>{{ 'اختر دواء...' if g.lang == 'ar' else 'Select medication...' }}</option>
                                         {% if meds %}
                                             {% for m in meds %}
                                             <option value="{{ m.id }}">{{ m.name }} ({{ m.dosage_form or '' }})</option>
@@ -34,30 +43,30 @@
                                     </select>
                                 </div>
                                 <div class="col-4">
-                                    <input type="text" class="form-control form-control-sm" name="dosage" placeholder="Dosage (500mg)">
+                                    <input type="text" class="form-control" name="dosage" placeholder="500mg" style="font-size:0.8125rem">
                                 </div>
                                 <div class="col-4">
-                                    <input type="text" class="form-control form-control-sm" name="frequency" placeholder="Frequency">
+                                    <input type="text" class="form-control" name="frequency" placeholder="{{ 'الجرعة' if g.lang == 'ar' else 'Frequency' }}" style="font-size:0.8125rem">
                                 </div>
                                 <div class="col-4">
-                                    <input type="text" class="form-control form-control-sm" name="duration" placeholder="Duration">
+                                    <input type="text" class="form-control" name="duration" placeholder="{{ 'المدة' if g.lang == 'ar' else 'Duration' }}" style="font-size:0.8125rem">
                                 </div>
                                 <div class="col-4">
-                                    <input type="number" class="form-control form-control-sm" name="quantity" min="1" value="1" placeholder="Qty">
+                                    <input type="number" class="form-control" name="quantity" min="1" value="1" placeholder="Qty" style="font-size:0.8125rem">
                                 </div>
                                 <div class="col-8">
-                                    <input type="text" class="form-control form-control-sm" name="instructions" placeholder="Instructions">
+                                    <input type="text" class="form-control" name="instructions" placeholder="{{ 'التعليمات' if g.lang == 'ar' else 'Instructions' }}" style="font-size:0.8125rem">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Refills</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'عدد مرات التجديد' if g.lang == 'ar' else 'Refills' }}</label>
                         <input type="number" class="form-control" name="refills" min="0" value="0">
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100"><i class="fas fa-prescription me-1"></i>Add Prescription</button>
+                    <button type="submit" class="btn-ihs btn-ihs-success w-100"><i class="fas fa-prescription"></i> {{ 'إضافة الوصفة' if g.lang == 'ar' else 'Add Prescription' }}</button>
                 </form>
             </div>
         </div>
@@ -66,44 +75,60 @@
     <div class="col-lg-7">
         {% if items %}
             {% for rx in items %}
-            <div class="card card-shadow mb-3">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Rx #{{ rx.id }}
-                        <span class="text-muted fw-normal ms-1">{{ rx.prescribed_date.strftime('%Y-%m-%d') if rx.prescribed_date else '' }}</span>
-                    </span>
-                    <span class="badge {% if rx.status == 'Dispensed' %}bg-success{% elif rx.status == 'Cancelled' %}bg-secondary{% else %}bg-info{% endif %}">{{ rx.status }}</span>
+            <div class="card-premium" style="margin-bottom:var(--sp-4)">
+                <div class="card-header">
+                    <div class="card-title" style="flex:1">
+                        <i class="fas fa-prescription" style="color:var(--ihis-primary)"></i>
+                        Rx #<span class="t-num">{{ rx.id }}</span>
+                        <span class="cell-muted" style="margin-left:var(--sp-2);font-weight:400">{{ rx.prescribed_date.strftime('%Y-%m-%d') if rx.prescribed_date else '' }}</span>
+                    </div>
+                    <span class="status-badge {{ 's-completed' if rx.status == 'Dispensed' else 's-cancelled' if rx.status == 'Cancelled' else 's-active' }}">{{ rx.status }}</span>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Medication</th>
-                                <th>Dosage</th>
-                                <th>Frequency</th>
-                                <th>Duration</th>
-                                <th>Qty</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for li in rx.items %}
-                            <tr>
-                                <td>{{ li.medication.name if li.medication else 'N/A' }}</td>
-                                <td>{{ li.dosage or '-' }}</td>
-                                <td>{{ li.frequency or '-' }}</td>
-                                <td>{{ li.duration or '-' }}</td>
-                                <td>{{ li.quantity or 1 }}</td>
-                            </tr>
-                            {% else %}
-                            <tr><td colspan="5" class="text-center text-muted py-3">No items.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="card-body flush">
+                    <div class="table-wrapper">
+                        <table class="table-ihs">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th>
+                                    <th>{{ 'الجرعة' if g.lang == 'ar' else 'Dosage' }}</th>
+                                    <th>{{ 'التكرار' if g.lang == 'ar' else 'Frequency' }}</th>
+                                    <th>{{ 'المدة' if g.lang == 'ar' else 'Duration' }}</th>
+                                    <th>{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for li in rx.items %}
+                                <tr>
+                                    <td class="cell-primary">{{ li.medication.name if li.medication else 'N/A' }}</td>
+                                    <td>{{ li.dosage or '-' }}</td>
+                                    <td>{{ li.frequency or '-' }}</td>
+                                    <td>{{ li.duration or '-' }}</td>
+                                    <td class="t-num">{{ li.quantity or 1 }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-state" style="padding:var(--sp-3)">
+                                            <div class="empty-desc">{{ 'لا توجد بنود' if g.lang == 'ar' else 'No items' }}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="card card-shadow">
-                <div class="card-body text-center text-muted py-5">No prescriptions yet. Use the form to add one.</div>
+            <div class="card-premium">
+                <div class="card-body">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-prescription-bottle-medical"></i></div>
+                        <div class="empty-title">{{ 'لا توجد وصفات بعد' if g.lang == 'ar' else 'No Prescriptions Yet' }}</div>
+                        <div class="empty-desc">{{ 'استخدم النموذج لإضافة وصفة جديدة' if g.lang == 'ar' else 'Use the form on the left to add a new prescription' }}</div>
+                    </div>
+                </div>
             </div>
         {% endif %}
     </div>
@@ -113,19 +138,19 @@
 {% block scripts %}
 <script>
 const medLineTmpl = `
-<div class="med-line border rounded p-2 mb-2">
+<div class="med-line" style="border:1px solid var(--ihis-border);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-2)">
     <div class="row g-2">
         <div class="col-12">
-            <select class="form-select form-select-sm" name="medication_id" required>
+            <select class="form-control" name="medication_id" required style="font-size:0.8125rem">
                 <option value="" selected disabled>Select medication...</option>
                 {% if meds %}{% for m in meds %}<option value="{{ m.id }}">{{ m.name }} ({{ m.dosage_form or '' }})</option>{% endfor %}{% endif %}
             </select>
         </div>
-        <div class="col-4"><input type="text" class="form-control form-control-sm" name="dosage" placeholder="Dosage (500mg)"></div>
-        <div class="col-4"><input type="text" class="form-control form-control-sm" name="frequency" placeholder="Frequency"></div>
-        <div class="col-4"><input type="text" class="form-control form-control-sm" name="duration" placeholder="Duration"></div>
-        <div class="col-4"><input type="number" class="form-control form-control-sm" name="quantity" min="1" value="1" placeholder="Qty"></div>
-        <div class="col-8"><input type="text" class="form-control form-control-sm" name="instructions" placeholder="Instructions"></div>
+        <div class="col-4"><input type="text" class="form-control" name="dosage" placeholder="500mg" style="font-size:0.8125rem"></div>
+        <div class="col-4"><input type="text" class="form-control" name="frequency" placeholder="Frequency" style="font-size:0.8125rem"></div>
+        <div class="col-4"><input type="text" class="form-control" name="duration" placeholder="Duration" style="font-size:0.8125rem"></div>
+        <div class="col-4"><input type="number" class="form-control" name="quantity" min="1" value="1" placeholder="Qty" style="font-size:0.8125rem"></div>
+        <div class="col-8"><input type="text" class="form-control" name="instructions" placeholder="Instructions" style="font-size:0.8125rem"></div>
     </div>
 </div>`;
 

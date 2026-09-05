@@ -1,60 +1,49 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-file-medical me-2"></i>Patient Record</h3>
-    <a href="{{ url_for('doctor.patients') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patients</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'سجل المريض' if g.lang == 'ar' else 'Patient Record' }}</h1>
+        <p class="page-subtitle">{{ 'البيانات والسجلات السريرية الشاملة' if g.lang == 'ar' else 'Complete patient demographics and clinical records' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('doctor.patients') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'العودة للمرضى' if g.lang == 'ar' else 'Back to Patients' }}
+        </a>
+    </div>
 </div>
 
+<!-- Patient Header -->
+{% include 'clinical/_patient_header.html' %}
+
 <div class="row g-4">
-    <!-- Demographics -->
+    <!-- Sidebar: Actions -->
     <div class="col-lg-4">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Demographics</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-primary)"></i> {{ 'الإجراءات' if g.lang == 'ar' else 'Actions' }}</div>
             </div>
             <div class="card-body">
-                <h5>{{ patient.user.full_name if patient and patient.user else 'N/A' }}</h5>
-                <p class="text-muted mb-2"><i class="fas fa-envelope me-2"></i>{{ patient.user.email if patient and patient.user else 'N/A' }}</p>
-                <p class="text-muted mb-2"><i class="fas fa-birthday-cake me-2"></i>{{ patient.date_of_birth.strftime('%B %d, %Y') if patient and patient.date_of_birth else 'N/A' }}</p>
-                <p class="text-muted mb-3"><i class="fas fa-venus-mars me-2"></i>{{ patient.gender or 'N/A' }}</p>
-
-                {% if patient and patient.allergies %}
-                <h6 class="text-danger mt-3"><i class="fas fa-exclamation-triangle me-1"></i>Allergies</h6>
-                <p>{{ patient.allergies }}</p>
-                {% endif %}
-
-                {% if patient and patient.chronic_diseases %}
-                <h6 class="text-warning mt-3"><i class="fas fa-notes-medical me-1"></i>Chronic Diseases</h6>
-                <p>{{ patient.chronic_diseases }}</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="card card-shadow mt-4">
-            <div class="card-body">
-                <h6 class="mb-3">Actions</h6>
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('doctor.add_emr', patient_id=patient.id) }}" class="btn btn-primary">
-                        <i class="fas fa-plus-circle me-1"></i>Add Medical Record
+                <div style="display:flex;flex-direction:column;gap:var(--sp-3)">
+                    <a href="{{ url_for('doctor.add_emr', patient_id=patient.id) }}" class="btn-ihs btn-ihs-primary" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-plus-circle"></i> {{ 'إضافة سجل طبي' if g.lang == 'ar' else 'Add Medical Record' }}
                     </a>
-                    <a href="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}" class="btn btn-success">
-                        <i class="fas fa-pills me-1"></i>Prescriptions
+                    <a href="{{ url_for('doctor.prescriptions', patient_id=patient.id) }}" class="btn-ihs btn-ihs-success" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-pills"></i> {{ 'الوصفات الطبية' if g.lang == 'ar' else 'Prescriptions' }}
                     </a>
-                    <a href="{{ url_for('doctor.lab_order', patient_id=patient.id) }}" class="btn btn-info text-white">
-                        <i class="fas fa-flask me-1"></i>Lab Order
+                    <a href="{{ url_for('doctor.lab_order', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-flask"></i> {{ 'طلب مختبر' if g.lang == 'ar' else 'Lab Order' }}
                     </a>
-                    <a href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}" class="btn btn-warning">
-                        <i class="fas fa-x-ray me-1"></i>Radiology Order
+                    <a href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-x-ray"></i> {{ 'طلب تصوير' if g.lang == 'ar' else 'Radiology Order' }}
                     </a>
-                    <a href="{{ url_for('ai.summary', patient_id=patient.id) }}" class="btn btn-outline-primary">
-                        <i class="fas fa-brain me-1"></i>AI Summary
+                    <a href="{{ url_for('ai.summary', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-brain"></i> {{ 'ملخص AI' if g.lang == 'ar' else 'AI Summary' }}
                     </a>
-                    <a href="{{ url_for('ai.medication_review', patient_id=patient.id) }}" class="btn btn-outline-primary">
-                        <i class="fas fa-capsules me-1"></i>AI Medication Review
+                    <a href="{{ url_for('ai.medication_review', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-capsules"></i> {{ 'مراجعة الأدوية AI' if g.lang == 'ar' else 'AI Medication Review' }}
                     </a>
-                    <a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn btn-outline-primary">
-                        <i class="fas fa-users me-1"></i>Care Team
+                    <a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="display:flex;align-items:center;justify-content:center;gap:var(--sp-2)">
+                        <i class="fas fa-users"></i> {{ 'فريق الرعاية' if g.lang == 'ar' else 'Care Team' }}
                     </a>
                 </div>
             </div>
@@ -63,20 +52,20 @@
 
     <div class="col-lg-8">
         <!-- Medical Records -->
-        <div class="card card-shadow mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-notes-medical me-2"></i>Medical Records</h5>
+        <div class="card-premium" style="margin-bottom:var(--sp-4)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-primary)"></i> {{ 'السجلات الطبية' if g.lang == 'ar' else 'Medical Records' }}</div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Diagnosis</th>
+                                <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                                <th>{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }}</th>
                                 <th>ICD-10</th>
-                                <th>Treatment Plan</th>
-                                <th>Status</th>
+                                <th>{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</th>
+                                <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -84,68 +73,131 @@
                             {% if records %}
                                 {% for rec in records %}
                                 <tr>
-                                    <td>{{ rec.created_at.strftime('%Y-%m-%d') if rec.created_at else 'N/A' }}</td>
-                                    <td>{{ rec.diagnosis or '-' }}</td>
-                                    <td><span class="badge bg-secondary">{{ rec.icd10 or '-' }}</span></td>
+                                    <td class="cell-mono">{{ rec.created_at.strftime('%Y-%m-%d') if rec.created_at else 'N/A' }}</td>
+                                    <td class="cell-primary">{{ rec.diagnosis or '-' }}</td>
+                                    <td><span class="tag-ihs">{{ rec.icd10 or '-' }}</span></td>
                                     <td>{{ rec.treatment_plan or '-' }}</td>
                                     <td>
                                         {% if rec.status == 'Signed' %}
-                                            <span class="badge bg-success">Signed</span>
+                                            <span class="status-badge s-signed">Signed</span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">Draft</span>
+                                            <span class="status-badge s-draft">Draft</span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-end text-nowrap">
-                                        {% if current_user.has_permission('MEDICAL_RECORD_AMEND') %}
-                                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('doctor.edit_emr', record_id=rec.id) }}"><i class="fas fa-edit me-1"></i>Edit</a>
-                                        {% endif %}
-                                        {% if current_user.has_permission('MEDICAL_RECORD_SIGN') and rec.status != 'Signed' %}
-                                        <form method="POST" action="{{ url_for('doctor.sign_record', record_id=rec.id) }}" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button class="btn btn-success btn-sm"><i class="fas fa-signature me-1"></i>Sign</button>
-                                        </form>
-                                        {% endif %}
-                                        <a class="btn btn-outline-primary btn-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=rec.id) }}"><i class="fas fa-file-pdf me-1"></i>PDF</a>
+                                    <td>
+                                        <div style="display:flex;gap:var(--sp-2);justify-content:flex-end">
+                                            {% if current_user.has_permission('MEDICAL_RECORD_AMEND') %}
+                                            <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.edit_emr', record_id=rec.id) }}"><i class="fas fa-edit"></i> {{ 'تعديل' if g.lang == 'ar' else 'Edit' }}</a>
+                                            {% endif %}
+                                            {% if current_user.has_permission('MEDICAL_RECORD_SIGN') and rec.status != 'Signed' %}
+                                            <form method="POST" action="{{ url_for('doctor.sign_record', record_id=rec.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn-ihs btn-ihs-success btn-ihs-sm"><i class="fas fa-signature"></i> {{ 'توقيع' if g.lang == 'ar' else 'Sign' }}</button>
+                                            </form>
+                                            {% endif %}
+                                            <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.medical_record', record_id=rec.id) }}"><i class="fas fa-file-pdf"></i> PDF</a>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr><td colspan="6" class="text-center text-muted py-4">No medical records found.</td></tr>
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="empty-state">
+                                            <div class="empty-icon"><i class="fas fa-file-medical"></i></div>
+                                            <div class="empty-title">{{ 'لا توجد سجلات طبية' if g.lang == 'ar' else 'No Medical Records Found' }}</div>
+                                            <div class="empty-desc">{{ 'لم يتم تسجيل أي سجلات طبية لهذا المريض' if g.lang == 'ar' else 'No medical records have been created for this patient' }}</div>
+                                        </div>
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
+</div>
+    </div>
+
+    <!-- Patient Documents/Images -->
+    {% if patient.documents|length > 0 %}
+    <div class="card-premium mb-4">
+        <div class="card-header">
+            <div class="card-title"><i class="fas fa-paperclip" style="color:var(--ihis-primary)"></i> {{ 'مرفقات المريض' if g.lang == 'ar' else 'Patient Documents' }} ({{ patient.documents|length }})</div>
+        </div>
+        <div class="card-body flush">
+            <div class="table-wrapper">
+                <table class="table-ihs">
+                    <thead>
+                        <tr>
+                            <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                            <th>{{ 'العنوان' if g.lang == 'ar' else 'Title' }}</th>
+                            <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الإجراءات' if g.lang == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in patient.documents %}
+                        <tr>
+                            <td class="cell-secondary">
+                                {% if doc.document_type and doc.document_type.lower().endswith(('.png', '.jpg', '.jpeg')) %}
+                                    <img src="{{ doc.file_url }}" class="img-thumbnail" style="max-width:50px;height:auto;">
+                                {% elif doc.document_type %}
+                                    {{ doc.document_type }}
+                                {% else %}
+                                    <i class="fas fa-file"></i>
+                                {% endif %}
+                            </td>
+                            <td class="cell-primary">{{ doc.title or 'مستند غير مسمي' if g.lang == 'ar' else 'Untitled Document' }}</td>
+                            <td class="cell-mono">{{ doc.uploaded_at.strftime('%d %b %Y') if doc.uploaded_at else 'N/A' }}</td>
+                            <td>
+                                {% if doc.file_url %}
+                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" target="_blank" href="{{ doc.file_url }}"><i class="fas fa-file-download"></i> {{ 'تحميل' if g.lang == 'ar' else 'Download' }}</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
+    </div>
+    {% endif %}
 
         <!-- Diagnoses -->
-        <div class="card card-shadow mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Diagnoses</h5>
+        <div class="card-premium" style="margin-bottom:var(--sp-4)">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-stethoscope" style="color:var(--ihis-primary)"></i> {{ 'التشخيصات' if g.lang == 'ar' else 'Diagnoses' }}</div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Diagnosis</th>
+                                <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                                <th>{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }}</th>
                                 <th>ICD-10</th>
-                                <th>Notes</th>
+                                <th>{{ 'الملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if diagnoses %}
                                 {% for d in diagnoses %}
                                 <tr>
-                                    <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else 'N/A' }}</td>
-                                    <td>{{ d.diagnosis_name or d.diagnosis or '-' }}</td>
-                                    <td><span class="badge bg-secondary">{{ d.icd10 or d.icd_10_code or '-' }}</span></td>
-                                    <td>{{ d.notes or '-' }}</td>
+                                    <td class="cell-mono">{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else 'N/A' }}</td>
+                                    <td class="cell-primary">{{ d.diagnosis_name or d.diagnosis or '-' }}</td>
+                                    <td><span class="tag-ihs">{{ d.icd10 or d.icd_10_code or '-' }}</span></td>
+                                    <td class="cell-secondary">{{ d.notes or '-' }}</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr><td colspan="4" class="text-center text-muted py-4">No diagnoses recorded.</td></tr>
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <div class="empty-icon"><i class="fas fa-stethoscope"></i></div>
+                                            <div class="empty-title">{{ 'لا توجد تشخيصات' if g.lang == 'ar' else 'No Diagnoses Recorded' }}</div>
+                                            <div class="empty-desc">{{ 'لم يتم تسجيل أي تشخيصات' if g.lang == 'ar' else 'No diagnoses have been documented' }}</div>
+                                        </div>
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>
@@ -154,37 +206,45 @@
         </div>
 
         <!-- Recent Vitals -->
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Recent Vitals</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-heartbeat" style="color:var(--ihis-danger)"></i> {{ 'العلامات الحيوية الأخيرة' if g.lang == 'ar' else 'Recent Vitals' }}</div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Blood Pressure</th>
-                                <th>Heart Rate</th>
-                                <th>Temperature</th>
-                                <th>SpO2</th>
-                                <th>Weight</th>
+                                <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                                <th>{{ 'ضغط الدم' if g.lang == 'ar' else 'Blood Pressure' }}</th>
+                                <th>{{ 'نبض القلب' if g.lang == 'ar' else 'Heart Rate' }}</th>
+                                <th>{{ 'الحرارة' if g.lang == 'ar' else 'Temperature' }}</th>
+                                <th>SpO₂</th>
+                                <th>{{ 'الوزن' if g.lang == 'ar' else 'Weight' }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if vitals %}
                                 {% for v in vitals %}
                                 <tr>
-                                    <td>{{ v.recorded_at.strftime('%Y-%m-%d %H:%M') if v.recorded_at else 'N/A' }}</td>
-                                    <td>{{ v.blood_pressure or '-' }}</td>
-                                    <td>{{ v.heart_rate or '-' }} bpm</td>
-                                    <td>{{ v.temperature or '-' }} &deg;C</td>
-                                    <td>{{ v.oxygen_saturation or '-' }}%</td>
-                                    <td>{{ v.weight or '-' }} kg</td>
+                                    <td class="cell-mono">{{ v.recorded_at.strftime('%Y-%m-%d %H:%M') if v.recorded_at else 'N/A' }}</td>
+                                    <td class="t-num">{{ v.blood_pressure or '-' }}</td>
+                                    <td class="t-num">{{ v.heart_rate or '-' }} bpm</td>
+                                    <td class="t-num">{{ v.temperature or '-' }} &deg;C</td>
+                                    <td class="t-num">{{ v.oxygen_saturation or '-' }}%</td>
+                                    <td class="t-num">{{ v.weight or '-' }} kg</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr><td colspan="6" class="text-center text-muted py-4">No vitals recorded.</td></tr>
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="empty-state">
+                                            <div class="empty-icon"><i class="fas fa-heartbeat"></i></div>
+                                            <div class="empty-title">{{ 'لا توجد علامات حيوية' if g.lang == 'ar' else 'No Vitals Recorded' }}</div>
+                                            <div class="empty-desc">{{ 'لم يتم تسجيل أي علامات حيوية' if g.lang == 'ar' else 'No vital signs have been recorded' }}</div>
+                                        </div>
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>

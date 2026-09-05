@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('pharmacy.reconciliations') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm" style="float:right">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+        </a>
+        <h1><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i>
+            {{ 'توفيق دوائي' if g.lang == 'ar' else 'Medication Reconciliation' }} #{{ rec.id }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ rec.patient.user.full_name if rec.patient and rec.patient.user else 'Patient' }} · MRN {{ rec.patient.mrn if rec.patient else '-' }}
+            · {{ rec.reconciliation_type }} · {{ rec.created_at.strftime('%d %b %Y %H:%M') }}
+        </p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-home" style="color:var(--ihis-info)"></i>
+                    {{ 'أدوية المنزل' if g.lang == 'ar' else 'Home Medications' }}
+                    ({{ rec.home_med_list|length }})</div>
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for h in rec.home_med_list %}
+                    <div class="list-item">
+                        <span style="flex:1;font-size:0.8125rem">{{ h.medication_name or '' }}</span>
+                        <span class="text-muted" style="font-size:0.75rem">{{ h.dose }} {{ h.frequency }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-prescription" style="color:var(--ihis-success)"></i>
+                    {{ 'الوصفات النشطة' if g.lang == 'ar' else 'Active Prescriptions' }}
+                    ({{ rec.active_med_list|length }})</div>
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for a in rec.active_med_list %}
+                    <div class="list-item">
+                        <span style="flex:1;font-size:0.8125rem">{{ a.name or '' }}</span>
+                        <span class="text-muted" style="font-size:0.75rem">{{ a.dose }} {{ a.frequency }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-triangle-exclamation" style="color:var(--ihis-danger)"></i>
+                    {{ 'النتائج' if g.lang == 'ar' else 'Findings' }} ({{ rec.discrepancies|length }})</div>
+                {% if rec.status != 'Completed' and current_user.has_permission('RECONCILIATION_COMPLETE') %}
+                <form method="post" action="{{ url_for('pharmacy.complete_reconciliation', rec_id=rec.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i>
+                        {{ 'إكمال' if g.lang == 'ar' else 'Complete' }}</button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for d in rec.discrepancies %}
+                    <div class="list-item" style="align-items:flex-start">
+                        <div style="flex:1">
+                            <div style="font-size:0.8125rem;font-weight:500">
+                                <span class="status-badge {{ 's-cancelled' if d.severity in ('HIGH','CRITICAL') else 's-pending' }}" style="font-size:0.625rem">{{ d.severity }}</span>
+                                {{ d.discrepancy_type|replace('_',' ') }}
+                            </div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ d.description }}</div>
+                            {% if d.recommended_action %}
+                            <div style="font-size:0.75rem;color:var(--ihis-primary)"><i class="fas fa-check-circle me-1"></i>{{ d.recommended_action }}</div>
+                            {% endif %}
+                            {% if d.resolved_note %}<div style="font-size:0.75rem;color:var(--ihis-success)">{{ d.resolved_note }}</div>{% endif %}
+                        </div>
+                        {% if d.status == 'Open' and current_user.has_permission('RECONCILIATION_COMPLETE') %}
+                        <a href="#resolve-{{ d.id }}" data-bs-toggle="collapse" class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'حل' if g.lang == 'ar' else 'Resolve' }}</a>
+                        {% else %}
+                        <span class="status-badge s-completed" style="font-size:0.6875rem">{{ d.status }}</span>
+                        {% endif %}
+                    </div>
+                    {% if d.status == 'Open' %}
+                    <div class="collapse" id="resolve-{{ d.id }}">
+                        <form method="post" action="{{ url_for('pharmacy.resolve_discrepancy', d_id=d.id) }}" style="padding:var(--sp-2) var(--sp-3);border-top:1px solid var(--ihis-border)">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="resolved_note" class="form-control" placeholder="{{ 'ملاحظة الحل' if g.lang == 'ar' else 'Resolution note' }}">
+                                <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i></button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">
+                        {{ 'لا توجد نتائج. توفيق نظيف.' if g.lang == 'ar' else 'No findings. Clean reconciliation.' }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% if rec.summary %}
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-note-sticky"></i> {{ rec.summary }}</div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

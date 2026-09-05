@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-play" style="color:var(--ihis-primary)"></i> {{ 'تطبيق' if g.lang == 'ar' else 'Apply' }} “{{ oset.name }}”</h1>
+        <p class="text-muted" style="font-size:0.85rem">{{ 'اختر مريضاً لتطبيق الحزمة عليه.' if g.lang == 'ar' else 'Choose a patient to apply this order set to.' }}</p>
+    </div>
+    <a href="{{ url_for('clinical.order_set_detail', order_set_id=oset.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+        <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-list-check"></i> {{ 'سيتم إنشاؤه' if g.lang == 'ar' else 'Will be created' }}</div></div>
+            <div class="card-body">
+                {% set sm = oset.summary %}
+                <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+                    <span class="tag-ihs">{{ sm.LAB }} {{ 'فحص مختبر' if g.lang == 'ar' else 'lab order(s)' }}</span>
+                    <span class="tag-ihs">{{ sm.RADIOLOGY }} {{ 'أمر تصوير' if g.lang == 'ar' else 'imaging order(s)' }}</span>
+                    <span class="tag-ihs">{{ sm.MEDICATION }} {{ 'دواء (روشتة)' if g.lang == 'ar' else 'medication(s) (prescription)' }}</span>
+                    <span class="tag-ihs">{{ sm.REFERRAL }} {{ 'إحالة' if g.lang == 'ar' else 'referral(s)' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-user-injured"></i> {{ 'المرضى في نطاقك' if g.lang == 'ar' else 'Patients in your scope' }}</div></div>
+            <div class="card-body flush">
+                {% if patients %}
+                <div class="list-compact">
+                    {% for p in patients %}
+                    <div class="list-item">
+                        <div class="patient-avatar-lg">{{ p.user.full_name[0]|upper if p.user else 'P' }}</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:600;color:var(--ihis-text);font-size:0.875rem">{{ p.user.full_name if p.user else 'Patient' }}</div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">MRN {{ p.mrn or '-' }}
+                                {% if p.gender %} &middot; {{ p.gender }}{% endif %}</div>
+                        </div>
+                        <form method="POST" action="{{ url_for('clinical.order_set_apply', order_set_id=oset.id, patient_id=p.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-play"></i> {{ 'تطبيق' if g.lang == 'ar' else 'Apply' }}</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">{{ 'لا مرضى متاحين.' if g.lang == 'ar' else 'No accessible patients.' }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

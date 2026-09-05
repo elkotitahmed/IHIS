@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+<div>
+        <h1><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i>
+            {{ 'سجل مواءمة الأدوية' if g.lang == 'ar' else 'New Medication Reconciliation' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">{{ patient.user.full_name if patient.user else 'Patient' }} • MRN {{ patient.mrn or '-' }}</p>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+{% if existing %}
+<div class="alert alert-warning">
+    <i class="fas fa-circle-exclamation me-2"></i>
+    {{ 'يوجد توفيق مفتوح لهذا المريض.' if g.lang == 'ar' else 'There is already an open reconciliation for this patient.' }}
+    <a href="{{ url_for('pharmacy.reconciliation_detail', rec_id=existing.id) }}">{{ 'عرضه' if g.lang == 'ar' else 'View it' }}</a>
+</div>
+{% endif %}
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-success)"></i>
+            {{ 'أدوية المنزل' if g.lang == 'ar' else 'Home Medications' }}</div>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('pharmacy.reconcile', patient_id=patient.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">{{ 'النوع' if g.lang == 'ar' else 'Type' }}</label>
+                <select name="reconciliation_type" class="form-select">
+                    <option value="Admission">Admission</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Discharge">Discharge</option>
+                    <option value="Ambulatory">Ambulatory</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ 'قائمة أدوية المنزل (سطر لكل دواء: الاسم، الجرعة، التكرار)' if g.lang == 'ar' else 'Home medication list (one per line: name, dose, frequency)' }}</label>
+                <textarea name="home_medications" class="form-control" rows="6"
+                          placeholder="Metformin 500mg twice daily&#10;Lisinopril 10mg once daily&#10;Aspirin 81mg once daily"></textarea>
+                <div class="form-text">
+                    {{ 'يدعم أيضاً JSON: [{"name": "...", "dose": "...", "frequency": "..."}]' if g.lang == 'ar' else 'Also accepts JSON: [{"name": "...", "dose": "...", "frequency": "..."}]' }}
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ 'ملخص' if g.lang == 'ar' else 'Summary' }}</label>
+                <input type="text" name="summary" class="form-control" placeholder="{{ 'ثبت أثناء القبول' if g.lang == 'ar' else 'Taken on admission' }}">
+            </div>
+            <button class="btn-ihs btn-ihs-primary"><i class="fas fa-play"></i>
+                {{ 'تشغيل الفحص' if g.lang == 'ar' else 'Run Reconciliation' }}</button>
+            <a href="{{ url_for('pharmacy.reconciliations') }}" class="btn-ihs btn-ihs-outline">{{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -70,7 +70,6 @@ class AIClinicalPharmacist:
                 < (birth.month, birth.day))
 
         gender = patient.gender or 'N/A'
-        mrn = patient.mrn or 'N/A'
         allergies = patient.allergies or 'NKDA (No Known Drug Allergies)'
         diagnoses = (patient.chronic_diseases or 'Not specified')
 
@@ -101,10 +100,8 @@ class AIClinicalPharmacist:
         prompt = f"""You are performing a comprehensive medication therapy review for a patient. Analyze the provided patient information and medications, then provide detailed clinical recommendations.
 
 PATIENT INFORMATION:
-- Name: {patient.user.full_name if patient.user else 'N/A'}
 - Age: {age} years
 - Gender: {gender}
-- MRN: {mrn}
 
 CURRENT MEDICATIONS:
 {med_text}

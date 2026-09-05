@@ -5,14 +5,16 @@ from app.models import (
     LabOrder, LabResult, LabTestCatalog, Patient, Doctor,
 )
 from app.routes.decorators import roles_required, permissions_required, log_activity, log_change
-from app.utils import utcnow, is_clinical_locked, apply_lab_abnormality
+from app.access import accessible_patient_ids, require_patient_access
+from app.utils import (utcnow, is_clinical_locked,
+                       apply_lab_abnormality, apply_lab_criticality)
 from app.services.status import assert_transition, StatusTransitionError
 from app.services.notifications import notify, notify_doctor, notify_patient, notify_role
 from app.services import tasks as task_svc
+from app.services.timeline import record_event
+from app.services import alerts as alert_svc
 
 lab_bp = Blueprint('lab', __name__)
-
-ALLOWED = ['doctor', 'admin', 'lab_technician', 'SuperAdmin']
 
 
 def _order(oid):
@@ -30,6 +32,13 @@ def _status_badge(s):
         'Resulted': 'success', 'Verified': 'success', 'Finalized': 'success',
         'Rejected': 'danger', 'Reordered': 'warning', 'Cancelled': 'danger',
     }.get(s, 'secondary')
+
+
+def _parse_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 @lab_bp.route('/dashboard')
@@ -58,9 +67,26 @@ def dashboard():
 @login_required
 @roles_required('LabTechnician', 'Doctor', 'Admin', 'SuperAdmin')
 def orders():
-    all_orders = LabOrder.query.order_by(LabOrder.order_date.desc()).all()
+    q = LabOrder.query
+    f_status = request.args.get('status', '').strip()
+    f_priority = request.args.get('priority', '').strip()
+    f_critical = request.args.get('critical', '').strip()
+    search = request.args.get('q', '').strip()
+    if f_status:
+        q = q.filter(LabOrder.status == f_status)
+    if f_priority:
+        q = q.filter(LabOrder.priority == f_priority)
+    if f_critical == '1':
+        q = q.join(LabResult, LabOrder.result).filter(LabResult.is_critical.is_(True))
+    if search:
+        like = f'%{search}%'
+        numeric = int(search) if search.isdigit() else -1
+        q = q.filter(db.or_(LabOrder.accession_number.like(like), LabOrder.id == numeric))
+    all_orders = q.order_by(LabOrder.order_date.desc()).all()
     return render_template('lab/orders.html', title='Lab Orders', orders=all_orders,
-                           status_badge=_status_badge)
+                           status_badge=_status_badge,
+                           f_status=f_status, f_priority=f_priority,
+                           f_critical=f_critical, search=search)
 
 
 @lab_bp.route('/order/new', methods=['GET', 'POST'])
@@ -77,6 +103,8 @@ def new_order():
         if not Patient.query.get(patient_id) or not LabTestCatalog.query.get(test_id):
             flash('Please select a valid patient and test.', 'danger')
             return redirect(url_for('lab.new_order'))
+        patient = db.session.get(Patient, patient_id)
+        require_patient_access(patient)
         priority = request.form.get('priority', 'Normal')
         specimen_type = (request.form.get('specimen_type') or 'Blood').strip() or 'Blood'
         notes = request.form.get('notes')
@@ -107,11 +135,18 @@ def new_order():
                     f'New lab order #{order.id}',
                     f'A new lab order ({order.test.test_name if order.test else ""}) has been created for patient #{order.patient_id}.',
                     entity_type='lab_order', entity_id=order.id)
+        record_event(patient_id, 'LAB',
+                     f'Lab order: {order.test.test_name if order.test else "Test"}',
+                     f'{specimen_type} sample · priority {priority}',
+                     source_type='lab_order', source_id=order.id,
+                     department='Laboratory')
         db.session.commit()
         flash('Lab order created; sample workflow started.', 'success')
         return redirect(url_for('lab.orders'))
 
-    patients = Patient.query.all()
+    patients = Patient.query.filter(
+        Patient.id.in_(accessible_patient_ids(current_user) or [-1])
+    ).order_by(Patient.id).all()
     tests = LabTestCatalog.query.filter_by(is_active=True).all()
     return render_template('lab/new_order.html', title='New Lab Order',
                            patients=patients, tests=tests)
@@ -270,11 +305,8 @@ def enter_result(order_id):
             result.result_notes = result_notes
             result.result_unit = result_unit
             result.qualitative = qualitative
-            apply_lab_abnormality(result, order)
-            if manual_critical:
-                result.is_critical = True
-            if not result.is_abnormal and manual_abnormal:
-                result.is_abnormal = True
+            apply_lab_abnormality(result, order, manual_abnormal)
+            apply_lab_criticality(result, order, manual_critical)
             result.validated_by = current_user.id
             result.result_date = utcnow()
             result.status = 'Draft'
@@ -295,11 +327,8 @@ def enter_result(order_id):
             result.result_notes = result_notes
             result.result_unit = result_unit
             result.qualitative = qualitative
-            apply_lab_abnormality(result, order)
-            if manual_critical:
-                result.is_critical = True
-            if not result.is_abnormal and manual_abnormal:
-                result.is_abnormal = True
+            apply_lab_abnormality(result, order, manual_abnormal)
+            apply_lab_criticality(result, order, manual_critical)
             result.validated_by = current_user.id
             result.result_date = utcnow()
         else:
@@ -308,11 +337,8 @@ def enter_result(order_id):
                 result_notes=result_notes, result_unit=result_unit,
                 qualitative=qualitative,
                 validated_by=current_user.id, created_by=current_user.id)
-            apply_lab_abnormality(result, order)
-            if manual_critical:
-                result.is_critical = True
-            if not result.is_abnormal and manual_abnormal:
-                result.is_abnormal = True
+            apply_lab_abnormality(result, order, manual_abnormal)
+            apply_lab_criticality(result, order, manual_critical)
             db.session.add(result)
 
         try:
@@ -324,12 +350,25 @@ def enter_result(order_id):
             if order.status not in ('Resulted', 'Verified', 'Finalized'):
                 order.status = 'Resulted'
         log_activity('ENTER_LAB_RESULT', 'lab_order', order.id)
+        record_event(order.patient_id, 'LAB',
+                     f'Lab result entered: {order.test.test_name if order.test else "Test"}',
+                     f'{result_value} {result_unit or ""}' +
+                     (f' · CRITICAL' if result and result.is_critical else
+                      f' · abnormal' if result and result.is_abnormal else ''),
+                     source_type='lab_order', source_id=order.id,
+                     department='Laboratory')
         db.session.commit()
-        # If a critical panic value was flagged, escalate immediately.
-        if manual_critical or (result and result.is_critical):
+        # If a critical panic value was flagged (manually or by thresholds),
+        # escalate immediately.
+        if result and result.is_critical:
             notify_role('Doctor', f'CRITICAL lab result — order #{order.id}',
                         f'Critical value: {result_value} ({order.test.test_name if order.test else ""}). Review immediately.',
                         notification_type='critical', entity_type='lab_order', entity_id=order.id)
+            alert_svc.ensure_open_alert(
+                order.patient_id, 'CRITICAL_LAB', severity='CRITICAL',
+                title=f'Critical lab value: {order.test.test_name if order.test else "Lab"}',
+                message=f'{result_value} {result_unit or ""} — order #{order.id}',
+                source_type='lab_order', source_id=order.id)
             db.session.commit()
         return redirect(url_for('lab.orders'))
 
@@ -360,6 +399,32 @@ def verify_result(order_id):
     result.validated_by = current_user.id
     log_activity('VERIFY_LAB_RESULT', 'lab_result', result.id,
                  f'Verified by {current_user.full_name}')
+    # Re-derive abnormality/criticality at verification time: catches values
+    # entered before thresholds existed and guarantees review is the moment the
+    # panic value is confirmed and escalated.
+    apply_lab_abnormality(result, order, manual_abnormal=False)
+    apply_lab_criticality(result, order, manual_critical=False)
+    record_event(order.patient_id, 'LAB',
+                 f'Lab result verified: {order.test.test_name if order.test else "Test"}',
+                 f'{result.result_value} {result.result_unit or ""}',
+                 source_type='lab_order', source_id=order.id,
+                 department='Laboratory')
+    if result.is_critical:
+        notify_role('Doctor',
+                    f'CRITICAL lab result verified — order #{order.id}',
+                    f'Critical panic value: {result.result_value} ({order.test.test_name if order.test else ""}). Review immediately.',
+                    notification_type='critical', entity_type='lab_order', entity_id=order.id)
+        alert_svc.ensure_open_alert(
+            order.patient_id, 'CRITICAL_LAB', severity='CRITICAL',
+            title=f'Critical lab value: {order.test.test_name if order.test else "Lab"}',
+            message=f'{result.result_value} {result.result_unit or ""} — order #{order.id}',
+            source_type='lab_order', source_id=order.id)
+    if result.is_abnormal and not result.is_critical:
+        alert_svc.ensure_open_alert(
+            order.patient_id, 'CRITICAL_LAB', severity='LOW',
+            title=f'Abnormal result: {order.test.test_name if order.test else "Lab"}',
+            message=f'{result.result_value} {result.result_unit or ""} — order #{order.id}',
+            source_type='lab_order', source_id=order.id)
     if order.test and order.test.price:
         from app.services.billing import ensure_bill_for_lab
         ensure_bill_for_lab(order.id)
@@ -416,6 +481,9 @@ def add_test():
             normal_range=request.form.get('normal_range'),
             unit=request.form.get('unit'),
             price=float(request.form.get('price') or 0),
+            critical_low=_parse_float(request.form.get('critical_low')),
+            critical_high=_parse_float(request.form.get('critical_high')),
+            critical_notes=request.form.get('critical_notes'),
         ))
         db.session.commit()
         flash('Test added to catalog.', 'success')

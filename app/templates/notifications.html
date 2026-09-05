@@ -1,47 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-bell me-2"></i>Notifications
-        <span class="badge bg-primary ms-1">{{ notifications|length }} shown</span>
-        {% if unread_notifications %}<span class="badge bg-danger rounded-pill ms-1">{{ unread_notifications }} unread</span>{% endif %}
-    </h4>
-    <form method="post" action="{{ url_for('main.notifications_mark_all_read') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn btn-sm btn-outline-primary" {% if not unread_notifications %}disabled{% endif %}>
-            <i class="fas fa-check-double me-1"></i>Mark all read
-        </button>
-    </form>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-bell" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ t('notifications') }}</h1>
+        <p class="page-subtitle">{{ notifications|length }} {{ 'إشعار' if g.lang == 'ar' else 'notifications' }}{% if unread_notifications %} &middot; {{ unread_notifications }} {{ 'غير مقروء' if g.lang == 'ar' else 'unread' }}{% endif %}</p>
+    </div>
+    <div class="page-actions">
+        <form method="post" action="{{ url_for('main.notifications_mark_all_read') }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-ihs btn-ihs-outline" {% if not unread_notifications %}disabled{% endif %}>
+                <i class="fas fa-check-double"></i> {{ 'تحديد الكل كمقروء' if g.lang == 'ar' else 'Mark all read' }}
+            </button>
+        </form>
+    </div>
 </div>
 
-<ul class="nav nav-pills mb-3">
-    <li class="nav-item"><a class="nav-link {{ 'active' if not category else '' }}" href="{{ url_for('main.notifications') }}">All</a></li>
+<div class="tabs-ihs mb-4">
+    <a class="tab-item {{ 'active' if not category else '' }}" href="{{ url_for('main.notifications') }}">{{ t('all') }}</a>
     {% for c in ['in-app', 'critical', 'email', 'sms'] %}
-    <li class="nav-item"><a class="nav-link {{ 'active' if category == c else '' }}" href="{{ url_for('main.notifications', category=c) }}">{{ c|title }}</a></li>
+    <a class="tab-item {{ 'active' if category == c else '' }}" href="{{ url_for('main.notifications', category=c) }}">{{ c|title }}</a>
     {% endfor %}
-</ul>
+</div>
 
-<div class="card card-shadow">
-    <div class="card-body">
+<div class="card-premium">
+    <div class="card-body flush">
         {% if notifications %}
-        <ul class="list-group list-group-flush">
+        <div class="list-compact">
             {% for n in notifications %}
-            <li class="list-group-item d-flex justify-content-between align-items-start {{ '' if n.is_read else 'list-group-item-light' }}">
-                <div class="w-100">
-                    <div>
-                        <span class="badge bg-{{ 'danger' if n.notification_type == 'critical' else 'info' }} me-2">
-                            {{ n.notification_type or 'in-app' }}
-                        </span>
-                        {% if not n.is_read %}<span class="badge bg-danger">new</span>{% endif %}
-                        <strong>{{ n.title }}</strong>
-                    </div>
-                    <div class="text-muted small">{{ n.message }}</div>
+            <div class="list-item" style="align-items:flex-start;{{ '' if n.is_read else 'background:var(--ihis-primary-light)' }};padding:var(--sp-3) var(--sp-4)">
+                <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ 'var(--ihis-danger-light)' if n.notification_type == 'critical' else 'var(--ihis-info-light)' }}">
+                    <i class="fas fa-{{ 'exclamation-triangle' if n.notification_type == 'critical' else 'bell' }}" style="font-size:0.75rem;color:{{ 'var(--ihis-danger)' if n.notification_type == 'critical' else 'var(--ihis-info)' }}"></i>
                 </div>
-                <small class="text-muted text-nowrap ms-3">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-            </li>
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:2px">
+                        <span style="font-weight:{{ '600' if not n.is_read else '400' }};font-size:0.875rem;color:var(--ihis-text)">{{ n.title }}</span>
+                        {% if not n.is_read %}<span class="notif-badge" style="font-size:0.5625rem;min-width:14px;height:14px">new</span>{% endif %}
+                    </div>
+                    <div style="font-size:0.8125rem;color:var(--ihis-text-secondary)">{{ n.message }}</div>
+                </div>
+                <div style="font-size:0.6875rem;color:var(--ihis-text-muted);white-space:nowrap">{{ n.created_at.strftime('%d %b %H:%M') if n.created_at else '' }}</div>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
         {% else %}
-        <p class="text-muted text-center py-4">No notifications{% if category %} in the '{{ category }}' category{% endif %}.</p>
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-bell-slash"></i></div>
+            <div class="empty-title">{{ 'لا توجد إشعارات' if g.lang == 'ar' else 'No notifications' }}</div>
+            <div class="empty-desc">{{ 'ستظهر الإشعارات الجديدة هنا' if g.lang == 'ar' else 'New notifications will appear here' }}</div>
+        </div>
         {% endif %}
     </div>
 </div>

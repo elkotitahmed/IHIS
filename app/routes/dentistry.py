@@ -9,6 +9,8 @@ from app.models import (
 )
 from app.routes.decorators import roles_required, log_activity, save_upload
 from app.access import patient_access_required, require_patient_access
+from app.services.patient_safety import patient_safety_context
+from app.utils import utcnow
 
 dentistry_bp = Blueprint('dentistry', __name__)
 
@@ -63,7 +65,9 @@ def chart(patient_id):
     charts = DentalChart.query.filter_by(patient_id=patient.id).order_by(
         DentalChart.tooth_number.asc()).all()
     return render_template('dentistry/chart.html', title='Dental Chart',
-                           patient=patient, charts=charts)
+                           patient=patient, charts=charts,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
 
 
 @dentistry_bp.route('/patients/<int:patient_id>/chart/add', methods=['POST'])
@@ -121,7 +125,9 @@ def record(patient_id):
         return redirect(url_for('dentistry.record', patient_id=patient.id))
 
     return render_template('dentistry/dental_record.html', title='Dental Record',
-                           patient=patient, dental_record=dental_record)
+                           patient=patient, dental_record=dental_record,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
 
 
 @dentistry_bp.route('/patients/<int:patient_id>/procedure', methods=['GET', 'POST'])
@@ -157,7 +163,9 @@ def procedures(patient_id):
     procedures_list = DentalProcedure.query.filter_by(patient_id=patient.id).order_by(
         DentalProcedure.performed_at.desc()).all()
     return render_template('dentistry/procedures.html', title='Dental Procedures',
-                           patient=patient, procedures=procedures_list)
+                           patient=patient, procedures=procedures_list,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
 
 
 @dentistry_bp.route('/patients/<int:patient_id>/imaging', methods=['GET', 'POST'])
@@ -194,7 +202,9 @@ def imaging(patient_id):
     images = DentalImage.query.filter_by(patient_id=patient.id).order_by(
         DentalImage.uploaded_at.desc()).all()
     return render_template('dentistry/imaging.html', title='Dental Imaging',
-                           patient=patient, images=images)
+                           patient=patient, images=images,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
 
 
 @dentistry_bp.route('/images/<int:image_id>/download')
@@ -293,7 +303,9 @@ def treatment_plans(patient_id):
     plans = DentalTreatmentPlan.query.filter_by(patient_id=patient.id).order_by(
         DentalTreatmentPlan.start_date.desc()).all()
     return render_template('dentistry/treatment_plan.html', title='Treatment Plan',
-                           patient=patient, plans=plans)
+                           patient=patient, plans=plans,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
 
 
 @dentistry_bp.route('/plans/<int:plan_id>/procedures', methods=['GET', 'POST'])

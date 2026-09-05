@@ -1,0 +1,23 @@
+# Core dependencies for CI/test runners. This deliberately excludes the heavy
+# ML stack (tensorflow-cpu, ultralytics, timm, torch, opencv): the AI services
+# import those lazily inside request handlers, so the suite passes without
+# downloading ~1.5 GB of model-runtime wheels.
+# numpy/Pillow/psycopg2-binary ARE needed here (the AI test modules and the
+# production-boot subprocess tests import them).
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+Flask-WTF==1.2.1
+Flask-Cors==4.0.1
+Flask-Limiter==4.1.1
+WTForms==3.1.2
+email-validator==2.2.0
+python-dotenv==1.0.1
+reportlab==4.2.0
+requests>=2.31.0
+numpy>=1.26.0
+Pillow>=10.0.0
+psycopg2-binary>=2.9.0
+pytest>=8.0.0

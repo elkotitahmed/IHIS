@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-edit" style="color:var(--ihis-primary)"></i> {{ 'تعديل ملف السلامة' if g.lang == 'ar' else 'Edit Safety Profile' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.safety_profile', patient_id=patient.id) }}">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
+</div>
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-4">
+        <!-- Pregnancy -->
+        <div class="col-lg-6">
+            <div class="card-premium" style="border-top:3px solid var(--ihis-info)">
+                <div class="card-header"><div class="card-title"><i class="fas fa-baby" style="color:var(--ihis-info)"></i> {{ 'حالة الحمل' if g.lang == 'ar' else 'Pregnancy Status' }}</div></div>
+                <div class="card-body">
+                    <select class="form-select" name="pregnancy_status">
+                        {% for s in ['Not Screened', 'Not Pregnant', 'Pregnant', 'Possibly Pregnant', 'Not Applicable'] %}
+                        <option value="{{ s }}" {% if profile.pregnancy_status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- Renal Function -->
+        <div class="col-lg-6">
+            <div class="card-premium" style="border-top:3px solid var(--ihis-success)">
+                <div class="card-header"><div class="card-title"><i class="fas fa-kidneys" style="color:var(--ihis-success)"></i> {{ 'الوظيفة الكلوية' if g.lang == 'ar' else 'Renal Function' }}</div></div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small">{{ 'الكرياتينين' if g.lang == 'ar' else 'Creatinine (mg/dL)' }}</label>
+                            <input class="form-control" type="number" step="0.1" name="last_creatinine" value="{{ profile.last_creatinine or '' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">eGFR (mL/min)</label>
+                            <input class="form-control" type="number" step="0.1" name="last_egfr" value="{{ profile.last_egfr or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">{{ 'تاريخ الفحص' if g.lang == 'ar' else 'Test Date' }}</label>
+                            <input class="form-control" type="date" name="renal_function_date" value="{{ profile.renal_function_date or '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Contrast -->
+        <div class="col-lg-6">
+            <div class="card-premium" style="border-top:3px solid var(--ihis-warning)">
+                <div class="card-header"><div class="card-title"><i class="fas fa-flask" style="color:var(--ihis-warning)"></i> {{ 'سجل التعقيد' if g.lang == 'ar' else 'Contrast History' }}</div></div>
+                <div class="card-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="previous_contrast_reaction" {% if profile.previous_contrast_reaction %}checked{% endif %}>
+                        <label class="form-check-label">{{ 'تفاعل سابق مع مادة تعقيد' if g.lang == 'ar' else 'Previous contrast reaction' }}</label>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">{{ 'نوع التعقيد' if g.lang == 'ar' else 'Contrast Type' }}</label>
+                        <select class="form-select form-select-sm" name="previous_contrast_type">
+                            <option value="">—</option>
+                            <option value="Iodinated" {% if profile.previous_contrast_type == 'Iodinated' %}selected{% endif %}>Iodinated</option>
+                            <option value="Gadolinium" {% if profile.previous_contrast_type == 'Gadolinium' %}selected{% endif %}>Gadolinium</option>
+                            <option value="Barium" {% if profile.previous_contrast_type == 'Barium' %}selected{% endif %}>Barium</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small">{{ 'تفاصيل التفاعل' if g.lang == 'ar' else 'Reaction Details' }}</label>
+                        <textarea class="form-control" name="contrast_reaction_details" rows="2">{{ profile.contrast_reaction_details or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- MRI -->
+        <div class="col-lg-6">
+            <div class="card-premium" style="border-top:3px solid #8b5cf6">
+                <div class="card-header"><div class="card-title"><i class="fas fa-magnet" style="color:#8b5cf6"></i> {{ 'حالة الفحص' if g.lang == 'ar' else 'MRI Screening Status' }}</div></div>
+                <div class="card-body">
+                    <select class="form-select" name="mri_screening_status">
+                        {% for s in ['Not Screened', 'Cleared', 'Additional Verification Required', 'Safety Concern'] %}
+                        <option value="{{ s }}" {% if profile.mri_screening_status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- CT Precautions -->
+        <div class="col-lg-6">
+            <div class="card-premium" style="border-top:3px solid var(--ihis-danger)">
+                <div class="card-header"><div class="card-title"><i class="fas fa-exclamation-triangle" style="color:var(--ihis-danger)"></i> {{ 'موانع واحتياطات CT' if g.lang == 'ar' else 'CT Contraindications & Precautions' }}</div></div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label small">{{ 'موانع' if g.lang == 'ar' else 'Contraindications' }}</label>
+                        <textarea class="form-control" name="ct_contraindications" rows="2">{{ profile.ct_contraindications or '' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="form-label small">{{ 'احتياطات' if g.lang == 'ar' else 'Precautions' }}</label>
+                        <textarea class="form-control" name="ct_precautions" rows="2">{{ profile.ct_precautions or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Special Prep -->
+        <div class="col-12">
+            <div class="card-premium">
+                <div class="card-header"><div class="card-title"><i class="fas fa-clipboard-list"></i> {{ 'ملاحظات إعداد خاصة' if g.lang == 'ar' else 'Special Preparation Notes' }}</div></div>
+                <div class="card-body">
+                    <textarea class="form-control" name="special_preparation_notes" rows="2">{{ profile.special_preparation_notes or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-3">
+        <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-save"></i> {{ 'حفظ' if g.lang == 'ar' else 'Save' }}</button>
+    </div>
+</form>
+{% endblock %}

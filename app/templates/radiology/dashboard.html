@@ -1,117 +1,77 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-x-ray me-2"></i>Radiology Dashboard</h3>
-    <a href="{{ url_for('radiology.new_order') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Order</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'لوحة الأشعة' if g.lang == 'ar' else 'Radiology Dashboard' }}</h1>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('radiology.orders') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-list"></i> {{ t('worklist') }}
+        </a>
+    </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-warning me-3"><i class="fas fa-hourglass-half"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Pending</h6>
-                    <h3 class="mb-0">{{ pending }}</h3>
-                </div>
-            </div>
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-icon warning"><i class="fas fa-hourglass-half"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('pending') }}</div>
+            <div class="kpi-value">{{ pending }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-info me-3"><i class="fas fa-calendar-check"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Scheduled</h6>
-                    <h3 class="mb-0">{{ scheduled }}</h3>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon info"><i class="fas fa-calendar-check"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('scheduled_studies') }}</div>
+            <div class="kpi-value">{{ scheduled }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-success me-3"><i class="fas fa-check-circle"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Completed</h6>
-                    <h3 class="mb-0">{{ completed }}</h3>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon success"><i class="fas fa-check-circle"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('completed') }}</div>
+            <div class="kpi-value">{{ completed }}</div>
         </div>
     </div>
 </div>
 
-<div class="row g-2 mb-4">
-    <div class="col-12">
-        <div class="card card-shadow">
-            <div class="card-body">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="fw-bold text-primary me-2"><i class="fas fa-brain me-1"></i>AI Tools:</span>
-                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('ai.fracture_detection') }}">
-                        <i class="fas fa-bone me-1"></i>Fracture Detection</a>
-                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('ai.tooth_segmentation') }}">
-                        <i class="fas fa-tooth me-1"></i>Tooth Segmentation</a>
-                    <span class="text-muted small ms-2">Auto-detect bone fractures and segment teeth from uploaded images.</span>
-                </div>
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'آخر الطلبات' if g.lang == 'ar' else 'Recent Orders' }}</div>
+                <a href="{{ url_for('radiology.orders') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ t('view_all') }}</a>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-lg-6">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Orders by Status</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="statusChart"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card card-shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Recent Orders</h5>
-                <a href="{{ url_for('radiology.orders') }}" class="btn btn-sm btn-outline-primary">View All</a>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
                             <tr>
-                                <th>Patient</th>
-                                <th>Imaging</th>
-                                <th>Status</th>
-                                <th>Priority</th>
+                                <th>{{ t('patients') }}</th>
+                                <th>{{ 'التصوير' if g.lang == 'ar' else 'Imaging' }}</th>
+                                <th>{{ t('priority') if false else 'Priority' }}</th>
+                                <th>{{ t('status') if false else 'Status' }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if recent %}
                                 {% for order in recent %}
                                 <tr>
-                                    <td>{{ order.patient.user.full_name if order.patient and order.patient.user else 'N/A' }}</td>
-                                    <td>{{ order.imaging_type.name if order.imaging_type else 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge bg-{% if order.status == 'Completed' %}success{% elif order.status == 'In Progress' or order.status == 'InProgress' %}info{% elif order.status == 'Scheduled' %}warning{% else %}secondary{% endif %}">
-                                            {{ order.status or 'Pending' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if order.priority == 'Urgent' or order.priority == 'High' %}
-                                            <span class="badge bg-danger">{{ order.priority }}</span>
-                                        {% elif order.priority == 'Routine' or order.priority == 'Normal' %}
-                                            <span class="badge bg-secondary">{{ order.priority }}</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ order.priority or 'Normal' }}</span>
-                                        {% endif %}
-                                    </td>
+                                    <td class="cell-primary">{{ order.patient.user.full_name if order.patient and order.patient.user else '-' }}</td>
+                                    <td>{{ order.imaging_type.name if order.imaging_type else '-' }}</td>
+                                    <td><span class="priority-badge p-{{ order.priority|lower }}">{{ order.priority }}</span></td>
+                                    <td><span class="status-badge s-{{ order.status|lower|replace(' ','-') }}">{{ order.status }}</span></td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">No recent radiology orders.</td>
-                                </tr>
+                            <tr>
+                                <td colspan="4">
+                                    <div class="empty-state" style="padding:2rem">
+                                        <div class="empty-icon"><i class="fas fa-x-ray"></i></div>
+                                        <div class="empty-title">{{ 'لا توجد طلبات أشعة' if g.lang == 'ar' else 'No radiology orders' }}</div>
+                                    </div>
+                                </td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
@@ -119,36 +79,25 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card card-shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-tasks text-primary me-2"></i>Radiology Work Queue</h5>
-                <a href="{{ url_for('tasks.queue', department='Radiology') }}" class="btn btn-sm btn-outline-primary">Open Queue</a>
+    <div class="col-lg-4">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-chart-pie" style="color:var(--ihis-info)"></i> {{ 'حسب الحالة' if g.lang == 'ar' else 'By Status' }}</div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr><th>Task</th><th>Patient</th><th>Priority</th><th>Status</th><th></th></tr>
-                        </thead>
-                        <tbody>
-                        {% for t in tasks %}
-                            <tr>
-                                <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
-                                <td>{{ t.patient.user.full_name if t.patient and t.patient.user else '-' }}</td>
-                                <td><span class="badge bg-{{ 'danger' if t.priority in ('URGENT','CRITICAL') else ('warning text-dark' if t.priority=='HIGH' else 'info') }}">{{ t.priority }}</span></td>
-                                <td><span class="badge bg-{{ 'primary' if t.status=='IN_PROGRESS' else 'secondary' }}">{{ t.status }}</span></td>
-                                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('tasks.detail', task_id=t.id) }}">View</a></td>
-                            </tr>
-                        {% else %}
-                            <tr><td colspan="5" class="text-center text-muted py-3">No open radiology tasks</td></tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-robot" style="color:var(--ihis-primary)"></i> AI Tools</div>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:0.5rem">
+                <a href="{{ url_for('ai.fracture_detection') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                    <i class="fas fa-bone"></i> {{ 'كشف الكسور' if g.lang == 'ar' else 'Fracture Detection' }}
+                </a>
             </div>
         </div>
     </div>
@@ -161,27 +110,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const ctx = document.getElementById('statusChart');
     if (!ctx) return;
     new Chart(ctx, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
             labels: ['Pending', 'Scheduled', 'In Progress', 'Completed'],
             datasets: [{
-                label: 'Orders',
                 data: [{{ pending }}, {{ scheduled }}, {{ in_progress }}, {{ completed }}],
-                backgroundColor: ['#f0ad4e', '#17a2b8', '#28a745'],
-                borderRadius: 8
+                backgroundColor: ['#c67d1a', '#2471a3', '#5c3d99', '#2e7d5b'],
+                borderWidth: 2,
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--ihis-surface').trim() || '#fff'
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { precision: 0 }
-                }
-            }
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
         }
     });
 });

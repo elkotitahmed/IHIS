@@ -1,74 +1,103 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-user-cog text-primary"></i> Manage Staff: {{ user.full_name }}</h4>
-    <a href="{{ url_for('admin.staff') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left"></i> Back to Staff
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-user-cog" style="color:var(--ihis-primary)"></i> {{ 'إدارة الموظف' if g.lang == 'ar' else 'Manage Staff' }}: {{ user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'تعديل معلومات وأدوار الموظف' if g.lang == 'ar' else 'Edit staff information and roles' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admin.staff') }}" class="btn-ihs btn-ihs-ghost">
+            <i class="fas fa-arrow-left"></i> {{ 'العودة للموظفين' if g.lang == 'ar' else 'Back to Staff' }}
+        </a>
+    </div>
 </div>
 
 <div class="row g-4">
-    <!-- User Details -->
     <div class="col-md-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-id-card"></i> User Details</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-id-card" style="color:var(--ihis-primary)"></i> {{ 'بيانات المستخدم' if g.lang == 'ar' else 'User Details' }}</div>
             </div>
             <div class="card-body">
-                <table class="table mb-0">
-                    <tr><th>ID</th><td>{{ user.id }}</td></tr>
-                    <tr><th>Full Name</th><td>{{ user.full_name }}</td></tr>
-                    <tr><th>Username</th><td>{{ user.username }}</td></tr>
-                    <tr><th>Email</th><td>{{ user.email }}</td></tr>
-                    <tr><th>Type</th><td><span class="badge bg-secondary">{{ user.user_type }}</span></td></tr>
-                    <tr><th>Phone</th><td>{{ user.phone or 'N/A' }}</td></tr>
-                    <tr><th>Active</th>
-                        <td>
-                            {% if user.is_active %}
-                                <span class="badge bg-success">Active</span>
-                            {% else %}
-                                <span class="badge bg-danger">Inactive</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr><th>Department</th><td>{{ user.department.name if user.department else 'N/A' }}</td></tr>
-                    <tr><th>Created</th><td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td></tr>
-                    <tr><th>Last Login</th><td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td></tr>
-                </table>
+                <div style="display:flex;flex-direction:column;gap:0">
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">ID</span>
+                        <strong class="cell-mono">{{ user.id }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'الاسم الكامل' if g.lang == 'ar' else 'Full Name' }}</span>
+                        <strong>{{ user.full_name }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'اسم المستخدم' if g.lang == 'ar' else 'Username' }}</span>
+                        <strong>{{ user.username }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'البريد الإلكتروني' if g.lang == 'ar' else 'Email' }}</span>
+                        <strong>{{ user.email }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'النوع' if g.lang == 'ar' else 'Type' }}</span>
+                        <span class="tag-ihs">{{ user.user_type }}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'الهاتف' if g.lang == 'ar' else 'Phone' }}</span>
+                        <strong>{{ user.phone or 'N/A' }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</span>
+                        {% if user.is_active %}
+                            <span class="status-badge s-active">{{ 'نشط' if g.lang == 'ar' else 'Active' }}</span>
+                        {% else %}
+                            <span class="status-badge s-cancelled">{{ 'غير نشط' if g.lang == 'ar' else 'Inactive' }}</span>
+                        {% endif %}
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'القسم' if g.lang == 'ar' else 'Department' }}</span>
+                        <strong>{{ user.department.name if user.department else 'N/A' }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0;border-bottom:1px solid var(--ihis-border-light)">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'تاريخ الإنشاء' if g.lang == 'ar' else 'Created' }}</span>
+                        <strong>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:var(--sp-2) 0">
+                        <span style="color:var(--ihis-text-secondary)">{{ 'آخر دخول' if g.lang == 'ar' else 'Last Login' }}</span>
+                        <strong>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</strong>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Roles -->
     <div class="col-md-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-user-tag"></i> Assigned Roles</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-tag" style="color:var(--ihis-primary)"></i> {{ 'الأدوار المعينة' if g.lang == 'ar' else 'Assigned Roles' }}</div>
             </div>
             <div class="card-body">
                 {% if user.roles %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                <div class="table-wrapper" style="margin-bottom:var(--sp-4)">
+                    <table class="table-ihs">
                         <thead>
                             <tr>
-                                <th>Role</th>
-                                <th>Description</th>
-                                <th>Action</th>
+                                <th>{{ 'الدور' if g.lang == 'ar' else 'Role' }}</th>
+                                <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                                <th>{{ 'الإجراء' if g.lang == 'ar' else 'Action' }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for role in user.roles %}
                             <tr>
-                                <td><span class="badge bg-primary">{{ role.name }}</span></td>
-                                <td>{{ role.description or '-' }}</td>
+                                <td><span class="tag-ihs">{{ role.name }}</span></td>
+                                <td>{{ role.description or '—' }}</td>
                                 <td>
-                                    <form method="POST" action="{{ url_for('admin.update_roles', user_id=user.id) }}" class="d-inline">
+                                    <form method="POST" action="{{ url_for('admin.update_roles', user_id=user.id) }}" style="display:inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="role_id" value="{{ role.id }}">
                                         <input type="hidden" name="action" value="remove">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('Remove role {{ role.name }}?')">
-                                            <i class="fas fa-times"></i> Remove
+                                        <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm btn-ihs-danger"
+                                                onclick="return confirm('{{ 'إزالة دور' if g.lang == 'ar' else 'Remove role' }} {{ role.name }}?')">
+                                            <i class="fas fa-times"></i> {{ 'إزالة' if g.lang == 'ar' else 'Remove' }}
                                         </button>
                                     </form>
                                 </td>
@@ -78,28 +107,31 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-muted mb-3">No roles assigned.</p>
+                <p style="color:var(--ihis-text-muted);margin-bottom:var(--sp-4)">{{ 'لا توجد أدوار معينة.' if g.lang == 'ar' else 'No roles assigned.' }}</p>
                 {% endif %}
 
-                <hr>
-                <h6>Add Role</h6>
-                <form method="POST" action="{{ url_for('admin.update_roles', user_id=user.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="input-group">
-                        <select name="role_id" class="form-select" required>
-                            <option value="">-- Select Role --</option>
-                            {% for role in all_roles %}
-                                {% if role not in user.roles %}
-                                <option value="{{ role.id }}">{{ role.name }}{% if role.description %} - {{ role.description }}{% endif %}</option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                        <input type="hidden" name="action" value="add">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                </form>
+                <div style="border-top:1px solid var(--ihis-border-light);padding-top:var(--sp-4)">
+                    <h6 style="margin-bottom:var(--sp-3);color:var(--ihis-text)">{{ 'إضافة دور' if g.lang == 'ar' else 'Add Role' }}</h6>
+                    <form method="POST" action="{{ url_for('admin.update_roles', user_id=user.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div style="display:flex;gap:var(--sp-2);align-items:end">
+                            <div style="flex:1">
+                                <select name="role_id" class="form-control" required>
+                                    <option value="">{{ '— اختر دوراً —' if g.lang == 'ar' else '-- Select Role --' }}</option>
+                                    {% for role in all_roles %}
+                                        {% if role not in user.roles %}
+                                        <option value="{{ role.id }}">{{ role.name }}{% if role.description %} - {{ role.description }}{% endif %}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="action" value="add">
+                            <button type="submit" class="btn-ihs btn-ihs-success">
+                                <i class="fas fa-plus"></i> {{ 'إضافة' if g.lang == 'ar' else 'Add' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

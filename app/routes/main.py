@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.models import (
@@ -7,6 +7,30 @@ from app.models import (
 )
 
 main_bp = Blueprint('main', __name__)
+
+
+# ---------------------------------------------------------------------------
+# Health checks (Phase 19) — lightweight, no auth, no secrets.
+# ---------------------------------------------------------------------------
+@main_bp.route('/health/live')
+def health_live():
+    """Liveness: confirms the process is running and serving requests."""
+    return jsonify({'status': 'ok'}), 200
+
+
+@main_bp.route('/health/ready')
+def health_ready():
+    """Readiness: confirms the database is reachable."""
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    status = 200 if db_ok else 503
+    return jsonify({
+        'status': 'ok' if db_ok else 'degraded',
+        'database': 'connected' if db_ok else 'unreachable',
+    }), status
 
 
 @main_bp.route('/')
@@ -33,6 +57,8 @@ def _role_home():
         return 'pharmacy.dashboard'
     if current_user.has_any_role('Receptionist'):
         return 'reception.dashboard'
+    if current_user.has_any_role('Cashier'):
+        return 'billing.dashboard'
     if current_user.has_any_role('Dentist'):
         return 'dentistry.dashboard'
     if current_user.has_any_role('Physiotherapist'):

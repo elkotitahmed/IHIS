@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i>
+            {{ 'التوفيق الدوائي' if g.lang == 'ar' else 'Medication Reconciliation' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'مقارنة أدوية المنزل مع الوصفات النشطة للكشف عن السهو والتكرار والتفاعلات.' if g.lang == 'ar' else 'Compare home medications against active prescriptions to surface omissions, duplicates and interactions.' }}
+        </p>
+    </div>
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-history" style="color:var(--ihis-primary)"></i>
+            {{ 'السجلات' if g.lang == 'ar' else 'Records' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" style="font-size:0.8125rem">
+                <thead style="color:var(--ihis-text-muted);font-size:0.75rem">
+                    <tr>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'النتائج' if g.lang == 'ar' else 'Findings' }}</th>
+                        <th>{{ 'التاريخ' if g.lang == 'ar' else 'When' }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in items %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('pharmacy.reconciliation_detail', rec_id=rec.id) }}" style="color:var(--ihis-primary);text-decoration:none;font-weight:500">
+                                {{ rec.patient.user.full_name if rec.patient and rec.patient.user else 'Patient' }}
+                            </a>
+                            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ rec.patient.mrn if rec.patient else '' }}</div>
+                        </td>
+                        <td>{{ rec.reconciliation_type }}</td>
+                        <td>
+                            <span class="status-badge {{ 's-completed' if rec.status == 'Completed' else 's-draft' }}" style="font-size:0.6875rem">{{ rec.status }}</span>
+                        </td>
+                        <td>
+                            {% set open = rec.discrepancies|selectattr('status','equalto','Open')|list %}
+                            {% if open %}
+                            <span class="status-badge s-cancelled" style="font-size:0.6875rem">{{ open|length }} {{ 'مفتوحة' if g.lang == 'ar' else 'open' }}</span>
+                            {% else %}<span class="text-muted" style="font-size:0.75rem">0</span>{% endif %}
+                        </td>
+                        <td style="white-space:nowrap">{{ rec.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                        <td class="text-end">
+                            <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.reconciliation_detail', rec_id=rec.id) }}">{{ 'فتح' if g.lang == 'ar' else 'Open' }}</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">
+                        {{ 'لا توجد سجلات توفيق بعد.' if g.lang == 'ar' else 'No reconciliations yet.' }}
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

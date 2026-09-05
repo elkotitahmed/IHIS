@@ -1,122 +1,387 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">Welcome, Dr. {{ doctor.user.full_name if doctor and doctor.user else '' }}</h3>
-    <span class="text-muted">{{ now.strftime('%A, %B %d, %Y') if now is defined else '' }}</span>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-stethoscope" style="color:var(--ihis-primary)"></i>
+            {{ 'لوحة تحكم الطبيب' if g.lang == 'ar' else 'Doctor Dashboard' }}
+        </h1>
+        <p class="page-subtitle">
+            {{ 'أهلاً' if g.lang == 'ar' else 'Welcome' }}, {{ 'د.' if g.lang == 'ar' else 'Dr.' }}{{ doctor.user.full_name if doctor and doctor.user else '' }}
+            {% if doctor and doctor.specialty %}
+                &middot; <span class="tag-ihs">{{ doctor.specialty.name }}</span>
+            {% endif %}
+            {% if department_name is defined and department_name %}
+                &middot; <span class="tag-ihs" style="background:var(--ihis-warning-bg);color:var(--ihis-warning)"><i class="fas fa-building"></i> {{ department_name }}</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{{ url_for('doctor.patients') }}" class="btn-ihs btn-ihs-primary">
+            <i class="fas fa-user-injured"></i> {{ 'مرضاي' if g.lang == 'ar' else 'My Patients' }}
+        </a>
+        <a href="{{ url_for('doctor.appointments') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-calendar-check"></i> {{ 'المواعيد' if g.lang == 'ar' else 'Appointments' }}
+        </a>
+    </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-primary me-3"><i class="fas fa-calendar-check"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Today's Appointments</h6>
-                    <h3 class="mb-0">{{ todays_appts|length }}</h3>
-                </div>
-            </div>
+<!-- ============================================================
+     SIX REQUIRED WIDGETS (Dr. Ahmad approved layout)
+     ============================================================ -->
+<div class="stat-row" style="margin-bottom:var(--sp-5)">
+    <a class="stat-row-item" href="{{ url_for('doctor.patients') }}" style="text-decoration:none;color:inherit" title="{{ 'مرضاي' if g.lang == 'ar' else 'My Patients' }}">
+        <div class="stat-row-icon" style="background:var(--ihis-primary-bg);color:var(--ihis-primary)">
+            <i class="fas fa-user-injured"></i>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-warning me-3"><i class="fas fa-flask"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Pending Lab Reports</h6>
-                    <h3 class="mb-0">{{ pending_labs }}</h3>
-                </div>
-            </div>
+        <div>
+            <div class="stat-row-value">{{ my_patients|length if my_patients is defined else 0 }}</div>
+            <div class="stat-row-label">{{ 'مرضاي' if g.lang == 'ar' else 'My Patients' }}</div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-info me-3"><i class="fas fa-x-ray"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Pending Radiology Reports</h6>
-                    <h3 class="mb-0">{{ pending_radio }}</h3>
-                </div>
-            </div>
+    </a>
+    <a class="stat-row-item" href="{{ url_for('doctor.appointments') }}" style="text-decoration:none;color:inherit">
+        <div class="stat-row-icon" style="background:var(--ihis-success-bg);color:var(--ihis-success)">
+            <i class="fas fa-calendar-check"></i>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card card-shadow stat-card h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon text-danger me-3"><i class="fas fa-heartbeat"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Patients at Risk</h6>
-                    <h3 class="mb-0">{{ critical_count }}</h3>
-                </div>
-            </div>
+        <div>
+            <div class="stat-row-value">{{ todays_appts|length }}</div>
+            <div class="stat-row-label">{{ 'مواعيد اليوم' if g.lang == 'ar' else "Today's Appointments" }}</div>
         </div>
-    </div>
+    </a>
+    <a class="stat-row-item" href="#waiting" style="text-decoration:none;color:inherit" title="{{ 'مرضى قاعة الانتظار' if g.lang == 'ar' else 'Waiting' }}">
+        <div class="stat-row-icon" style="background:var(--ihis-warning-bg);color:var(--ihis-warning)">
+            <i class="fas fa-person-walking"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ waiting|length if waiting is defined else 0 }}</div>
+            <div class="stat-row-label">{{ 'الانتظار' if g.lang == 'ar' else 'Waiting' }}</div>
+        </div>
+    </a>
+    <a class="stat-row-item" href="#notifications" style="text-decoration:none;color:inherit">
+        <div class="stat-row-icon" style="background:var(--ihis-info-bg);color:var(--ihis-info)">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ doctor_notifications|length if doctor_notifications is defined else 0 }}</div>
+            <div class="stat-row-label">{{ 'إشعارات' if g.lang == 'ar' else 'Notifications' }}</div>
+        </div>
+    </a>
+    <a class="stat-row-item" href="#ai-specialists" style="text-decoration:none;color:inherit">
+        <div class="stat-row-icon" style="background:var(--ihis-purple-bg);color:var(--ihis-purple)">
+            <i class="fas fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ ai_tools|length if ai_tools is defined else 0 }}</div>
+            <div class="stat-row-label">{{ 'متخصصو الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Specialists' }}</div>
+        </div>
+    </a>
+    <a class="stat-row-item" href="#clinical-history" style="text-decoration:none;color:inherit" title="{{ 'التاريخ الطبي للمريض' if g.lang == 'ar' else 'Patient Clinical History' }}">
+        <div class="stat-row-icon" style="background:var(--ihis-danger-bg);color:var(--ihis-danger)">
+            <i class="fas fa-notes-medical"></i>
+        </div>
+        <div>
+            <div class="stat-row-value">{{ clinical_history_count if clinical_history_count is defined else 0 }}</div>
+            <div class="stat-row-label">{{ 'التاريخ الطبي' if g.lang == 'ar' else 'Clinical History' }}</div>
+        </div>
+    </a>
 </div>
 
 <div class="row g-4">
+    <!-- ============================================================
+         MAIN COLUMN
+         ============================================================ -->
     <div class="col-lg-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Today's Appointments</h5>
-                <a href="{{ url_for('doctor.appointments') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        <!-- Today's Appointments -->
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-calendar-alt" style="color:var(--ihis-primary)"></i> {{ 'مواعيد اليوم' if g.lang == 'ar' else "Today's Appointments" }}</div>
+                <a href="{{ url_for('doctor.appointments') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'عرض الكل' if g.lang == 'ar' else 'View all' }} <i class="fas fa-arrow-right" style="font-size:0.7rem"></i></a>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Patient</th>
-                                <th>Reason</th>
-                                <th>Status</th>
+                                <th>{{ 'الوقت' if g.lang == 'ar' else 'Time' }}</th>
+                                <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                                <th>{{ 'السبب' if g.lang == 'ar' else 'Reason' }}</th>
+                                <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if todays_appts %}
                                 {% for appt in todays_appts %}
                                 <tr>
-                                    <td>{{ appt.scheduled_at.strftime('%H:%M') if appt.scheduled_at else 'N/A' }}</td>
-                                    <td>{{ appt.patient.user.full_name if appt.patient and appt.patient.user else 'N/A' }}</td>
-                                    <td>{{ appt.reason or '-' }}</td>
+                                    <td class="cell-mono">{{ appt.scheduled_at.strftime('%H:%M') if appt.scheduled_at else '-' }}</td>
                                     <td>
-                                        <span class="badge bg-{% if appt.status == 'confirmed' %}success{% elif appt.status == 'cancelled' %}danger{% elif appt.status == 'completed' %}secondary{% else %}warning{% endif %}">
+                                        <a href="{{ url_for('doctor.patient_360', patient_id=appt.patient.id) if appt.patient else '#' }}" class="cell-primary" style="text-decoration:none">
+                                            {{ appt.patient.user.full_name if appt.patient and appt.patient.user else '-' }}
+                                        </a>
+                                    </td>
+                                    <td class="cell-secondary">{{ appt.reason or '-' }}</td>
+                                    <td>
+                                        <span class="status-badge s-{{ appt.status|lower|replace(' ','-') }}">
                                             {{ appt.status|capitalize }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {% if appt.status in ['Scheduled', 'CheckedIn', 'InConsultation'] %}
+                                        <form method="post" action="{{ url_for('doctor.complete_appointment', appt_id=appt.id) }}" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="mode" value="Completed">
+                                            <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-sm">
+                                                <i class="fas fa-check"></i> {{ 'مكتمل' if g.lang == 'ar' else 'Completed' }}
+                                            </button>
+                                        </form>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">No appointments scheduled for today.</td>
-                                </tr>
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state" style="padding:2rem">
+                                        <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+                                        <div class="empty-title">{{ 'لا توجد مواعيد اليوم' if g.lang == 'ar' else 'No appointments today' }}</div>
+                                    </div>
+                                </td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-4">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-robot me-2"></i>AI Clinical Assistant</h5>
+        <!-- Waiting -->
+        {% if waiting is defined and waiting %}
+        <div class="card-premium mt-4" id="waiting">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-person-walking" style="color:var(--ihis-warning)"></i> {{ 'قاعة الانتظار' if g.lang == 'ar' else 'Waiting / In Clinic' }}</div>
+            </div>
+            <div class="card-body flush">
+                <div class="activity-panel" style="border:none">
+                    {% for appt in waiting %}
+                    <a href="{{ url_for('doctor.patient_360', patient_id=appt.patient.id) if appt.patient else '#' }}" class="activity-item" style="text-decoration:none;color:inherit">
+                        <div class="activity-dot" style="background:var(--ihis-warning)"></div>
+                        <div class="activity-body">
+                            <div class="activity-text">
+                                <strong>{{ appt.patient.user.full_name if appt.patient and appt.patient.user else 'Patient' }}</strong>
+                                <span class="status-badge s-{{ appt.status|lower|replace(' ','-') }}" style="font-size:0.625rem">{{ appt.status|capitalize }}</span>
+                            </div>
+                            <div class="activity-meta">
+                                {{ appt.scheduled_at.strftime('%H:%M') if appt.scheduled_at else '' }}
+                                {% if appt.reason %} &middot; {{ appt.reason }}{% endif %}
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--ihis-text-muted);font-size:0.75rem"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- My Patients -->
+        {% if my_patients is defined and my_patients %}
+        <div class="card-premium mt-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-info)"></i> {{ 'مرضاي' if g.lang == 'ar' else 'My Patients' }}</div>
+                <a href="{{ url_for('doctor.patients') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'عرض الكل' if g.lang == 'ar' else 'View all' }} <i class="fas fa-arrow-right" style="font-size:0.7rem"></i></a>
+            </div>
+            <div class="card-body flush">
+                <div class="activity-panel" style="border:none">
+                    {% for p in my_patients %}
+                    <a href="{{ url_for('doctor.patient_360', patient_id=p.id) }}" class="activity-item" style="text-decoration:none;color:inherit">
+                        <div class="activity-dot" style="background:var(--ihis-success)"></div>
+                        <div class="activity-body">
+                            <div class="activity-text">
+                                <strong>{{ p.user.full_name if p.user else 'Patient' }}</strong>
+                                {% if p.mrn %}<span style="color:var(--ihis-text-muted)"> — {{ p.mrn }}</span>{% endif %}
+                            </div>
+                            <div class="activity-meta">
+                                {% if p.gender %}{{ p.gender }}{% endif %}
+                                {% if p.date_of_birth %} &middot; {{ ((today - p.date_of_birth).days // 365) if today is defined and p.date_of_birth else '' }} y{% endif %}
+                                {% if p.blood_type %} &middot; {{ p.blood_type }}{% endif %}
+                                {% if p.department %} &middot; <i class="fas fa-building"></i> {{ p.department.name }}{% endif %}
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--ihis-text-muted);font-size:0.75rem"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Clinical History -->
+        <div class="card-premium mt-4" id="clinical-history">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-danger)"></i> {{ 'التاريخ الطبي للمريض' if g.lang == 'ar' else 'Patient Clinical History' }}</div>
             </div>
             <div class="card-body">
-                <p class="text-muted small mb-3">Use decision-support tools on your patients.</p>
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('doctor.patients') }}" class="btn btn-primary btn-sm text-start">
-                        <i class="fas fa-user-md me-1"></i>Open a Patient
+                {% if recent_patients is defined and recent_patients %}
+                <p style="color:var(--ihis-text-muted);font-size:0.8125rem;margin-bottom:0.75rem">
+                    {{ 'افتح ملف مريض لعرض تاريخه الطبي الكامل: التشخيصات، العلاجات، المختبر، الأشعة، والتنبيهات.' if g.lang == 'ar' else 'Open a patient chart to see their full clinical history: diagnoses, medications, labs, imaging, and alerts.' }}
+                </p>
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
+                            <tr>
+                                <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                                <th>{{ 'التشخيصات' if g.lang == 'ar' else 'Diagnoses' }}</th>
+                                <th>{{ 'السجلات' if g.lang == 'ar' else 'Records' }}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in recent_patients %}
+                            {% set diag_count = p.diagnoses|length if p.diagnoses is defined else 0 %}
+                            {% set rec_count = p.medical_records|length if p.medical_records is defined else 0 %}
+                            {% set img_count = p.documents|length if p.documents is defined else 0 %}
+                            <tr>
+                                <td class="cell-primary">{{ p.user.full_name if p.user else '-' }}</td>
+                                <td class="cell-secondary">{{ diag_count }} {{ 'تشخيص' if g.lang == 'ar' else 'dx' }}</td>
+                                <td class="cell-secondary">
+                                    {{ rec_count }} {{ 'سجل' if g.lang == 'ar' else 'records' }},
+                                    {{ img_count }} {{ 'صورة' if g.lang == 'ar' else 'images' }}
+                                </td>
+                                <td>
+                                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.patient_360', patient_id=p.id) }}">
+                                        <i class="fas fa-notes-medical"></i> {{ 'التاريخ الطبي' if g.lang == 'ar' else 'History' }}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding:2rem">
+                    <div class="empty-icon"><i class="fas fa-notes-medical"></i></div>
+                    <div class="empty-title">{{ 'افتح ملف مريض لبدء المشاهدة' if g.lang == 'ar' else 'Open a patient chart to begin' }}</div>
+                    <p style="color:var(--ihis-text-muted);font-size:0.8125rem">{{ 'يظهر التاريخ الطبي الكامل لكل مريض هنا بعد الزيارة الأولى.' if g.lang == 'ar' else 'Each patient\'s full clinical history appears here after their first visit.' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SIDEBAR COLUMN
+         ============================================================ -->
+    <div class="col-lg-4">
+        <!-- Patient Attachments (dermatology / department portal) -->
+        <div class="card-premium mb-4" style="border:1px solid {{ 'var(--ihis-warning)' if department_attachments else 'transparent' }}">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-paperclip" style="color:var(--ihis-warning)"></i> {{ 'مرفقات المرضى' if g.lang == 'ar' else 'Patient Attachments' }}</div>
+                <span class="status-badge {{ 's-confirmed' if department_attachments else 's-pending' }}" style="font-size:0.625rem">
+                    {{ department_attachments|length if department_attachments is defined else 0 }}
+                </span>
+            </div>
+            <div class="card-body">
+                <p style="color:var(--ihis-text-muted);font-size:0.8125rem;margin-bottom:0.6rem">
+                    {{ 'صور رفعها المرضى إلى قسمك — راجعها وحللها بذكاء اصطناعي.' if g.lang == 'ar' else 'Images patients sent to your department — review and analyze with AI.' }}
+                </p>
+                {% if department_attachments is defined and department_attachments %}
+                <div class="list-compact" style="max-height:220px;overflow:auto">
+                    {% for doc in department_attachments[:5] %}
+                    {% set is_img = doc.file_url and doc.file_url.lower().endswith(('.png', '.jpg', '.jpeg')) %}
+                    <div class="list-item" style="align-items:center">
+                        {% if is_img %}
+                        <img src="{{ url_for('patient.download_document', doc_id=doc.id, inline=1) }}" class="rounded"
+                             style="width:40px;height:40px;object-fit:cover;border:1px solid var(--ihis-border)" alt="">
+                        {% else %}
+                        <i class="fas fa-file-medical" style="color:var(--ihis-warning)"></i>
+                        {% endif %}
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:0.75rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                {{ doc.patient.user.full_name if doc.patient and doc.patient.user else 'Patient' }}
+                            </div>
+                            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">
+                                {{ doc.category or doc.document_type or '' }} &middot; {{ doc.uploaded_at.strftime('%d %b') if doc.uploaded_at }}
+                            </div>
+                        </div>
+                        {% if is_img %}
+                        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.skin_lesion_detection', doc=doc.id) }}" title="AI">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('doctor.patient_attachments') }}" class="btn-ihs btn-ihs-primary btn-ihs-sm w-100" style="margin-top:0.6rem">
+                    <i class="fas fa-inbox"></i> {{ 'عرض كل المرفقات' if g.lang == 'ar' else 'Open all attachments' }}
+                </a>
+                {% else %}
+                <div style="text-align:center;padding:0.5rem">
+                    <i class="fas fa-inbox" style="font-size:1.5rem;color:var(--ihis-text-muted)"></i>
+                    <div style="font-size:0.75rem;color:var(--ihis-text-muted);margin-top:0.25rem">{{ 'لا مرفقات واردة بعد' if g.lang == 'ar' else 'No incoming attachments yet' }}</div>
+                </div>
+                <a href="{{ url_for('doctor.patient_attachments') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm w-100">
+                    <i class="fas fa-inbox"></i> {{ 'صندوق المرفقات' if g.lang == 'ar' else 'Attachment inbox' }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card-premium mb-4" id="notifications">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-bell" style="color:var(--ihis-info)"></i> {{ 'الإشعارات' if g.lang == 'ar' else 'Notifications' }}</div>
+                {% if doctor_notifications is defined and doctor_notifications %}
+                <a href="{{ url_for('main.notifications') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'All' }}</a>
+                {% endif %}
+            </div>
+            <div class="card-body flush">
+                {% if doctor_notifications is defined and doctor_notifications %}
+                <div class="activity-panel" style="border:none">
+                    {% for n in doctor_notifications %}
+                    <div class="activity-item">
+                        <div class="activity-dot" style="background:{{ 'var(--ihis-danger)' if n.is_read is defined and not n.is_read else 'var(--ihis-text-muted)' }}"></div>
+                        <div class="activity-body">
+                            <div class="activity-text"><strong>{{ n.title }}</strong></div>
+                            <div class="activity-meta">{{ n.created_at.strftime('%d %b %H:%M') if n.created_at }}</div>
+                            {% if n.message %}<div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ n.message }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding:1.5rem">
+                    <div class="empty-icon"><i class="fas fa-bell-slash"></i></div>
+                    <div class="empty-title">{{ 'لا إشعارات' if g.lang == 'ar' else 'No notifications' }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Specialists -->
+        <div class="card-premium mb-4" id="ai-specialists">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-wand-magic-sparkles" style="color:var(--ihis-purple)"></i> {{ 'متخصصو الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Specialists' }}</div>
+            </div>
+            <div class="card-body">
+                {% if ai_tools is defined and ai_tools %}
+                <div style="display:grid;grid-template-columns:1fr;gap:0.5rem">
+                    {% for tool in ai_tools %}
+                    <a href="{{ tool.url }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="{{ tool.icon }}"></i>
+                        <span>{{ tool.name }}</span>
                     </a>
-                    <a href="{{ url_for('care.referrals') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-share-alt me-1"></i>Referrals
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="display:grid;grid-template-columns:1fr;gap:0.5rem">
+                    <a href="{{ url_for('ai.skin_lesion_detection') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-person-circle-question"></i> {{ 'آفات الجلد' if g.lang == 'ar' else 'Skin Lesions' }}
                     </a>
-                    <a href="{{ url_for('care.cases') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-users me-1"></i>MD Cases
-                    </a>
-                    <a href="{{ url_for('ai.fracture_detection') }}" class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-bone me-1"></i>Fracture Detection
+                    <a href="{{ url_for('ai.fracture_detection') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-bone"></i> {{ 'كشف الكسور' if g.lang == 'ar' else 'Fracture Detection' }}
                     </a>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>

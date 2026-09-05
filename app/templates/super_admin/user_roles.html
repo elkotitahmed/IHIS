@@ -1,48 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-user-tag text-primary"></i> User Roles</h4>
-    <a href="{{ url_for('super_admin.users') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Back to Users
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-user-tag" style="color:var(--ihis-primary)"></i> {{ 'أدوار المستخدم' if g.lang == 'ar' else 'User Roles' }}</h1>
+        <p class="page-subtitle">{{ user.full_name }} &mdash; {{ user.email }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.users') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'رجوع للمستخدمين' if g.lang == 'ar' else 'Back to Users' }}</a>
+    </div>
 </div>
 
 <div class="row g-4">
     <div class="col-md-6">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5>{{ user.full_name }}</h5>
-                <small class="text-muted">{{ user.email }}</small>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-id-badge" style="color:var(--ihis-info)"></i> {{ 'الأدوار الحالية' if g.lang == 'ar' else 'Current Roles' }}</div>
             </div>
             <div class="card-body">
-                <h6>Current Roles</h6>
                 {% for role in user.roles %}
-                    <span class="badge bg-primary fs-6">{{ role.name }}</span>
+                    <span class="tag-ihs" style="font-size:0.95rem;margin-right:4px;margin-bottom:4px;display:inline-block">{{ role.name }}</span>
                 {% else %}
-                    <p class="text-muted">No roles assigned yet.</p>
+                    <div class="empty-state" style="padding:var(--sp-3) 0">
+                        <div class="empty-icon"><i class="fas fa-user-tag"></i></div>
+                        <div class="empty-title">{{ 'لم يتم تعيين أدوار بعد' if g.lang == 'ar' else 'No roles assigned yet' }}</div>
+                    </div>
                 {% endfor %}
             </div>
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-plus-circle"></i> Add Role</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إضافة دور' if g.lang == 'ar' else 'Add Role' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('super_admin.user_roles', user_id=user.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label for="role_name" class="form-label">Role Name</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="role_name">{{ 'اسم الدور' if g.lang == 'ar' else 'Role Name' }} <span class="required">*</span></label>
                         <input type="text" class="form-control" id="role_name" name="role_name"
-                               placeholder="e.g. Nurse" required>
+                               placeholder="{{ 'مثال: ممرض' if g.lang == 'ar' else 'e.g. Nurse' }}" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add Role
+                    <button type="submit" class="btn-ihs btn-ihs-primary">
+                        <i class="fas fa-plus me-1"></i>{{ 'إضافة دور' if g.lang == 'ar' else 'Add Role' }}
                     </button>
                 </form>
-                <hr>
-                <h6>Available Roles</h6>
+                <hr style="border-color:var(--ihis-border);margin:var(--sp-3) 0">
+                <h6 style="color:var(--ihis-text-secondary);margin-bottom:var(--sp-2)">{{ 'الأدوار المتاحة' if g.lang == 'ar' else 'Available Roles' }}</h6>
                 <div>
                     {% for role in all_roles %}
                         {% if role not in user.roles %}
@@ -50,13 +55,15 @@
                               class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="role_name" value="{{ role.name }}">
-                            <button type="submit" class="btn btn-sm btn-outline-primary mb-1">
-                                <i class="fas fa-user-tag"></i> {{ role.name }}
+                            <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" style="margin:0 4px 4px 0">
+                                <i class="fas fa-user-tag me-1"></i>{{ role.name }}
                             </button>
                         </form>
                         {% endif %}
                     {% else %}
-                        <p class="text-muted">No roles defined yet.</p>
+                        <div class="empty-state" style="padding:var(--sp-2) 0">
+                            <div class="empty-title" style="font-size:0.9rem">{{ 'لم يتم تعريف أي أدوار بعد' if g.lang == 'ar' else 'No roles defined yet' }}</div>
+                        </div>
                     {% endfor %}
                 </div>
             </div>

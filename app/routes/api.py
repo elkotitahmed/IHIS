@@ -24,6 +24,7 @@ from app.models import (
 api_bp = Blueprint('api', __name__)
 
 
+
 def _csrf_valid():
     """Validate the CSRF token from the X-CSRFToken header or form for the
     JSON write endpoints. These cannot rely solely on @csrf.exempt because the
@@ -436,7 +437,7 @@ def create_prescription():
         patient_id=int(patient_id),
         doctor_id=doctor.id,
         refills=int(data.get('refills', 0) or 0),
-        status=data.get('status', 'Active'),
+        status='Active',
     )
     db.session.add(rx)
     db.session.flush()
@@ -533,7 +534,7 @@ def create_referral():
         to_doctor_id=int(data['to_doctor_id']) if data.get('to_doctor_id') else None,
         to_specialty=to_specialty,
         reason=data.get('reason', ''),
-        status=data.get('status', 'Pending'),
+        status='Pending',
     )
     db.session.add(r)
     db.session.commit()

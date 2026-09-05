@@ -1,49 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-brain me-2 text-primary"></i>AI Patient Summary</h4>
+<div class="page-header">
     <div>
-        <a class="btn btn-outline-primary btn-sm me-1"
-           href="{{ url_for('ai.diagnosis_support', patient_id=patient.id) }}">
-            <i class="fas fa-stethoscope me-1"></i>Diagnosis Support</a>
+        <h1 class="page-title">{{ 'ملخص المريض الذكي' if g.lang == 'ar' else 'AI Patient Summary' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.diagnosis_support', patient_id=patient.id) }}">
+            <i class="fas fa-stethoscope"></i>{{ 'دعم التشخيص' if g.lang == 'ar' else 'Diagnosis Support' }}</a>
         {% if current_user.has_any_role('Physiotherapist','Admin','SuperAdmin') %}
-        <a class="btn btn-outline-primary btn-sm"
-           href="{{ url_for('ai.rehab', patient_id=patient.id) }}">
-            <i class="fas fa-person-walking me-1"></i>Rehab Insights</a>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.rehab', patient_id=patient.id) }}">
+            <i class="fas fa-person-walking"></i>{{ 'رؤى التأهيل' if g.lang == 'ar' else 'Rehab Insights' }}</a>
         {% endif %}
-        <a class="btn btn-outline-primary btn-sm ms-1"
-           href="{{ url_for('reports.medical_record', record_id=patient.id) if False else '#' }}"
-           style="display:none"></a>
-        <a class="btn btn-outline-secondary btn-sm"
+        <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" style="display:none"
+           href="{{ url_for('reports.medical_record', record_id=patient.id) if False else '#' }}"></a>
+        <a class="btn-ihs btn-ihs-ghost btn-ihs-sm"
            href="{{ url_for('doctor.patients') if current_user.has_any_role('Doctor') else
            url_for('physiotherapy.patients') if current_user.has_any_role('Physiotherapist') else
            url_for('main.dashboard') }}">
-            <i class="fas fa-arrow-left me-1"></i>Back</a>
+            <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
     </div>
 </div>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-white fw-bold">{{ patient.user.full_name }}
-        <span class="text-muted fs-6">({{ patient.user.email }})</span></div>
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-brain" style="color:var(--ihis-primary)"></i> {{ patient.user.full_name }} <span class="tag-ihs">AI</span></div>
+        <span class="cell-muted fs-6">{{ patient.user.email }}</span>
+    </div>
     <div class="card-body">
         {% set level_color = 'danger' if risk.level=='High' else ('warning' if risk.level=='Moderate' else 'success') %}
         <div class="row">
             <div class="col-md-4 text-center">
-                <h1 class="{{ 'text-danger' if risk.level=='High' else ('text-warning' if risk.level=='Moderate' else 'text-success') }}">
-                    {{ risk.score }}</h1>
-                <span class="badge bg-{{ level_color }}">Risk: {{ risk.level }}</span>
+                <div class="t-display" style="color:{{ 'var(--ihis-danger)' if risk.level=='High' else ('var(--ihis-warning)' if risk.level=='Moderate' else 'var(--ihis-success)') }}">
+                    {{ risk.score }}</div>
+                <span class="status-badge {{ 's-cancelled' if level_color=='danger' else ('s-pending' if level_color=='warning' else 's-completed') }}">{{ 'مخاطرة' if g.lang == 'ar' else 'Risk' }}: {{ risk.level }}</span>
             </div>
             <div class="col-md-8">
-                <p class="mb-1"><strong>Blood Type:</strong> {{ summary.blood_type }}
-                    &nbsp; <strong>Last Visit:</strong> {{ summary.last_visit }}</p>
-                <p class="mb-1"><strong>Allergies:</strong> {{ summary.allergies }}</p>
-                <p class="mb-0"><strong>Chronic Diseases:</strong> {{ summary.chronic_diseases }}</p>
+                <p class="mb-1 cell-secondary"><strong>{{ 'فصيلة الدم' if g.lang == 'ar' else 'Blood Type' }}:</strong> {{ summary.blood_type }}
+                    &nbsp; <strong>{{ 'آخر زيارة' if g.lang == 'ar' else 'Last Visit' }}:</strong> {{ summary.last_visit }}</p>
+                <p class="mb-1 cell-secondary"><strong>{{ 'الحساسية' if g.lang == 'ar' else 'Allergies' }}:</strong> {{ summary.allergies }}</p>
+                <p class="mb-0 cell-secondary"><strong>{{ 'الأمراض المزمنة' if g.lang == 'ar' else 'Chronic Diseases' }}:</strong> {{ summary.chronic_diseases }}</p>
             </div>
         </div>
         {% if risk.reasons %}
         <hr>
-        <small><strong>Risk factors:</strong>
-            {% for r in risk.reasons %}<span class="badge bg-light text-dark me-1">{{ r }}</span>{% endfor %}
+        <small><strong>{{ 'عوامل الخطر' if g.lang == 'ar' else 'Risk factors' }}:</strong>
+            {% for r in risk.reasons %}<span class="tag-ihs me-1">{{ r }}</span>{% endfor %}
         </small>
         {% endif %}
     </div>
@@ -51,26 +55,30 @@
 
 <div class="row g-4">
     <div class="col-lg-6">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-white fw-bold">Diagnoses</div>
+        <div class="card-premium h-100">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-stethoscope" style="color:var(--ihis-info)"></i> {{ 'التشخيصات' if g.lang == 'ar' else 'Diagnoses' }}</div>
+            </div>
             <div class="card-body">
                 {% for d in summary.diagnoses %}
-                <span class="badge bg-info text-dark d-inline-block mb-1 me-1">{{ d.description }}</span>
+                <span class="tag-ihs d-inline-block mb-1 me-1">{{ d.description }}</span>
                 {% else %}
-                <p class="text-muted mb-0">No diagnoses recorded.</p>
+                <p class="cell-muted mb-0">{{ 'لا توجد تشخيصات مسجلة.' if g.lang == 'ar' else 'No diagnoses recorded.' }}</p>
                 {% endfor %}
             </div>
         </div>
     </div>
     <div class="col-lg-6">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-white fw-bold">Active Medications</div>
+        <div class="card-premium h-100">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-success)"></i> {{ 'الأدوية النشطة' if g.lang == 'ar' else 'Active Medications' }}</div>
+            </div>
             <div class="card-body">
                 <ul class="mb-0 ps-3">
                 {% for p in summary.active_prescriptions %}
                     <li>{{ p.medication }} &mdash; {{ p.dosage }} {{ p.frequency }}</li>
                 {% else %}
-                    <li class="text-muted">None.</li>
+                    <li class="cell-muted">{{ 'لا شيء.' if g.lang == 'ar' else 'None.' }}</li>
                 {% endfor %}
                 </ul>
             </div>

@@ -1,115 +1,127 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-file-invoice-dollar text-success"></i> Billing Dashboard</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-file-invoice-dollar" style="color:var(--ihis-success);margin-right:var(--sp-2)"></i>{{ 'لوحة الفواتير' if g.lang == 'ar' else 'Billing Dashboard' }}</h1>
+        <p class="page-subtitle">{{ 'التسويات والمدفوعات' if g.lang == 'ar' else 'Settlements and payments' }}</p>
+    </div>
+</div>
 
-<div class="row g-3">
-    <div class="col-md-4">
-        <div class="card text-white bg-danger card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-hand-holding-usd icon me-3"></i>
-                <div>
-                    <h5 class="card-title mb-0">Outstanding Balance</h5>
-                    <p class="display-6 mb-0">{{ "%.2f"|format(outstanding) }}</p>
-                </div>
-            </div>
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-icon danger"><i class="fas fa-hand-holding-usd"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'الرصيد المستحق' if g.lang == 'ar' else 'Outstanding Balance' }}</div>
+            <div class="kpi-value t-num">{{ "%.2f"|format(outstanding) }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-success card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-coins icon me-3"></i>
-                <div>
-                    <h5 class="card-title mb-0">Collected Today</h5>
-                    <p class="display-6 mb-0">{{ "%.2f"|format(collected_today) }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon success"><i class="fas fa-coins"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'محصل اليوم' if g.lang == 'ar' else 'Collected Today' }}</div>
+            <div class="kpi-value t-num">{{ "%.2f"|format(collected_today) }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-warning card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-hourglass-half icon me-3"></i>
-                <div>
-                    <h5 class="card-title mb-0">Unpaid Bills</h5>
-                    <p class="display-6 mb-0">{{ unpaid }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon warning"><i class="fas fa-hourglass-half"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'فواتير غير مدفوعة' if g.lang == 'ar' else 'Unpaid Bills' }}</div>
+            <div class="kpi-value">{{ unpaid }}</div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات سريعة' if g.lang == 'ar' else 'Quick Actions' }}</div>
             </div>
             <div class="card-body">
-                <div class="list-group">
-                    <a href="{{ url_for('billing.new_bill') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-file-invoice text-success"></i> New Bill
+                <div style="display:flex;flex-direction:column;gap:0.5rem">
+                    <a href="{{ url_for('billing.new_bill') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-file-invoice" style="color:var(--ihis-success)"></i> {{ 'فاتورة جديدة' if g.lang == 'ar' else 'New Bill' }}
                     </a>
-                    <a href="{{ url_for('billing.bills') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-list-alt text-primary"></i> All Bills
+                    <a href="{{ url_for('billing.bills') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-list-alt" style="color:var(--ihis-primary)"></i> {{ 'كل الفواتير' if g.lang == 'ar' else 'All Bills' }}
                     </a>
-                    <a href="{{ url_for('billing.service_catalog') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-boxes-stacked text-warning"></i> Service Catalog
+                    <a href="{{ url_for('billing.service_catalog') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-boxes-stacked" style="color:var(--ihis-warning)"></i> {{ 'دليل الخدمات' if g.lang == 'ar' else 'Service Catalog' }}
                     </a>
-                    <a href="{{ url_for('billing.reports') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chart-line text-secondary"></i> Revenue Report
+                    <a href="{{ url_for('billing.reports') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                        <i class="fas fa-chart-line" style="color:var(--ihis-info)"></i> {{ 'تقرير الإيرادات' if g.lang == 'ar' else 'Revenue Report' }}
                     </a>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="card card-shadow mb-3">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Recent Bills</h5>
+
+    <div class="col-lg-8">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-file-invoice" style="color:var(--ihis-primary)"></i> {{ 'أحدث الفواتير' if g.lang == 'ar' else 'Recent Bills' }}</div>
             </div>
-            <div class="card-body p-0">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr><th>Bill #</th><th>Patient</th><th>Total</th><th>Balance</th><th>Status</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                    {% for b in recent_bills %}
-                        <tr>
-                            <td>{{ b.bill_no }}</td>
-                            <td>{{ b.patient.user.full_name }}</td>
-                            <td>{{ "%.2f"|format(b.total()) }}</td>
-                            <td class="{% if b.balance()>0 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ "%.2f"|format(b.balance()) }}</td>
-                            <td><span class="badge bg-{% if b.status=='Paid' %}success{% elif b.status=='PartiallyPaid' %}warning{% else %}secondary{% endif %}">{{ b.status }}</span></td>
-                            <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('billing.view_bill', bill_id=b.id) }}">View</a></td>
-                        </tr>
-                    {% else %}
-                        <tr><td colspan="6" class="text-center text-muted py-3">No bills yet.</td></tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead><tr>
+                            <th>{{ 'رقم الفاتورة' if g.lang == 'ar' else 'Bill #' }}</th>
+                            <th>{{ t('patient') }}</th>
+                            <th>{{ 'الإجمالي' if g.lang == 'ar' else 'Total' }}</th>
+                            <th>{{ 'الرصيد' if g.lang == 'ar' else 'Balance' }}</th>
+                            <th>{{ t('status') }}</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody>
+                        {% for b in recent_bills %}
+                            <tr>
+                                <td class="cell-mono">{{ b.bill_no }}</td>
+                                <td class="cell-primary">{{ b.patient.user.full_name }}</td>
+                                <td class="t-num">{{ "%.2f"|format(b.total()) }}</td>
+                                <td><span class="t-num" style="color:{{ 'var(--ihis-danger)' if b.balance()>0 else 'var(--ihis-text-muted)' }}">{{ "%.2f"|format(b.balance()) }}</span></td>
+                                <td><span class="status-badge {{ 's-completed' if b.status=='Paid' else ('s-hold' if b.status=='PartiallyPaid' else 's-pending') }}">{{ b.status }}</span></td>
+                                <td class="text-end">
+                                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('billing.view_bill', bill_id=b.id) }}"><i class="fas fa-eye"></i></a>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><i class="fas fa-file-invoice"></i></div><div class="empty-title">{{ 'لا توجد فواتير بعد' if g.lang == 'ar' else 'No bills yet' }}</div></div></td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0"><i class="fas fa-credit-card"></i> Recent Payments</h5>
+
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-credit-card" style="color:var(--ihis-success)"></i> {{ 'أحدث المدفوعات' if g.lang == 'ar' else 'Recent Payments' }}</div>
             </div>
-            <div class="card-body p-0">
-                <table class="table table-hover align-middle mb-0">
-                    <thead><tr><th>Receipt</th><th>Bill</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
-                    <tbody>
-                    {% for p in recent_payments %}
-                        <tr>
-                            <td>{{ p.receipt_no }}</td>
-                            <td>{{ p.bill.bill_no }}</td>
-                            <td class="text-success fw-bold">{{ "%.2f"|format(p.amount) }}</td>
-                            <td>{{ p.method }}</td>
-                            <td>{{ p.received_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        </tr>
-                    {% else %}
-                        <tr><td colspan="5" class="text-center text-muted py-3">No payments yet.</td></tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead><tr>
+                            <th>{{ 'الإيصال' if g.lang == 'ar' else 'Receipt' }}</th>
+                            <th>{{ 'الفاتورة' if g.lang == 'ar' else 'Bill' }}</th>
+                            <th>{{ 'المبلغ' if g.lang == 'ar' else 'Amount' }}</th>
+                            <th>{{ 'الطريقة' if g.lang == 'ar' else 'Method' }}</th>
+                            <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for p in recent_payments %}
+                            <tr>
+                                <td class="cell-mono">{{ p.receipt_no }}</td>
+                                <td class="cell-mono">{{ p.bill.bill_no }}</td>
+                                <td class="t-num" style="color:var(--ihis-success)">{{ "%.2f"|format(p.amount) }}</td>
+                                <td class="cell-secondary">{{ p.method }}</td>
+                                <td class="cell-secondary">{{ p.received_at.strftime('%d %b %H:%M') }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><i class="fas fa-credit-card"></i></div><div class="empty-title">{{ 'لا توجد مدفوعات بعد' if g.lang == 'ar' else 'No payments yet' }}</div></div></td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

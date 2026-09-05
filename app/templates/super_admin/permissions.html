@@ -1,49 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-key text-warning"></i> Manage Permissions</h4>
-    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-key" style="color:var(--ihis-warning)"></i> {{ 'إدارة الصلاحيات' if g.lang == 'ar' else 'Manage Permissions' }}</h1>
+        <p class="page-subtitle">{{ 'إضافة الصلاحيات للأدوار وإدارتها' if g.lang == 'ar' else 'Assign permissions to roles and manage access' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.dashboard') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+    </div>
 </div>
 
 <div class="row g-4">
     <div class="col-md-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-plus-circle"></i> Add Permission to Role</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-warning)"></i> {{ 'إضافة صلاحية لدور' if g.lang == 'ar' else 'Add Permission to Role' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('super_admin.permissions') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label for="role_id" class="form-label">Role</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="role_id">{{ 'الدور' if g.lang == 'ar' else 'Role' }} <span class="required">*</span></label>
                         <select class="form-select" id="role_id" name="role_id" required>
-                            <option value="">-- Select Role --</option>
+                            <option value="">{{ '-- اختر دور --' if g.lang == 'ar' else '-- Select Role --' }}</option>
                             {% for role in roles %}
                             <option value="{{ role.id }}">{{ role.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="permission_name" class="form-label">Permission Name</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="permission_name">{{ 'اسم الصلاحية' if g.lang == 'ar' else 'Permission Name' }} <span class="required">*</span></label>
                         <input type="text" class="form-control" id="permission_name" name="permission_name"
-                               placeholder="e.g. manage_patients" required>
+                               placeholder="{{ 'مثال: إدارة_المرضى' if g.lang == 'ar' else 'e.g. manage_patients' }}" required>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="resource" class="form-label">Resource</label>
-                            <input type="text" class="form-control" id="resource" name="resource"
-                                   placeholder="e.g. Patient">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="resource">{{ 'المورد' if g.lang == 'ar' else 'Resource' }}</label>
+                                <input type="text" class="form-control" id="resource" name="resource"
+                                       placeholder="{{ 'مثال: Patient' if g.lang == 'ar' else 'e.g. Patient' }}">
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="action" class="form-label">Action</label>
-                            <input type="text" class="form-control" id="action" name="action"
-                                   placeholder="e.g. read">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="action">{{ 'الإجراء' if g.lang == 'ar' else 'Action' }}</label>
+                                <input type="text" class="form-control" id="action" name="action"
+                                       placeholder="{{ 'مثال: read' if g.lang == 'ar' else 'e.g. read' }}">
+                            </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-plus"></i> Add Permission
+                    <button type="submit" class="btn-ihs btn-ihs-warning">
+                        <i class="fas fa-plus me-1"></i>{{ 'إضافة صلاحية' if g.lang == 'ar' else 'Add Permission' }}
                     </button>
                 </form>
             </div>
@@ -51,31 +59,34 @@
     </div>
     <div class="col-md-7">
         {% for role in roles %}
-        <div class="card card-shadow mb-3">
-            <div class="card-header bg-transparent">
-                <h6 class="mb-0"><span class="badge bg-primary">{{ role.name }}</span></h6>
+        <div class="card-premium" style="margin-bottom:var(--sp-3)">
+            <div class="card-header">
+                <div class="card-title"><span class="tag-ihs">{{ role.name }}</span></div>
             </div>
             <div class="card-body">
                 {% for perm in role.permissions %}
-                    <span class="badge bg-light text-dark border me-1">{{ perm.name }}</span>
+                    <span class="tag-ihs" style="margin-right:4px;margin-bottom:4px;display:inline-block">{{ perm.name }}</span>
                 {% else %}
-                    <p class="text-muted mb-0">No permissions assigned.</p>
+                    <p style="color:var(--ihis-text-muted);margin:0">{{ 'لم يتم تعيين صلاحيات' if g.lang == 'ar' else 'No permissions assigned.' }}</p>
                 {% endfor %}
             </div>
         </div>
         {% else %}
-        <p class="text-muted">No roles defined. Create a role first.</p>
+        <div class="empty-state" style="margin-bottom:var(--sp-4)">
+            <div class="empty-icon"><i class="fas fa-user-shield"></i></div>
+            <div class="empty-title">{{ 'لا توجد أدوار معرّفة. أنشئ دورًا أولًا.' if g.lang == 'ar' else 'No roles defined. Create a role first.' }}</div>
+        </div>
         {% endfor %}
 
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h6 class="mb-0"><i class="fas fa-key"></i> All Defined Permissions</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-key" style="color:var(--ihis-warning)"></i> {{ 'جميع الصلاحيات المعرّفة' if g.lang == 'ar' else 'All Defined Permissions' }}</div>
             </div>
             <div class="card-body">
                 {% for perm in permissions %}
-                    <span class="badge bg-light text-dark border me-1 mb-1">{{ perm.name }}</span>
+                    <span class="tag-ihs" style="margin-right:4px;margin-bottom:4px;display:inline-block">{{ perm.name }}</span>
                 {% else %}
-                    <p class="text-muted mb-0">No permissions defined yet.</p>
+                    <p style="color:var(--ihis-text-muted);margin:0">{{ 'لم يتم تعريف أي صلاحيات بعد' if g.lang == 'ar' else 'No permissions defined yet.' }}</p>
                 {% endfor %}
             </div>
         </div>

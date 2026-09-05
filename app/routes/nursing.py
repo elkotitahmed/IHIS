@@ -8,6 +8,10 @@ from app.models import (
 )
 from app.routes.decorators import roles_required, permissions_required, log_activity
 from app.access import patient_access_required
+from app.services.timeline import record_event
+from app.services import alerts as alert_svc
+from app.services.patient_safety import patient_safety_context
+from app.utils import utcnow
 
 nursing_bp = Blueprint('nursing', __name__)
 
@@ -105,6 +109,31 @@ def vitals(patient_id):
             weight_kg=_as_float(request.form.get('weight_kg')),
         )
         db.session.add(vital)
+        db.session.flush()
+        summary = (f'BP {vital.blood_pressure_systolic}/{vital.blood_pressure_diastolic} · '
+                   f'HR {vital.heart_rate} · RR {vital.respiratory_rate} · '
+                   f'Temp {vital.temperature} · SpO2 {vital.oxygen_saturation}')
+        record_event(patient.id, 'VITALS', 'Vital signs recorded', summary,
+                     source_type='vital_sign', source_id=vital.id,
+                     department='Nursing')
+        if _is_abnormal(vital):
+            abnormal = []
+            if vital.temperature is not None and (vital.temperature > 38.0 or vital.temperature < 36.0):
+                abnormal.append(f'Temp {vital.temperature}')
+            if vital.heart_rate is not None and (vital.heart_rate > 100 or vital.heart_rate < 60):
+                abnormal.append(f'HR {vital.heart_rate}')
+            if vital.respiratory_rate is not None and vital.respiratory_rate > 20:
+                abnormal.append(f'RR {vital.respiratory_rate}')
+            if vital.oxygen_saturation is not None and vital.oxygen_saturation < 90:
+                abnormal.append(f'SpO2 {vital.oxygen_saturation}')
+            if vital.blood_pressure_systolic is not None and \
+                    (vital.blood_pressure_systolic > 140 or vital.blood_pressure_systolic < 90):
+                abnormal.append(f'BP {vital.blood_pressure_systolic}/{vital.blood_pressure_diastolic}')
+            alert_svc.ensure_open_alert(
+                patient.id, 'ABNORMAL_VITALS', severity='LOW',
+                title=f'Abnormal vitals: {", ".join(abnormal)}',
+                message=f'Recorded at {datetime.now().strftime("%H:%M")} · {summary}',
+                source_type='vital_sign', source_id=vital.id)
         log_activity('CREATE_VITAL_SIGN', 'patient', patient.id,
                      f'Nurse {current_user.id} recorded vital signs')
         db.session.commit()
@@ -175,18 +204,29 @@ def care_plan(patient_id):
 @login_required
 @roles_required('Nurse', 'Admin', 'SuperAdmin')
 def medication_schedule():
-    records = MedicationAdministration.query.order_by(
-        MedicationAdministration.administered_at.desc()).all()
+    # Eager-load patient, prescription and its items/medications in one query
+    # to avoid the N+1 pattern of per-record lookups.
+    recs = (MedicationAdministration.query
+            .options(
+                db.joinedload(MedicationAdministration.patient)
+                .joinedload(Patient.user),
+                db.joinedload(MedicationAdministration.prescription)
+                .joinedload(Prescription.items),
+            )
+            .order_by(MedicationAdministration.administered_at.desc())
+            .all())
+    lang = getattr(current_user, 'lang', 'en') or 'en'
     items = []
-    for rec in records:
-        patient = Patient.query.get(rec.patient_id)
-        prescription = Prescription.query.get(rec.prescription_id) if rec.prescription_id else None
-        line = prescription.items[0] if prescription and prescription.items else None
+    nurse_map = {u.id: u for u in
+                 User.query.filter(User.id.in_(
+                     {r.nurse_id for r in recs if r.nurse_id})).all()}
+    for rec in recs:
+        line = rec.prescription.items[0] if rec.prescription and rec.prescription.items else None
         medication = line.medication if line else None
-        nurse = User.query.get(rec.nurse_id) if rec.nurse_id else None
+        nurse = nurse_map.get(rec.nurse_id)
         items.append({
             'record': rec,
-            'patient': patient,
+            'patient': rec.patient,
             'medication_name': medication.generic_name if medication else 'N/A',
             'dosage': line.dosage if line else None,
             'frequency': line.frequency if line else None,
@@ -260,7 +300,9 @@ def mar(patient_id):
     now = datetime.now()
     return render_template('nursing/mar.html', title='Medication Administration Record',
                            patient=patient, active_rx=active_rx,
-                           pending=pending, history=history, now=now)
+                           pending=pending, history=history, now=now,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
 
 
 @nursing_bp.route('/administration/<int:admin_id>/outcome', methods=['POST'])

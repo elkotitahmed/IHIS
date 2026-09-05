@@ -1,81 +1,68 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-user-shield text-primary"></i> Admin Dashboard
-    <span class="badge bg-primary ms-2">{{ role_label }}</span>
-</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'لوحة الإدارة' if g.lang == 'ar' else 'Admin Dashboard' }}</h1>
+        <p class="page-subtitle">{{ role_label if role_label is defined else 'Management Console' }}</p>
+    </div>
+</div>
 
-<!-- KPI Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-user-injured icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Patients</h6>
-                    <p class="display-6 mb-0">{{ total_patients }}</p>
-                </div>
-            </div>
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-icon primary"><i class="fas fa-user-injured"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('patients') }}</div>
+            <div class="kpi-value">{{ total_patients }}</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-user-md icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Doctors</h6>
-                    <p class="display-6 mb-0">{{ total_doctors }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon success"><i class="fas fa-user-md"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('doctors') }}</div>
+            <div class="kpi-value">{{ total_doctors }}</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-calendar-check icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Appointments Today</h6>
-                    <p class="display-6 mb-0">{{ appointments_today }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon info"><i class="fas fa-calendar-check"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('appointments') }} {{ t('today') }}</div>
+            <div class="kpi-value">{{ appointments_today }}</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning card-shadow h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-building icon me-3"></i>
-                <div>
-                    <h6 class="card-title mb-0">Departments</h6>
-                    <p class="display-6 mb-0">{{ total_departments }}</p>
-                </div>
-            </div>
+    <div class="kpi-card">
+        <div class="kpi-icon warning"><i class="fas fa-building"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ t('departments') }}</div>
+            <div class="kpi-value">{{ total_departments }}</div>
         </div>
     </div>
 </div>
 
-<div class="row g-3">
-    <!-- Revenue / Revenue Overview -->
+<div class="row g-4">
     <div class="col-md-6">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-dollar-sign text-success"></i> Revenue Overview</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-dollar-sign" style="color:var(--ihis-success)"></i> {{ 'نظرة مالية' if g.lang == 'ar' else 'Revenue Overview' }}</div>
             </div>
-            <div class="card-body d-flex align-items-center justify-content-center">
-                <div class="text-center">
-                    <h1 class="text-success">${{ "{:,.2f}".format(revenue) }}</h1>
-                    <p class="text-muted mb-0">Total payments received</p>
-                    <hr>
-                    <p class="mb-0"><span class="text-danger fw-bold">Outstanding:</span> ${{ "{:,.2f}".format(outstanding) }}</p>
-                    <p class="text-muted mb-0 small">Unpaid &amp; partially-paid invoices</p>
+            <div class="card-body">
+                <div style="display:flex;gap:var(--sp-6);align-items:center">
+                    <div style="flex:1">
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted);margin-bottom:4px">{{ 'المدفوعات' if g.lang == 'ar' else 'Total Payments' }}</div>
+                        <div class="t-num" style="font-size:1.75rem;color:var(--ihis-success)">${{ "{:,.2f}".format(revenue) }}</div>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-size:0.75rem;color:var(--ihis-text-muted);margin-bottom:4px">{{ 'المستحق' if g.lang == 'ar' else 'Outstanding' }}</div>
+                        <div class="t-num" style="font-size:1.75rem;color:var(--ihis-danger)">${{ "{:,.2f}".format(outstanding) }}</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Chart: Appointments by Status (Doughnut) -->
     <div class="col-md-6">
-        <div class="card card-shadow h-100">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-chart-pie text-info"></i> Appointments by Status</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-chart-pie" style="color:var(--ihis-info)"></i> {{ 'المواعيد حسب الحالة' if g.lang == 'ar' else 'Appointments by Status' }}</div>
             </div>
             <div class="card-body">
                 <canvas id="statusChart" height="200"></canvas>
@@ -84,39 +71,28 @@
     </div>
 </div>
 
-<!-- Quick Links -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-bolt"></i> Quick Links</h5>
-            </div>
-            <div class="card-body">
-                <a href="{{ url_for('admin.staff') }}" class="btn btn-outline-primary me-2">
-                    <i class="fas fa-users"></i> Staff Management
-                </a>
-                <a href="{{ url_for('admin.departments') }}" class="btn btn-outline-success me-2">
-                    <i class="fas fa-building"></i> Departments
-                </a>
-                <a href="{{ url_for('admin.doctors') }}" class="btn btn-outline-info me-2">
-                    <i class="fas fa-user-md"></i> Doctors
-                </a>
-                <a href="{{ url_for('admin.statistics') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-chart-bar"></i> Statistics
-                </a>
-                <a href="{{ url_for('ai.analytics') }}" class="btn btn-outline-dark">
-                    <i class="fas fa-brain"></i> AI Analytics
-                </a>
-                <a href="{{ url_for('care.referrals') }}" class="btn btn-outline-warning me-2">
-                    <i class="fas fa-share-alt"></i> Referrals
-                </a>
-                <a href="{{ url_for('care.cases') }}" class="btn btn-outline-danger">
-                    <i class="fas fa-users"></i> MD Cases
-                </a>
-                <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-danger me-2">
-                    <i class="fas fa-file-alt"></i> Reports Center
-                </a>
-            </div>
+<div class="card-premium mt-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'التوصلات السريعة' if g.lang == 'ar' else 'Quick Links' }}</div>
+    </div>
+    <div class="card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+            <a href="{{ url_for('admin.staff') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-users-cog"></i> {{ t('staff') }}</a>
+            <a href="{{ url_for('admin.departments') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-building"></i> {{ t('departments') }}</a>
+            <a href="{{ url_for('admin.doctors') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-user-md"></i> {{ t('doctors') }}</a>
+            <a href="{{ url_for('admin.statistics') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-chart-bar"></i> {{ t('statistics') }}</a>
+            <a href="{{ url_for('reports.dashboard') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-chart-pie"></i> {{ t('reports') }}</a>
+            <a href="{{ url_for('billing.dashboard') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-file-invoice-dollar"></i> {{ t('billing') }}</a>
+            <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-share-nodes"></i> {{ t('referrals') }}</a>
+        </div>
+        <div class="t-h6" style="margin-top:1rem;margin-bottom:0.5rem;color:var(--ihis-primary);font-weight:600">
+            <i class="fas fa-robot"></i> {{ 'أدوات الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Tools' }}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+            <a href="{{ url_for('ai.fracture_detection') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-bone" style="color:var(--ihis-info)"></i> {{ 'كشف الكسور' if g.lang == 'ar' else 'Fracture Detection' }}</a>
+            <a href="{{ url_for('ai.tooth_segmentation') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-tooth" style="color:var(--ihis-info)"></i> {{ 'تجزئة الأسنان' if g.lang == 'ar' else 'Tooth Segmentation' }}</a>
+            <a href="{{ url_for('ai.skin_lesion_detection') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-person-circle-question" style="color:var(--ihis-info)"></i> {{ 'كشف آفات الجلد' if g.lang == 'ar' else 'Skin Lesion Detection' }}</a>
+            <a href="{{ url_for('ai.health_insights') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-brain" style="color:var(--ihis-success)"></i> {{ 'الرؤى الصحية' if g.lang == 'ar' else 'Health Insights' }}</a>
         </div>
     </div>
 </div>
@@ -132,19 +108,14 @@ if (ctx) {
             labels: {{ status_labels | tojson }},
             datasets: [{
                 data: {{ status_counts | tojson }},
-                backgroundColor: [
-                    '#0d6efd', '#198754', '#ffc107', '#dc3545',
-                    '#0dcaf0', '#6f42c1', '#fd7e14'
-                ],
+                backgroundColor: ['#1a6b52', '#2471a3', '#c67d1a', '#c0392b', '#5c3d99', '#f57f17'],
                 borderWidth: 2,
-                borderColor: '#fff'
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--ihis-surface').trim() || '#fff'
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
         }
     });
 }

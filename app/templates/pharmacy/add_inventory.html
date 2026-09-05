@@ -1,55 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إضافة صنف مخزون' if g.lang == 'ar' else 'Add Inventory Item' }}</h1>
+        <p class="page-subtitle">{{ 'إدخال دواء جديد إلى المخزون' if g.lang == 'ar' else 'Add a new medication to inventory' }}</p>
+    </div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Inventory Item</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-boxes-stacked" style="color:var(--ihis-primary)"></i> {{ 'بيانات الصنف' if g.lang == 'ar' else 'Item Details' }}</div>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('pharmacy.add_inventory') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label">Medication <span class="text-danger">*</span></label>
-                            <select class="form-select" name="medication_id" required>
-                                <option value="">Select medication...</option>
-                                {% for med in medications %}
-                                <option value="{{ med.id }}">{{ med.generic_name }} ({{ med.brand_name or 'N/A' }})</option>
-                                {% endfor %}
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الدواء' if g.lang == 'ar' else 'Medication' }} <span class="required">*</span></label>
+                                <select class="form-control" name="medication_id" required>
+                                    <option value="">{{ 'اختر الدواء...' if g.lang == 'ar' else 'Select medication...' }}</option>
+                                    {% for med in medications %}
+                                    <option value="{{ med.id }}">{{ med.generic_name }} ({{ med.brand_name or 'N/A' }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Batch Number</label>
-                            <input type="text" class="form-control" name="batch_number">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'رقم الدفعة' if g.lang == 'ar' else 'Batch Number' }}</label>
+                                <input type="text" class="form-control" name="batch_number">
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="quantity" min="0" value="0" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الكمية' if g.lang == 'ar' else 'Quantity' }} <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="quantity" min="0" value="0" required>
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Reorder Level</label>
-                            <input type="number" class="form-control" name="reorder_level" min="0" value="10">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'حد إعادة الطلب' if g.lang == 'ar' else 'Reorder Level' }}</label>
+                                <input type="number" class="form-control" name="reorder_level" min="0" value="10">
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Expiry Date</label>
-                            <input type="date" class="form-control" name="expiry_date">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'تاريخ الانتهاء' if g.lang == 'ar' else 'Expiry Date' }}</label>
+                                <input type="date" class="form-control" name="expiry_date">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Unit Cost</label>
-                            <input type="number" step="0.01" class="form-control" name="unit_cost" min="0" value="0">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'تكلفة الوحدة' if g.lang == 'ar' else 'Unit Cost' }}</label>
+                                <input type="number" step="0.01" class="form-control" name="unit_cost" min="0" value="0">
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Selling Price</label>
-                            <input type="number" step="0.01" class="form-control" name="selling_price" min="0" value="0">
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'سعر البيع' if g.lang == 'ar' else 'Selling Price' }}</label>
+                                <input type="number" step="0.01" class="form-control" name="selling_price" min="0" value="0">
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between mt-4">
-                        <a href="{{ url_for('pharmacy.inventory') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                    <div style="display:flex;justify-content:space-between;margin-top:var(--sp-5)">
+                        <a href="{{ url_for('pharmacy.inventory') }}" class="btn-ihs btn-ihs-outline">
+                            <i class="fas fa-arrow-left"></i> {{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>Save Item
+                        <button type="submit" class="btn-ihs btn-ihs-primary">
+                            <i class="fas fa-save"></i> {{ 'حفظ الصنف' if g.lang == 'ar' else 'Save Item' }}
                         </button>
                     </div>
                 </form>

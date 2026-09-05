@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-bell" style="color:var(--ihis-danger)"></i>
+            {{ 'التنبيهات السريرية' if g.lang == 'ar' else 'Clinical Alerts' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">{{ 'آخر 100 إنذار ضمن نطاق وصولك.' if g.lang == 'ar' else 'Latest 100 alerts within your access scope.' }}</p>
+    </div>
+</div>
+
+<div class="card-premium">
+    <div class="card-body flush">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" style="font-size:0.8125rem">
+                <thead style="color:var(--ihis-text-muted);font-size:0.75rem">
+                    <tr>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                        <th>{{ 'الخطورة' if g.lang == 'ar' else 'Severity' }}</th>
+                        <th>{{ 'العنوان' if g.lang == 'ar' else 'Title' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'التاريخ' if g.lang == 'ar' else 'When' }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in alerts %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('clinical.patient_360', patient_id=a.patient_id) }}" style="color:var(--ihis-primary);text-decoration:none;font-weight:500">
+                                {{ a.patient.user.full_name if a.patient and a.patient.user else 'Patient' }}
+                            </a>
+                            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">{{ a.patient.mrn if a.patient else '' }}</div>
+                        </td>
+                        <td>{{ a.alert_type|replace('_',' ') }}</td>
+                        <td>
+                            <span class="status-badge {{ 's-cancelled' if a.severity in ('HIGH','CRITICAL') else 's-pending' }}" style="font-size:0.6875rem">{{ a.severity }}</span>
+                        </td>
+                        <td>{{ a.title or '' }}</td>
+                        <td>
+                            <span class="status-badge {{ 's-completed' if a.status == 'RESOLVED' else ('s-pending' if a.status == 'ACKNOWLEDGED' else 's-draft') }}" style="font-size:0.6875rem">{{ a.status }}</span>
+                        </td>
+                        <td style="white-space:nowrap">{{ a.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                        <td class="text-end" style="white-space:nowrap">
+                            {% if current_user.has_permission('ALERT_ACK') and a.status == 'OPEN' %}
+                            <form method="post" action="{{ url_for('clinical.alert_action', patient_id=a.patient_id, alert_id=a.id, action='ack') }}" style="display:inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'إقرار' if g.lang == 'ar' else 'Ack' }}</button>
+                            </form>
+                            {% endif %}
+                            {% if current_user.has_permission('ALERT_ACK') and a.status in ('OPEN','ACKNOWLEDGED') %}
+                            <form method="post" action="{{ url_for('clinical.alert_action', patient_id=a.patient_id, alert_id=a.id, action='dismiss') }}" style="display:inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn-ihs btn-ihs-secondary btn-ihs-sm">×</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">
+                        {{ 'لا توجد إنذارات.' if g.lang == 'ar' else 'No alerts.' }}
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

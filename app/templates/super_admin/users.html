@@ -1,85 +1,91 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-users text-primary"></i> Manage Users</h4>
-    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-users" style="color:var(--ihis-primary)"></i> {{ 'إدارة المستخدمين' if g.lang == 'ar' else 'Manage Users' }}</h1>
+        <p class="page-subtitle">{{ 'عرض وإدارة حسابات المستخدمين في النظام' if g.lang == 'ar' else 'View and manage system user accounts' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.dashboard') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5>All System Users</h5>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'جميع مستخدمي النظام' if g.lang == 'ar' else 'All System Users' }}</div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>User Type</th>
-                    <th>Roles</th>
-                    <th>Status</th>
-                    <th>Last Login</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.id }}</td>
-                    <td>{{ user.full_name }}</td>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.email }}</td>
-                    <td><span class="badge bg-secondary">{{ user.user_type }}</span></td>
-                    <td>
-                        {% for role in user.roles %}
-                            <span class="badge bg-primary">{{ role.name }}</span>
-                        {% else %}
-                            <span class="text-muted">No role</span>
-                        {% endfor %}
-                    </td>
-                    <td>
-                        {% if user.is_active %}
-                            <span class="badge bg-success">Active</span>
-                        {% else %}
-                            <span class="badge bg-danger">Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
-                    <td class="text-nowrap">
-                        <a href="{{ url_for('super_admin.user_roles', user_id=user.id) }}"
-                           class="btn btn-sm btn-outline-primary" title="Manage roles">
-                            <i class="fas fa-user-tag"></i>
-                        </a>
-                        {% if user.id != current_user.id %}
-                        <form method="post" action="{{ url_for('super_admin.toggle_user', user_id=user.id) }}"
-                              class="d-inline" onsubmit="return confirm('Toggle active status for {{ user.username }}?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            {% if user.is_active %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate">
-                                    <i class="fas fa-user-slash"></i>
-                                </button>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>{{ 'الاسم الكامل' if g.lang == 'ar' else 'Full Name' }}</th>
+                        <th>{{ 'اسم المستخدم' if g.lang == 'ar' else 'Username' }}</th>
+                        <th>{{ 'البريد الإلكتروني' if g.lang == 'ar' else 'Email' }}</th>
+                        <th>{{ 'نوع المستخدم' if g.lang == 'ar' else 'User Type' }}</th>
+                        <th>{{ 'الأدوار' if g.lang == 'ar' else 'Roles' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'آخر دخول' if g.lang == 'ar' else 'Last Login' }}</th>
+                        <th>{{ 'إجراءات' if g.lang == 'ar' else 'Actions' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td><span class="t-num">{{ user.id }}</span></td>
+                        <td><span class="cell-primary">{{ user.full_name }}</span></td>
+                        <td>{{ user.username }}</td>
+                        <td><span class="cell-muted">{{ user.email }}</span></td>
+                        <td><span class="tag-ihs">{{ user.user_type }}</span></td>
+                        <td>
+                            {% for role in user.roles %}
+                                <span class="tag-ihs" style="margin-right:2px">{{ role.name }}</span>
                             {% else %}
-                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activate">
-                                    <i class="fas fa-user-check"></i>
-                                </button>
+                                <span class="cell-muted">{{ 'بدون دور' if g.lang == 'ar' else 'No role' }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="status-badge s-active">{{ 'نشط' if g.lang == 'ar' else 'Active' }}</span>
+                            {% else %}
+                                <span class="status-badge s-cancelled">{{ 'غير نشط' if g.lang == 'ar' else 'Inactive' }}</span>
                             {% endif %}
-                        </form>
-                        {% else %}
-                            <span class="badge bg-info text-dark" title="This is you">You</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="9" class="text-center text-muted py-4">No users found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                        <td><span class="cell-mono">{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else ('لم يسجل دخول' if g.lang == 'ar' else 'Never') }}</span></td>
+                        <td class="text-nowrap">
+                            <a href="{{ url_for('super_admin.user_roles', user_id=user.id) }}"
+                               class="btn-ihs btn-ihs-outline btn-ihs-sm" title="{{ 'إدارة الأدوار' if g.lang == 'ar' else 'Manage roles' }}">
+                                <i class="fas fa-user-tag"></i>
+                            </a>
+                            {% if user.id != current_user.id %}
+                            <form method="post" action="{{ url_for('super_admin.toggle_user', user_id=user.id) }}"
+                                  class="d-inline" onsubmit="return confirm('Toggle active status for {{ user.username }}?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if user.is_active %}
+                                    <button type="submit" class="btn-ihs btn-ihs-danger btn-ihs-sm" title="{{ 'تعطيل' if g.lang == 'ar' else 'Deactivate' }}">
+                                        <i class="fas fa-user-slash"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-sm" title="{{ 'تفعيل' if g.lang == 'ar' else 'Activate' }}">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                {% endif %}
+                            </form>
+                            {% else %}
+                                <span class="status-badge s-in-progress" title="This is you">{{ 'أنت' if g.lang == 'ar' else 'You' }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9"><div class="empty-state"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-title">{{ 'لم يتم العثور على مستخدمين' if g.lang == 'ar' else 'No users found' }}</div></div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

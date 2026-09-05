@@ -2,66 +2,87 @@
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
-        <li class="breadcrumb-item active">Dental Record</li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">{{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</a></li>
+        <li class="breadcrumb-item active">{{ 'السجل السني' if g.lang == 'ar' else 'Dental Record' }}</li>
     </ol>
 </nav>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-file-medical"></i> Dental Record - {{ patient.user.full_name }}</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('dentistry.record', patient_id=patient.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-3">
-                <label class="form-label">Dental History</label>
-                <textarea class="form-control" name="dental_history" rows="4"
-                          placeholder="Past dental visits, treatments, hygiene history">{{ dental_record.dental_history if dental_record and dental_record.dental_history }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Dental Allergies</label>
-                <textarea class="form-control" name="dental_allergies" rows="3"
-                          placeholder="E.g. latex, local anesthetics">{{ dental_record.dental_allergies if dental_record and dental_record.dental_allergies }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Previous Procedures</label>
-                <textarea class="form-control" name="previous_procedures" rows="4"
-                          placeholder="Extractions, fillings, crowns, implants...">{{ dental_record.previous_procedures if dental_record and dental_record.previous_procedures }}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Record</button>
-        </form>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'السجل السني' if g.lang == 'ar' else 'Dental Record' }} ? {{ patient.user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'توثيق التاريخ السني والإجراءات السابقة' if g.lang == 'ar' else 'Document dental history and previous procedures' }}</p>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5><i class="fas fa-info-circle"></i> Saved Record Details</h5>
-    </div>
-    <div class="card-body">
-        {% if dental_record %}
-        <div class="row">
-            <div class="col-md-4">
-                <h6 class="text-muted">Dental History</h6>
-                <p>{{ dental_record.dental_history or 'Not provided' }}</p>
+{% include 'clinical/_patient_header.html' %}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-edit" style="color:var(--ihis-primary)"></i> {{ 'ملء السجل' if g.lang == 'ar' else 'Fill Record' }}</div>
             </div>
-            <div class="col-md-4">
-                <h6 class="text-muted">Dental Allergies</h6>
-                <p>{{ dental_record.dental_allergies or 'Not provided' }}</p>
-            </div>
-            <div class="col-md-4">
-                <h6 class="text-muted">Previous Procedures</h6>
-                <p>{{ dental_record.previous_procedures or 'Not provided' }}</p>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dentistry.record', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التاريخ السني' if g.lang == 'ar' else 'Dental History' }}</label>
+                        <textarea class="form-control" name="dental_history" rows="4"
+                                  placeholder="{{ 'الزيارات السابقة، العلاجات، تاريخ النظافة' if g.lang == 'ar' else 'Past dental visits, treatments, hygiene history' }}">{{ dental_record.dental_history if dental_record and dental_record.dental_history }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الحساسية السنية' if g.lang == 'ar' else 'Dental Allergies' }}</label>
+                        <textarea class="form-control" name="dental_allergies" rows="3"
+                                  placeholder="{{ 'مثال: كاوتش، مخدر موضعي' if g.lang == 'ar' else 'E.g. latex, local anesthetics' }}">{{ dental_record.dental_allergies if dental_record and dental_record.dental_allergies }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الإجراءات السابقة' if g.lang == 'ar' else 'Previous Procedures' }}</label>
+                        <textarea class="form-control" name="previous_procedures" rows="4"
+                                  placeholder="{{ 'خلع، حشوات، تاج، زراعة...' if g.lang == 'ar' else 'Extractions, fillings, crowns, implants...' }}">{{ dental_record.previous_procedures if dental_record and dental_record.previous_procedures }}</textarea>
+                    </div>
+                    <div style="margin-top:var(--sp-4)">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'حفظ السجل' if g.lang == 'ar' else 'Save Record' }}</button>
+                    </div>
+                </form>
             </div>
         </div>
-        <p class="text-muted small mb-0">Created: {{ dental_record.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-        {% else %}
-        <p class="text-muted mb-0">No dental record exists yet. Fill in the form above and save to create one.</p>
-        {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-info-circle" style="color:var(--ihis-info)"></i> {{ 'تفاصيل السجل' if g.lang == 'ar' else 'Saved Record Details' }}</div>
+            </div>
+            <div class="card-body">
+                {% if dental_record %}
+                <div style="margin-bottom:var(--sp-4)">
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--ihis-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-1)">{{ 'التاريخ السني' if g.lang == 'ar' else 'Dental History' }}</div>
+                    <p style="margin:0;color:var(--ihis-text)">{{ dental_record.dental_history or '—' }}</p>
+                </div>
+                <div style="margin-bottom:var(--sp-4)">
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--ihis-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-1)">{{ 'الحساسية السنية' if g.lang == 'ar' else 'Dental Allergies' }}</div>
+                    <p style="margin:0;color:var(--ihis-text)">{{ dental_record.dental_allergies or '—' }}</p>
+                </div>
+                <div style="margin-bottom:var(--sp-4)">
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--ihis-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-1)">{{ 'الإجراءات السابقة' if g.lang == 'ar' else 'Previous Procedures' }}</div>
+                    <p style="margin:0;color:var(--ihis-text)">{{ dental_record.previous_procedures or '—' }}</p>
+                </div>
+                <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'أنشئ:' if g.lang == 'ar' else 'Created:' }} {{ dental_record.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-file-medical"></i></div>
+                    <div class="empty-title">{{ 'لا يوجد سجل بعد' if g.lang == 'ar' else 'No dental record exists yet' }}</div>
+                    <div class="empty-desc">{{ 'املأ النموذج وأعد الحفظ لإنشاء سجل' if g.lang == 'ar' else 'Fill in the form above and save to create one.' }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
-<a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn btn-outline-secondary mt-3">
-    <i class="fas fa-arrow-left me-1"></i>Back to Chart
-</a>
+<div style="margin-top:var(--sp-4)">
+    <a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
+        <i class="fas fa-arrow-left"></i> {{ 'العودة للرسم السني' if g.lang == 'ar' else 'Back to Chart' }}
+    </a>
+</div>
 {% endblock %}

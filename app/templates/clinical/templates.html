@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-clipboard-list" style="color:var(--ihis-primary)"></i>
+            {{ 'قوالب السجلات السريرية' if g.lang == 'ar' else 'Clinical Templates' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'قوالب تسارع التوثيق السريري (SOAP وغيرها) دون تخفيض جودة الوصف.' if g.lang == 'ar' else 'Accelerate clinical documentation (SOAP and more) without reducing note quality.' }}
+        </p>
+    </div>
+    <a href="{{ url_for('clinical.template_new') }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+        <i class="fas fa-plus"></i> {{ 'قالب جديد' if g.lang == 'ar' else 'New Template' }}
+    </a>
+</div>
+
+<div class="row g-4">
+    {% for t in templates %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card-premium h-100">
+            <div style="padding:var(--sp-3) var(--sp-4)">
+                <div style="display:flex;align-items:flex-start;gap:var(--sp-3)">
+                    <div style="flex:1;min-width:0">
+                        <a href="{{ url_for('clinical.template_edit', template_id=t.id) }}"
+                           style="font-weight:600;color:var(--ihis-primary);text-decoration:none">{{ t.title }}</a>
+                        <div class="text-muted" style="font-size:0.75rem">{{ t.template_type }}
+                            {% if t.specialty %}&middot; {{ t.specialty.name }}{% endif %}</div>
+                    </div>
+                    {% if not t.is_active %}<span class="status-badge s-cancelled">{{ 'معطّل' if g.lang == 'ar' else 'Inactive' }}</span>{% endif %}
+                </div>
+                <p style="font-size:0.8rem;color:var(--ihis-text-muted);margin:var(--sp-2) 0">{{ t.description or '' }}</p>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    {% for s in t.section_list %}<span class="tag-ihs">{{ s.label }}</span>{% endfor %}
+                </div>
+                <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3)">
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.template_edit', template_id=t.id) }}">{{ 'تحرير' if g.lang == 'ar' else 'Edit' }}</a>
+                    <form method="POST" action="{{ url_for('clinical.template_toggle', template_id=t.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn-ihs btn-ihs-secondary btn-ihs-sm" type="submit">{{ 'تفعيل' if g.lang == 'ar' else 'Activate' if not t.is_active else 'تعطيل' if g.lang == 'ar' else 'Deactivate' }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div style="text-align:center;padding:3rem;color:var(--ihis-text-muted)">
+            <i class="fas fa-clipboard-list" style="font-size:2.5rem;opacity:0.3;margin-bottom:1rem;display:block"></i>
+            {{ 'لا قوالب بعد.' if g.lang == 'ar' else 'No templates yet.' }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

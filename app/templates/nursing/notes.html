@@ -1,52 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('nursing.patients') }}">Patients</a></li>
-        <li class="breadcrumb-item active">Nursing Notes</li>
-    </ol>
-</nav>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-file-medical" style="color:var(--ihis-info)"></i> {{ 'ملاحظات التمريض' if g.lang == 'ar' else 'Nursing Notes' }} &mdash; {{ patient.user.full_name }}</h1>
+        <p class="page-subtitle"><a class="link-ihs" href="{{ url_for('nursing.patients') }}">{{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</a> / {{ 'ملاحظات التمريض' if g.lang == 'ar' else 'Nursing Notes' }}</p>
+    </div>
+</div>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-file-medical"></i> Add Nursing Note - {{ patient.user.full_name }}</h5>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-pen" style="color:var(--ihis-info)"></i> {{ 'إضافة ملاحظة تمريضية' if g.lang == 'ar' else 'Add Nursing Note' }}</div>
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('nursing.notes', patient_id=patient.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-3">
-                <label class="form-label">Shift</label>
-                <select class="form-select" name="shift">
-                    <option value="Day">Day</option>
-                    <option value="Evening">Evening</option>
-                    <option value="Night">Night</option>
-                </select>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الوردية' if g.lang == 'ar' else 'Shift' }} [<span class="required">*</span>]</label>
+                        <select class="form-control" name="shift">
+                            <option value="Day">{{ 'صباحية' if g.lang == 'ar' else 'Day' }}</option>
+                            <option value="Evening">{{ 'مسائية' if g.lang == 'ar' else 'Evening' }}</option>
+                            <option value="Night">{{ 'ليلية' if g.lang == 'ar' else 'Night' }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الملاحظة' if g.lang == 'ar' else 'Note' }} [<span class="required">*</span>]</label>
+                        <textarea class="form-control" name="note" rows="4" placeholder="{{ 'أدخل الملاحظات السريرية...' if g.lang == 'ar' else 'Enter clinical observations...' }}" required></textarea>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Note</label>
-                <textarea class="form-control" name="note" rows="4" placeholder="Enter clinical observations..." required></textarea>
+            <div class="mt-3">
+                <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'حفظ الملاحظة' if g.lang == 'ar' else 'Save Note' }}</button>
             </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Note</button>
         </form>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5><i class="fas fa-clipboard-list"></i> Nursing Notes History</h5>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-history" style="color:var(--ihis-info)"></i> {{ 'سجل ملاحظات التمريض' if g.lang == 'ar' else 'Nursing Notes History' }}</div>
     </div>
     <div class="card-body">
         {% for note in notes %}
-        <div class="border rounded p-3 mb-3">
-            <div class="d-flex justify-content-between">
-                <strong>{{ note.shift or 'Day' }} Shift</strong>
-                <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        <div style="background:var(--ihis-surface-inset);padding:var(--sp-3);border-radius:var(--radius-sm);margin-bottom:var(--sp-3);border-left:3px solid var(--ihis-primary)">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="tag-ihs">{{ note.shift or 'Day' }} Shift</span>
+                </div>
+                <small class="cell-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
             </div>
-            <p class="mb-0 mt-2">{{ note.note }}</p>
-            <small class="text-muted">Recorded by Nurse ID {{ note.nurse_id }}</small>
+            <p class="mb-0 mt-2 cell-secondary">{{ note.note }}</p>
+            <small class="cell-muted">Nurse ID <span class="t-num">{{ note.nurse_id }}</span></small>
         </div>
         {% else %}
-        <p class="text-center text-muted mb-0">No nursing notes recorded yet.</p>
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-file-medical"></i></div>
+            <div class="empty-title">{{ 'لا توجد ملاحظات تمريضية' if g.lang == 'ar' else 'No nursing notes recorded yet' }}</div>
+            <div class="empty-desc">{{ 'أضف ملاحظة تمريضية جديدة' if g.lang == 'ar' else 'Add a new nursing note for this patient' }}</div>
+        </div>
         {% endfor %}
     </div>
 </div>

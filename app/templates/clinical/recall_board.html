@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-calendar-check" style="color:var(--ihis-primary)"></i>
+            {{ 'لوحة الاستدعاء' if g.lang == 'ar' else 'Recall Board' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'المتابعات والتذكيرات المستحقة قريباً أو المتأخرة — معاً في لوحة واحدة.' if g.lang == 'ar' else 'Upcoming, due-today and overdue follow-ups and reminders in one board.' }}
+        </p>
+    </div>
+    <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
+        <span class="tag-ihs">{{ (f_over|length) + (r_over|length) }} {{ 'متأخر' if g.lang == 'ar' else 'overdue' }}</span>
+        <span class="tag-ihs">{{ (f_today|length) + (r_today|length) }} {{ 'مستحق اليوم' if g.lang == 'ar' else 'due today' }}</span>
+        <span class="tag-ihs">{{ (f_up|length) + (r_up|length) }} {{ 'قادم' if g.lang == 'ar' else 'upcoming' }}</span>
+    </div>
+</div>
+
+{% if (f_over|length) + (r_over|length) %}
+<div class="alert alert-warning" style="border-radius:var(--radius-md)">
+    <i class="fas fa-clock me-2"></i><strong>{{ (f_over|length) + (r_over|length) }}</strong>
+    {{ 'عنصر متأخر يحتاج مراجعة.' if g.lang == 'ar' else 'overdue item(s) need review.' }}
+</div>
+{% endif %}
+
+<div class="card-premium mb-4">
+    <div class="card-header"><div class="card-title"><i class="fas fa-briefcase-medical"></i> {{ 'المتابعات المجدولة' if g.lang == 'ar' else 'Scheduled Recalls' }}</div></div>
+    <div class="card-body">
+        {% macro frow(it, overdue) %}
+        <div class="list-item" style="align-items:flex-start">
+            <i class="fas fa-user-injured" style="color:var(--ihis-secondary)"></i>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.8125rem;font-weight:500">
+                    <a href="{{ url_for('clinical.patient_360', patient_id=it.patient_id) }}" style="color:var(--ihis-primary);text-decoration:none">{{ it.patient.user.full_name if it.patient and it.patient.user else 'Patient' }}</a>
+                </div>
+                <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ it.reason or 'Follow-up' }}</div>
+                <div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ it.scheduled_for.strftime('%A %d %b %Y %H:%M') if it.scheduled_for }}</div>
+            </div>
+            {% if overdue %}<span class="status-badge s-cancelled">{{ 'متأخر' if g.lang == 'ar' else 'Overdue' }}</span>
+            {% else %}<span class="status-badge s-pending">{{ 'مقرر' if g.lang == 'ar' else 'Planned' }}</span>{% endif %}
+        </div>
+        {% endmacro %}
+
+        {% if f_over or f_today or f_up %}
+        <div style="display:grid;gap:var(--sp-4)">
+            {% if f_over %}
+            <div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--ihis-danger);font-weight:600;margin-bottom:var(--sp-2)">{{ 'متأخر' if g.lang == 'ar' else 'Overdue' }} ({{ f_over|length }})</div>
+                <div class="list-compact">{% for it in f_over %}{{ frow(it, True) }}{% endfor %}</div>
+            </div>
+            {% endif %}
+            {% if f_today %}
+            <div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--ihis-warning);font-weight:600;margin-bottom:var(--sp-2)">{{ 'مستحق اليوم' if g.lang == 'ar' else 'Due Today' }} ({{ f_today|length }})</div>
+                <div class="list-compact">{% for it in f_today %}{{ frow(it, False) }}{% endfor %}</div>
+            </div>
+            {% endif %}
+            {% if f_up %}
+            <div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--ihis-text-muted);font-weight:600;margin-bottom:var(--sp-2)">{{ 'قادم' if g.lang == 'ar' else 'Upcoming' }} ({{ f_up|length }})</div>
+                <div class="list-compact">{% for it in f_up %}{{ frow(it, False) }}{% endfor %}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">{{ 'لا متابعات مجدولة.' if g.lang == 'ar' else 'No scheduled follow-ups.' }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card-premium mb-4">
+    <div class="card-header"><div class="card-title"><i class="fas fa-bell"></i> {{ 'التذكيرات المفتوحة' if g.lang == 'ar' else 'Open Reminders' }}</div></div>
+    <div class="card-body">
+        {% macro rrow(r) %}
+        <div class="list-item" style="align-items:flex-start">
+            <i class="fas fa {{ 'fa-triangle-exclamation' if r.priority == 'High' else 'fa-calendar-day' }}"
+               style="color:{{ 'var(--ihis-danger)' if r.priority == 'High' else 'var(--ihis-warning)' }}"></i>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.8125rem;font-weight:500">
+                    <a href="{{ url_for('clinical.patient_360', patient_id=r.patient_id) }}" style="color:var(--ihis-primary);text-decoration:none">{{ r.patient.user.full_name if r.patient and r.patient.user else 'Patient' }}</a>
+                </div>
+                <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ r.title }}</div>
+                <div style="font-size:0.7rem;color:var(--ihis-text-muted)">
+                    {% if r.due_date %}{{ r.due_date.strftime('%d %b %Y') }}{% endif %} · {{ r.reminder_type }}
+                </div>
+            </div>
+            <span class="status-badge {{ 's-cancelled' if r.due_date and r.due_date < today else 's-pending' }}">{{ 'متأخر' if g.lang == 'ar' else ('Overdue' if (r.due_date and r.due_date < today) else r.priority) }}</span>
+            <form method="POST" action="{{ url_for('clinical.reminder_done', reminder_id=r.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'أنجز' if g.lang == 'ar' else 'Done' }}</button>
+            </form>
+        </div>
+        {% endmacro %}
+
+        {% if r_over or r_today or r_up %}
+        <div style="display:grid;gap:var(--sp-4)">
+            {% if r_over %}
+            <div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--ihis-danger);font-weight:600;margin-bottom:var(--sp-2)">{{ 'متأخر' if g.lang == 'ar' else 'Overdue' }} ({{ r_over|length }})</div>
+                <div class="list-compact">{% for r in r_over %}{{ rrow(r) }}{% endfor %}</div>
+            </div>
+            {% endif %}
+            {% if r_today %}
+            <div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--ihis-warning);font-weight:600;margin-bottom:var(--sp-2)">{{ 'مستحق اليوم' if g.lang == 'ar' else 'Due Today' }} ({{ r_today|length }})</div>
+                <div class="list-compact">{% for r in r_today %}{{ rrow(r) }}{% endfor %}</div>
+            </div>
+            {% endif %}
+            {% if r_up %}
+            <div>
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--ihis-text-muted);font-weight:600;margin-bottom:var(--sp-2)">{{ 'قادم' if g.lang == 'ar' else 'Upcoming' }} ({{ r_up|length }})</div>
+                <div class="list-compact">{% for r in r_up %}{{ rrow(r) }}{% endfor %}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">{{ 'لا تذكيرات مفتوحة.' if g.lang == 'ar' else 'No open reminders.' }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

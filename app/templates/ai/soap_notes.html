@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'ملاحظات سريرية بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Clinical Notes (SOAP)' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }} — {{ 'توليد ملاحظات SOAP سريرية' if g.lang == 'ar' else 'Generate structured SOAP clinical notes' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.ai_dashboard') }}">
+            <i class="fas fa-arrow-left"></i> {{ 'لوحة AI' if g.lang == 'ar' else 'AI Dashboard' }}</a>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user" style="color:var(--ihis-primary)"></i> {{ patient.user.full_name }} <span class="tag-ihs">SOAP</span></div>
+    </div>
+    <div class="card-body">
+        <div class="row cell-muted small mb-3">
+            <div class="col-md-3"><strong>MRN:</strong> {{ patient.mrn or 'N/A' }}</div>
+            <div class="col-md-3"><strong>{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}:</strong> {{ patient.gender or 'N/A' }}</div>
+            <div class="col-md-3"><strong>{{ 'العمر' if g.lang == 'ar' else 'Age' }}:</strong> {{ patient.age or 'N/A' }}</div>
+            <div class="col-md-3"><strong>{{ 'الدم' if g.lang == 'ar' else 'Blood' }}:</strong> {{ patient.blood_type or 'N/A' }}</div>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label fw-bold">{{ 'السياق السريري الإضافي (اختياري)' if g.lang == 'ar' else 'Additional Clinical Context (optional)' }}</label>
+                <textarea class="form-control" name="clinical_context" rows="3"
+                    placeholder="{{ 'أضف ملاحظات سريرية إضافية如 الأعراض الحالية، تاريخ المرض، exam findings...' if g.lang == 'ar' else 'Add any clinical context: current symptoms, history of present illness, physical exam findings...' }}"></textarea>
+            </div>
+            <button class="btn-ihs btn-ihs-primary" type="submit" {% if not available %}disabled{% endif %}>
+                <i class="fas fa-brain"></i> {{ 'توليد ملاحظة SOAP' if g.lang == 'ar' else 'Generate SOAP Note' }}
+            </button>
+            {% if not available %}
+            <span class="cell-muted small ms-2"><i class="fas fa-info-circle"></i> {{ 'يتطلب GEMINI_API_KEY' if g.lang == 'ar' else 'Requires GEMINI_API_KEY' }}</span>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if not available %}
+<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i>
+    {{ 'يتطلب توليد الملاحظات السريرية بالذكاء الاصطناعي تعيين' if g.lang == 'ar' else 'AI clinical notes generation requires' }} <strong>GEMINI_API_KEY</strong> {{ 'في بيئة الخادم.' if g.lang == 'ar' else 'to be set in the server environment.' }}
+</div>
+{% endif %}
+
+{% if note and note.get('subjective') %}
+<div class="card-premium mb-3" style="border-top:3px solid var(--ihis-success)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-check-circle" style="color:var(--ihis-success)"></i> {{ 'ملاحظة SOAP جاهزة' if g.lang == 'ar' else 'SOAP Note Generated' }} <span class="tag-ihs">AI</span></div>
+        <span class="cell-muted small">{{ note.generated_at or '' }}</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <!-- Subjective -->
+            <div class="col-lg-6">
+                <div class="card-premium h-100" style="border-left:4px solid #3b82f6">
+                    <div class="card-header"><div class="card-title" style="font-size:0.875rem;color:#3b82f6"><i class="fas fa-user-clock"></i> S — {{ 'الموضوعي' if g.lang == 'ar' else 'Subjective' }}</div></div>
+                    <div class="card-body small">
+                        {% for key, val in note.subjective.items() %}
+                        <div class="mb-2"><strong>{{ key|replace('_', ' ')|title }}:</strong><br>{{ val }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <!-- Objective -->
+            <div class="col-lg-6">
+                <div class="card-premium h-100" style="border-left:4px solid #10b981">
+                    <div class="card-header"><div class="card-title" style="font-size:0.875rem;color:#10b981"><i class="fas fa-clipboard-list"></i> O — {{ 'الفعلي' if g.lang == 'ar' else 'Objective' }}</div></div>
+                    <div class="card-body small">
+                        {% for key, val in note.objective.items() %}
+                        <div class="mb-2"><strong>{{ key|replace('_', ' ')|title }}:</strong><br>{{ val }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <!-- Assessment -->
+            <div class="col-lg-6">
+                <div class="card-premium h-100" style="border-left:4px solid #f59e0b">
+                    <div class="card-header"><div class="card-title" style="font-size:0.875rem;color:#f59e0b"><i class="fas fa-stethoscope"></i> A — {{ 'التقييم' if g.lang == 'ar' else 'Assessment' }}</div></div>
+                    <div class="card-body small">
+                        <div class="mb-2"><strong>{{ 'التشخيص الأساسي' if g.lang == 'ar' else 'Primary Dx' }}:</strong> {{ note.assessment.get('primary_dx', 'N/A') }}</div>
+                        {% if note.assessment.get('differential_dx') %}
+                        <div class="mb-2"><strong>{{ 'التشخيصات التفريقية' if g.lang == 'ar' else 'Differential Dx' }}:</strong>
+                            <ul class="mb-0 ps-3">{% for d in note.assessment.differential_dx %}<li>{{ d }}</li>{% endfor %}</ul>
+                        </div>
+                        {% endif %}
+                        {% if note.assessment.get('clinical_reasoning') %}
+                        <div><strong>{{ 'التبرير السريري' if g.lang == 'ar' else 'Clinical Reasoning' }}:</strong> {{ note.assessment.clinical_reasoning }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Plan -->
+            <div class="col-lg-6">
+                <div class="card-premium h-100" style="border-left:4px solid #8b5cf6">
+                    <div class="card-header"><div class="card-title" style="font-size:0.875rem;color:#8b5cf6"><i class="fas fa-clipboard-check"></i> P — {{ 'الخطة' if g.lang == 'ar' else 'Plan' }}</div></div>
+                    <div class="card-body small">
+                        {% for key, val in note.plan.items() %}
+                        <div class="mb-2"><strong>{{ key|replace('_', ' ')|title }}:</strong>
+                            {% if val is iterable and val is not string %}
+                            <ul class="mb-0 ps-3">{% for item in val %}<li>{{ item }}</li>{% endfor %}</ul>
+                            {% else %}{{ val }}{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if note.get('quality_flags') %}
+        <div class="alert alert-info mt-3 mb-0 small">
+            <i class="fas fa-flag me-1"></i> <strong>{{ 'مؤشرات الجودة' if g.lang == 'ar' else 'Quality Flags' }}:</strong>
+            {{ note.quality_flags|join(', ') }}
+        </div>
+        {% endif %}
+        <hr>
+        <p class="cell-muted small mb-0"><i class="fas fa-exclamation-triangle" style="color:var(--ihis-warning)"></i> {{ note.disclaimer|default('AI-generated note requires physician review and signature.') }}</p>
+    </div>
+</div>
+{% elif note and note.get('error') %}
+<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ note.error }}</div>
+{% endif %}
+{% endblock %}

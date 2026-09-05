@@ -17,13 +17,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install core dependencies
+        # requirements-dev.txt deliberately excludes the heavy ML stack:
+        # the AI services import timm/torch/tensorflow/ultralytics lazily
+        # inside request handlers, so the suite passes without downloading
+        # ~1.5 GB of model-runtime wheels.
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Run unit tests
-        run: python -m unittest discover -s tests -p "test_*.py"
+      - name: Run the test suite
+        run: python -m pytest tests/ -q -p no:cacheprovider
 
       - name: Verify app boots (smoke)
         env:

@@ -1,99 +1,159 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-prescription me-2"></i>Prescription #{{ rx.id }}</h4>
+{% set rx_partial = false %}
+{% for i in rx.items %}{% if i.dispensed_qty() > 0 and i.status != 'Dispensed' %}{% set rx_partial = true %}{% endif %}{% endfor %}
+<div class="page-header">
     <div>
+        <h1 class="page-title"><i class="fas fa-prescription" style="color:var(--ihis-primary)"></i> {{ 'الروشتة #' if g.lang == 'ar' else 'Prescription #' }}{{ rx.id }}</h1>
+    </div>
+    <div class="page-actions">
         {% if rx.patient %}
-        <a href="{{ url_for('ai.medication_review', patient_id=rx.patient_id) }}" class="btn btn-outline-primary btn-sm me-1">
-            <i class="fas fa-brain me-1"></i>AI Medication Review</a>
+        <a href="{{ url_for('ai.medication_review', patient_id=rx.patient_id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+            <i class="fas fa-brain"></i> {{ 'مراجعة الأدوية AI' if g.lang == 'ar' else 'AI Medication Review' }}
+        </a>
         {% endif %}
-        <a href="{{ url_for('pharmacy.prescriptions') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+        <a href="{{ url_for('pharmacy.prescriptions') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+        </a>
     </div>
 </div>
 
-<div class="card card-shadow mb-3">
+<div class="card-premium mb-3">
     <div class="card-body">
-        <div class="row">
+        <div class="row g-4">
             <div class="col-md-3">
-                <div class="text-muted small">Patient</div>
-                <div class="fw-semibold">{{ rx.patient.user.full_name if rx.patient and rx.patient.user else '-' }}</div>
+                <div class="cell-muted" style="font-size:0.8rem">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</div>
+                <div class="cell-primary" style="margin-top:var(--sp-1)">{{ rx.patient.user.full_name if rx.patient and rx.patient.user else '-' }}</div>
             </div>
             <div class="col-md-3">
-                <div class="text-muted small">Prescribed By</div>
-                <div>{{ rx.doctor.user.full_name if rx.doctor and rx.doctor.user else '-' }}</div>
+                <div class="cell-muted" style="font-size:0.8rem">{{ 'الطبيب المعالج' if g.lang == 'ar' else 'Prescribed By' }}</div>
+                <div style="margin-top:var(--sp-1)">{{ rx.doctor.user.full_name if rx.doctor and rx.doctor.user else '-' }}</div>
             </div>
             <div class="col-md-3">
-                <div class="text-muted small">Date</div>
-                <div>{{ rx.prescribed_date.strftime('%d %b %Y %H:%M') if rx.prescribed_date else '-' }}</div>
+                <div class="cell-muted" style="font-size:0.8rem">{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</div>
+                <div class="cell-secondary" style="margin-top:var(--sp-1)">{{ rx.prescribed_date.strftime('%d %b %Y %H:%M') if rx.prescribed_date else '-' }}</div>
             </div>
             <div class="col-md-3">
-                <div class="text-muted small">Status</div>
-                <span class="badge bg-{{ 'success' if rx.status=='Dispensed' else ('secondary' if rx.status=='Cancelled' else ('warning' if rx.status=='PartiallyDispensed' else 'info')) }}">{{ rx.status }}</span>
+                <div class="cell-muted" style="font-size:0.8rem">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</div>
+                <div style="margin-top:var(--sp-1)">
+                    {% if rx.status == 'Dispensed' %}
+                        <span class="status-badge s-dispensed">{{ 'تم الصرف بالكامل' if g.lang == 'ar' else 'Dispensed' }}</span>
+                    {% elif rx.status == 'Cancelled' %}
+                        <span class="status-badge s-cancelled">{{ 'ملغاة' if g.lang == 'ar' else 'Cancelled' }}</span>
+                    {% elif rx_partial %}
+                        <span class="status-badge s-pending">{{ 'مصروف جزئيًا' if g.lang == 'ar' else 'Partially Dispensed' }}</span>
+                    {% else %}
+                        <span class="status-badge s-in-progress">{{ rx.status }}</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-white fw-bold"><i class="fas fa-pills me-2"></i>Items</div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Status</th><th>Action</th></tr>
-            </thead>
-            <tbody>
-            {% for li in rx.items %}
-                <tr>
-                    <td>{{ li.medication.generic_name if li.medication else '-' }}<br>
-                        <small class="text-muted">{{ li.medication.brand_name if li.medication and li.medication.brand_name else '' }}</small></td>
-                    <td>{{ li.dosage or '-' }}</td>
-                    <td>{{ li.frequency or '-' }}</td>
-                    <td>{{ li.duration or '-' }}</td>
-                    <td>{{ li.quantity or 1 }}</td>
-                    <td>
-                        {% if li.status == 'Dispensed' %}<span class="badge bg-success">Dispensed</span>
-                        {% elif li.status == 'Cancelled' %}<span class="badge bg-secondary">Cancelled</span>
-                        {% elif li.dispensed_qty() > 0 %}<span class="badge bg-warning">Partial {{ li.dispensed_qty() }}/{{ li.quantity }}</span>
-                        {% else %}<span class="badge bg-warning-subtle text-warning">Pending</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if li.status != 'Cancelled' and li.status != 'Dispensed' %}
-                        <form method="POST" action="{{ url_for('pharmacy.dispense', id=rx.id) }}" class="d-inline-flex align-items-center gap-1">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="item_id" value="{{ li.id }}">
-                            <input type="number" name="quantity" min="1" value="{{ li.remaining_qty() }}" style="width:70px" class="form-control form-control-sm">
-                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Dispense?')"><i class="fas fa-check me-1"></i>Dispense</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <tr><td colspan="7" class="text-center text-muted py-3">No items</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium mb-3">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-info)"></i> {{ 'العناصر' if g.lang == 'ar' else 'Items' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th>
+                        <th>{{ 'الجرعة' if g.lang == 'ar' else 'Dosage' }}</th>
+                        <th>{{ 'التكرار' if g.lang == 'ar' else 'Frequency' }}</th>
+                        <th>{{ 'المدة' if g.lang == 'ar' else 'Duration' }}</th>
+                        <th>{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'الإجراء' if g.lang == 'ar' else 'Action' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for li in rx.items %}
+                    <tr>
+                        <td>
+                            <span class="cell-primary">{{ li.medication.generic_name if li.medication else '-' }}</span>
+                            <br><span class="cell-muted" style="font-size:0.8rem">{{ li.medication.brand_name if li.medication and li.medication.brand_name else '' }}</span>
+                        </td>
+                        <td>{{ li.dosage or '-' }}</td>
+                        <td>{{ li.frequency or '-' }}</td>
+                        <td>{{ li.duration or '-' }}</td>
+                        <td class="t-num">{{ li.quantity or 1 }}{% if li.remaining_qty() < (li.quantity or 1) and li.status != 'Dispensed' %} <span class="cell-muted" style="font-size:.75rem">({{ 'متبقي' if g.lang == 'ar' else 'rem' }} {{ li.remaining_qty() }})</span>{% endif %}</td>
+                        <td>
+                            {% if li.status == 'Dispensed' %}
+                                <span class="status-badge s-dispensed">{{ 'تم الصرف' if g.lang == 'ar' else 'Dispensed' }}</span>
+                            {% elif li.status == 'Cancelled' %}
+                                <span class="status-badge s-cancelled">{{ 'ملغي' if g.lang == 'ar' else 'Cancelled' }}</span>
+                            {% elif li.dispensed_qty() > 0 %}
+                                <span class="status-badge s-pending">{{ 'جزئي' if g.lang == 'ar' else 'Partial' }} {{ li.dispensed_qty() }}/{{ li.quantity }}</span>
+                            {% else %}
+                                <span class="status-badge s-pending">{{ 'معلق' if g.lang == 'ar' else 'Pending' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if li.status != 'Cancelled' and li.status != 'Dispensed' %}
+                            <form method="POST" action="{{ url_for('pharmacy.dispense', id=rx.id) }}" style="display:inline-flex;align-items:center;gap:var(--sp-1)">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="item_id" value="{{ li.id }}">
+                                <input type="number" name="quantity" min="1" value="{{ li.remaining_qty() }}" style="width:70px" class="form-control">
+                                <button type="submit" class="btn-ihs btn-ihs-success btn-ihs-sm" onclick="return confirm('{{ 'صرف؟' if g.lang == 'ar' else 'Dispense?' }}')"><i class="fas fa-check"></i> {{ 'صرف' if g.lang == 'ar' else 'Dispense' }}</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state" style="padding:1.5rem">
+                                <div class="empty-desc">{{ 'لا توجد عناصر' if g.lang == 'ar' else 'No items' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<div class="card card-shadow mt-3">
-    <div class="card-header bg-white fw-bold"><i class="fas fa-history me-2"></i>Dispensing Records</div>
-    <div class="table-responsive">
-        <table class="table table-sm mb-0">
-            <thead class="table-light"><tr><th>Medication</th><th>Qty</th><th>Pharmacist</th><th>At</th><th>Notes</th></tr></thead>
-            <tbody>
-            {% for rec in rx.dispensing_records %}
-                <tr>
-                    <td>{{ rec.item.medication.generic_name if rec.item and rec.item.medication else '-' }}</td>
-                    <td>{{ rec.quantity }}</td>
-                    <td>{{ rec.pharmacist.full_name if rec.pharmacist else '-' }}</td>
-                    <td>{{ rec.dispensed_at.strftime('%d %b %Y %H:%M') if rec.dispensed_at else '-' }}</td>
-                    <td>{{ rec.notes or '-' }}</td>
-                </tr>
-            {% else %}
-                <tr><td colspan="5" class="text-center text-muted py-3">No dispensing records yet</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-history" style="color:var(--ihis-success)"></i> {{ 'سجلات الصرف' if g.lang == 'ar' else 'Dispensing Records' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th>
+                        <th>{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}</th>
+                        <th>{{ 'الصيدلي' if g.lang == 'ar' else 'Pharmacist' }}</th>
+                        <th>{{ 'التاريخ' if g.lang == 'ar' else 'At' }}</th>
+                        <th>{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for rec in rx.dispensing_records %}
+                    <tr>
+                        <td class="cell-primary">{{ rec.item.medication.generic_name if rec.item and rec.item.medication else '-' }}</td>
+                        <td class="t-num">{{ rec.quantity }}</td>
+                        <td>{{ rec.pharmacist.full_name if rec.pharmacist else '-' }}</td>
+                        <td class="cell-secondary">{{ rec.dispensed_at.strftime('%d %b %Y %H:%M') if rec.dispensed_at else '-' }}</td>
+                        <td>{{ rec.notes or '-' }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state" style="padding:1.5rem">
+                                <div class="empty-desc">{{ 'لا توجد سجلات صرف بعد' if g.lang == 'ar' else 'No dispensing records yet' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

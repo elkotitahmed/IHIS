@@ -1,74 +1,80 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-user-tag text-success"></i> Manage Roles</h4>
-    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-user-shield" style="color:var(--ihis-success)"></i> {{ 'إدارة الأدوار' if g.lang == 'ar' else 'Manage Roles' }}</h1>
+        <p class="page-subtitle">{{ 'إنشاء الأدوار وإدارتها في النظام' if g.lang == 'ar' else 'Create and manage roles in the system' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('super_admin.dashboard') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+    </div>
 </div>
 
 <div class="row g-4">
     <div class="col-md-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5><i class="fas fa-plus-circle"></i> Create Role</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إنشاء دور' if g.lang == 'ar' else 'Create Role' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('super_admin.roles') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Role Name</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="name">{{ 'اسم الدور' if g.lang == 'ar' else 'Role Name' }} <span class="required">*</span></label>
                         <input type="text" class="form-control" id="name" name="name"
-                               placeholder="e.g. Billing Officer" required>
+                               placeholder="{{ 'مثال: مسؤول الفواتير' if g.lang == 'ar' else 'e.g. Billing Officer' }}" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="description">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
                         <textarea class="form-control" id="description" name="description" rows="3"
-                                  placeholder="Short description of the role"></textarea>
+                                  placeholder="{{ 'وصف مختصر للدور' if g.lang == 'ar' else 'Short description of the role' }}"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check"></i> Create Role
+                    <button type="submit" class="btn-ihs btn-ihs-success">
+                        <i class="fas fa-check me-1"></i>{{ 'إنشاء الدور' if g.lang == 'ar' else 'Create Role' }}
                     </button>
                 </form>
             </div>
         </div>
     </div>
     <div class="col-md-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5>Existing Roles</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'الأدوار الحالية' if g.lang == 'ar' else 'Existing Roles' }}</div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Permissions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for role in roles %}
-                        <tr>
-                            <td>{{ role.id }}</td>
-                            <td><span class="badge bg-primary">{{ role.name }}</span></td>
-                            <td>{{ role.description or 'N/A' }}</td>
-                            <td>
-                                {% for perm in role.permissions %}
-                                    <span class="badge bg-light text-dark border">{{ perm.name }}</span>
-                                {% else %}
-                                    <span class="text-muted">None</span>
-                                {% endfor %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">No roles defined yet.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>{{ 'الاسم' if g.lang == 'ar' else 'Name' }}</th>
+                                <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                                <th>{{ 'الصلاحيات' if g.lang == 'ar' else 'Permissions' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role in roles %}
+                            <tr>
+                                <td><span class="t-num">{{ role.id }}</span></td>
+                                <td><span class="tag-ihs">{{ role.name }}</span></td>
+                                <td><span class="cell-muted">{{ role.description or ('غير متوفر' if g.lang == 'ar' else 'N/A') }}</span></td>
+                                <td>
+                                    {% for perm in role.permissions %}
+                                        <span class="tag-ihs" style="margin-right:2px;margin-bottom:2px;display:inline-block">{{ perm.name }}</span>
+                                    {% else %}
+                                        <span class="cell-muted">{{ 'لا توجد' if g.lang == 'ar' else 'None' }}</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4"><div class="empty-state"><div class="empty-icon"><i class="fas fa-user-shield"></i></div><div class="empty-title">{{ 'لم يتم تعريف أي أدوار بعد' if g.lang == 'ar' else 'No roles defined yet' }}</div></div></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

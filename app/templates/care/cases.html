@@ -1,51 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-file-medical text-primary"></i> Multidisciplinary Cases</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'حالات متعددة التخصصات' if g.lang == 'ar' else 'Multidisciplinary Cases' }}</h1>
+        <p class="page-subtitle">{{ 'إنشاء ومتابعة الحالات السريرية协作' if g.lang == 'ar' else 'Create and track collaborative clinical cases' }}</p>
+    </div>
+</div>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-white fw-bold">Open New Case</div>
+<div class="card-premium" style="margin-bottom:var(--sp-4)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-primary)"></i> {{ 'فتح حالة جديدة' if g.lang == 'ar' else 'Open New Case' }}</div>
+    </div>
     <div class="card-body">
-        <form method="post" action="{{ url_for('care.new_case') }}" class="row g-2">
+        <form method="post" action="{{ url_for('care.new_case') }}" class="row g-3">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="col-md-4">
-                <select name="patient_id" class="form-select" required>
-                    <option value="">Select patient...</option>
-                    {% for p in patients %}
-                    <option value="{{ p.id }}">{{ p.user.full_name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'المريض' if g.lang == 'ar' else 'Patient' }} <span class="required">*</span></label>
+                    <select name="patient_id" class="form-select" required>
+                        <option value="">{{ 'اختر مريض...' if g.lang == 'ar' else 'Select patient...' }}</option>
+                        {% for p in patients %}
+                        <option value="{{ p.id }}">{{ p.user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-8">
-                <input name="title" class="form-control" required placeholder="Case title (e.g. Complex cardiac + diabetes)">
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'العنوان' if g.lang == 'ar' else 'Title' }} <span class="required">*</span></label>
+                    <input name="title" class="form-control" required placeholder="{{ 'عنوان الحالة (مثال: قلب معقد + سكري)' if g.lang == 'ar' else 'Case title (e.g. Complex cardiac + diabetes)' }}">
+                </div>
             </div>
             <div class="col-12">
-                <textarea name="description" class="form-control" rows="2" placeholder="Case description / clinical question"></textarea>
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="{{ 'وصف الحالة / السؤال السريري' if g.lang == 'ar' else 'Case description / clinical question' }}"></textarea>
+                </div>
             </div>
             <div class="col-12">
-                <button class="btn btn-primary"><i class="fas fa-plus me-1"></i>Open Case</button>
+                <button class="btn-ihs btn-ihs-primary"><i class="fas fa-plus me-1"></i>{{ 'فتح حالة' if g.lang == 'ar' else 'Open Case' }}</button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-white fw-bold">All Cases</div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped align-middle">
-                <thead><tr><th>Title</th><th>Patient</th><th>Description</th><th>Created</th><th>Status</th><th></th></tr></thead>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'جميع الحالات' if g.lang == 'ar' else 'All Cases' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'العنوان' if g.lang == 'ar' else 'Title' }}</th>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                        <th>{{ 'تاريخ الإنشاء' if g.lang == 'ar' else 'Created' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
                 <tbody>
                 {% for c in cases %}
                     <tr>
-                        <td><strong>{{ c.title }}</strong></td>
+                        <td><span class="cell-primary">{{ c.title }}</span></td>
                         <td>{{ c.patient.user.full_name if c.patient else '-' }}</td>
-                        <td>{{ (c.description or '')[:60] }}</td>
-                        <td>{{ c.created_at.strftime('%Y-%m-%d') if c.created_at else '-' }}</td>
-                        <td><span class="badge
-                            {% if c.status=='Open' %}bg-success
-                            {% elif c.status=='In Progress' %}bg-warning text-dark
-                            {% elif c.status=='Resolved' %}bg-info
-                            {% else %}bg-secondary{% endif %}">{{ c.status }}</span></td>
+                        <td><span class="cell-muted">{{ (c.description or '')[:60] }}</span></td>
+                        <td><span class="cell-mono">{{ c.created_at.strftime('%Y-%m-%d') if c.created_at else '-' }}</span></td>
+                        <td>
+                            <span class="status-badge {% if c.status=='Open' %}s-active{% elif c.status=='In Progress' %}s-in-progress{% elif c.status=='Resolved' %}s-completed{% else %}s-cancelled{% endif %}">{{ c.status }}</span>
+                        </td>
                         <td>
                             <form method="post" class="d-flex gap-1"
                                   action="{{ url_for('care.update_case_status', case_id=c.id) }}">
@@ -56,12 +81,12 @@
                                     <option value="Resolved">Resolved</option>
                                     <option value="Closed">Closed</option>
                                 </select>
-                                <button class="btn btn-sm btn-outline-primary">Update</button>
+                                <button class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'تحديث' if g.lang == 'ar' else 'Update' }}</button>
                             </form>
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="6" class="text-center text-muted">No cases yet.</td></tr>
+                    <tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><i class="fas fa-file-medical"></i></div><div class="empty-title">{{ 'لا توجد حالات بعد' if g.lang == 'ar' else 'No cases yet' }}</div><div class="empty-desc">{{ 'ابدأ بإنشاء حالة جديدة' if g.lang == 'ar' else 'Start by opening a new case' }}</div></div></td></tr>
                 {% endfor %}
                 </tbody>
             </table>

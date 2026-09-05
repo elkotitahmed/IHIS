@@ -1,63 +1,93 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-file-medical text-primary"></i> My Documents</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'المستندات' if g.lang == 'ar' else 'My Documents' }}</h1>
+        <p class="page-subtitle">{{ 'تحميل وإدارة مستنداتك الطبية' if g.lang == 'ar' else 'Upload and manage your medical documents' }}</p>
+    </div>
+</div>
 
-<div class="row">
+<div class="row g-4">
     <div class="col-lg-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0"><i class="fas fa-upload text-primary"></i> Upload a Document</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-upload" style="color:var(--ihis-primary)"></i> {{ 'رفع مستند' if g.lang == 'ar' else 'Upload a Document' }}</div>
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data" action="{{ url_for('patient.documents') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input type="text" name="title" class="form-control" placeholder="e.g. Latest blood test result">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'العنوان' if g.lang == 'ar' else 'Title' }}</label>
+                        <input type="text" name="title" class="form-control" placeholder="{{ 'مثال: نتيجة فحص الدم الأخيرة' if g.lang == 'ar' else 'e.g. Latest blood test result' }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Document Type</label>
-                        <select name="document_type" class="form-select">
-                            <option value="other">Other</option>
-                            <option value="report">Lab / Radiology Report</option>
-                            <option value="imaging">Imaging / Scan</option>
-                            <option value="consent">Consent Form</option>
-                            <option value="insurance">Insurance</option>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نوع المستند' if g.lang == 'ar' else 'Document Type' }}</label>
+                        <select name="document_type" class="form-control">
+                            <option value="other">{{ 'أخرى' if g.lang == 'ar' else 'Other' }}</option>
+                            <option value="clinical_image">{{ 'صورة سريرية' if g.lang == 'ar' else 'Clinical Image' }}</option>
+                            <option value="report">{{ 'تقرير مخبري / شعاعي' if g.lang == 'ar' else 'Lab / Radiology Report' }}</option>
+                            <option value="imaging">{{ 'تصوير / أشعة' if g.lang == 'ar' else 'Imaging / Scan' }}</option>
+                            <option value="consent">{{ 'نموذج موافقة' if g.lang == 'ar' else 'Consent Form' }}</option>
+                            <option value="insurance">{{ 'تأمين' if g.lang == 'ar' else 'Insurance' }}</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Choose Document</label>
-                        <input type="file" name="document" class="form-control" required>
-                        <small class="text-muted">Allowed: PDF, PNG, JPG, JPEG</small>
+                    {% if patient.department %}
+                    <div class="form-group">
+                        <label class="form-label-ihs"><i class="fas fa-building" style="color:var(--ihis-primary)"></i> {{ 'القسم' if g.lang == 'ar' else 'Department' }}</label>
+                        <input type="text" class="form-control" value="{{ patient.department.name }}" disabled>
+                        <div class="form-hint">{{ 'سيتم إرسال مرفقك إلى قسم' if g.lang == 'ar' else 'Your attachment will be sent to the' }} {{ patient.department.name }} {{ 'للاطلاع والتحليل' if g.lang == 'ar' else 'department for review and analysis' }}</div>
                     </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-upload"></i> Upload
+                    {% endif %}
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نوع الطلب' if g.lang == 'ar' else 'Request Image Type' }}</label>
+                        <select name="category" class="form-control">
+                            <option value="Clinical image" selected>{{ 'صورة سريرية' if g.lang == 'ar' else 'Clinical image' }}</option>
+                            <option value="Skin Lesion">{{ 'آفة جلدية' if g.lang == 'ar' else 'Skin Lesion' }}</option>
+                            <option value="X-Ray">{{ 'أشعة سينية' if g.lang == 'ar' else 'X-Ray' }}</option>
+                            <option value="Scan">{{ 'فحص' if g.lang == 'ar' else 'Scan' }}</option>
+                            <option value="Lab Report">{{ 'تقرير مخبري' if g.lang == 'ar' else 'Lab Report' }}</option>
+                            <option value="Other">{{ 'أخرى' if g.lang == 'ar' else 'Other' }}</option>
+                        </select>
+                        <div class="form-hint">{{ 'يفيد الطبيب في تصنيف المرفق وتوجيهه لأداة الذكاء الاصطناعي المناسبة' if g.lang == 'ar' else 'Helps the doctor classify the attachment and route it to the right AI tool' }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'اختر المستند' if g.lang == 'ar' else 'Choose Document' }} [<span class="required">*</span>]</label>
+                        <input type="file" name="document" class="form-control" required>
+                        <div class="form-hint">{{ 'الصيغ المسموحة: PDF, PNG, JPG, JPEG' if g.lang == 'ar' else 'Allowed: PDF, PNG, JPG, JPEG' }}</div>
+                    </div>
+                    <button type="submit" class="btn-ihs btn-ihs-primary" style="width:100%">
+                        <i class="fas fa-upload"></i> {{ 'رفع المستند' if g.lang == 'ar' else 'Upload' }}
                     </button>
                 </form>
             </div>
         </div>
     </div>
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0"><i class="fas fa-folder-open text-primary"></i> My Documents ({{ files|length }})</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-folder-open" style="color:var(--ihis-success)"></i> {{ 'مستنداتي' if g.lang == 'ar' else 'My Documents' }} ({{ files|length }})</div>
             </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush">
+            <div class="card-body flush">
+                <div class="list-compact">
                     {% for file in files %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-file text-primary me-2"></i>
-                            <strong>{{ file.title }}</strong>
-                            <span class="badge bg-secondary ms-2">{{ file.document_type }}</span>
-                            <div class="small text-muted">{{ file.uploaded_at.strftime('%Y-%m-%d') }}</div>
+                    <div class="list-item">
+                        <i class="fas fa-file" style="color:var(--ihis-primary);font-size:0.875rem"></i>
+                        <div style="flex:1">
+                            <div style="font-weight:500">{{ file.title }}</div>
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ file.uploaded_at.strftime('%Y-%m-%d') }}</div>
                         </div>
-                         <a href="{{ url_for('patient.download_document', doc_id=file.id) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-download me-1"></i>Open
+                        <span class="tag-ihs">{{ file.document_type }}</span>
+                        <a href="{{ url_for('patient.download_document', doc_id=file.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                            <i class="fas fa-download"></i> {{ 'فتح' if g.lang == 'ar' else 'Open' }}
                         </a>
                     </div>
                     {% else %}
-                    <div class="list-group-item text-center text-muted py-4">No documents uploaded yet.</div>
+                    <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:2rem">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-file-medical"></i></div>
+                            <div class="empty-title">{{ 'لم يتم رفع أي مستندات بعد' if g.lang == 'ar' else 'No documents uploaded yet' }}</div>
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </div>

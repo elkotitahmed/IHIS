@@ -1,77 +1,89 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-list-alt text-primary"></i> All Appointments</h4>
-    <a href="{{ url_for('reception.book_appointment') }}" class="btn btn-primary">
-        <i class="fas fa-calendar-plus"></i> Book Appointment
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'جميع المواعيد' if g.lang == 'ar' else 'All Appointments' }}</h1>
+        <p class="page-subtitle">{{ 'إدارة وعرض جميع مواعيد المرضى' if g.lang == 'ar' else 'View and manage all patient appointments' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reception.book_appointment') }}" class="btn-ihs btn-ihs-primary">
+            <i class="fas fa-calendar-plus"></i> {{ 'حجز موعد' if g.lang == 'ar' else 'Book Appointment' }}
+        </a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list-alt" style="color:var(--ihis-primary)"></i> {{ 'جدول المواعيد' if g.lang == 'ar' else 'Appointments Schedule' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Patient</th>
-                        <th>Doctor</th>
-                        <th>Scheduled At</th>
-                        <th>Duration</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                        <th>{{ 'الموعد' if g.lang == 'ar' else 'Scheduled At' }}</th>
+                        <th>{{ 'المدة' if g.lang == 'ar' else 'Duration' }}</th>
+                        <th>{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'الإجراءات' if g.lang == 'ar' else 'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr>
-                        <td>{{ item.id }}</td>
-                        <td>{{ item.patient.user.full_name if item.patient else 'N/A' }}</td>
-                        <td>{{ item.doctor.user.full_name if item.doctor else 'N/A' }}</td>
-                        <td>{{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') if item.scheduled_at else 'N/A' }}</td>
-                        <td>{{ item.duration_minutes }} min</td>
+                        <td><span class="t-num">{{ item.id }}</span></td>
+                        <td><span class="cell-primary">{{ item.patient.user.full_name if item.patient else 'N/A' }}</span></td>
+                        <td><span class="cell-secondary">{{ item.doctor.user.full_name if item.doctor else 'N/A' }}</span></td>
+                        <td><span class="cell-mono">{{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') if item.scheduled_at else 'N/A' }}</span></td>
+                        <td><span class="cell-mono">{{ item.duration_minutes }} {{ 'دقيقة' if g.lang == 'ar' else 'min' }}</span></td>
                         <td>
-                            <span class="badge {{ 'bg-danger' if item.priority == 'High' else 'bg-warning' if item.priority == 'Medium' else 'bg-info' }}">
-                                {{ item.priority }}
-                            </span>
+                            <span class="tag-ihs">{{ item.priority }}</span>
                         </td>
                         <td>
-                            <span class="badge {{ 'bg-success' if item.status == 'CheckedIn' else 'bg-primary' if item.status == 'Scheduled' else 'bg-secondary' }}">
-                                {{ item.status }}
-                            </span>
+                            <span class="status-badge {{ 's-active' if item.status == 'CheckedIn' else 's-scheduled' if item.status == 'Scheduled' else 's-completed' }}">{{ item.status }}</span>
                         </td>
                         <td>
                             {% if item.status in ['Scheduled', 'Confirmed'] %}
-                            <form action="{{ url_for('reception.checkin', id=item.id) }}" method="post" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success" title="Patient arrived">
-                                    <i class="fas fa-user-check"></i> Check In
-                                </button>
-                            </form>
-                            <form action="{{ url_for('reception.set_status', id=item.id) }}" method="post" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="mode" value="NoShow">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Patient did not arrive">
-                                    <i class="fas fa-user-slash"></i> No-Show
-                                </button>
-                            </form>
+                            <div style="display:flex;gap:0.375rem;flex-wrap:wrap">
+                                <form action="{{ url_for('reception.checkin', id=item.id) }}" method="post" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-ihs btn-ihs-sm btn-ihs-success" title="{{ 'تسجيل حضور المريض' if g.lang == 'ar' else 'Patient arrived' }}">
+                                        <i class="fas fa-user-check"></i> {{ 'حضور' if g.lang == 'ar' else 'Check In' }}
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('reception.set_status', id=item.id) }}" method="post" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="mode" value="NoShow">
+                                    <button type="submit" class="btn-ihs btn-ihs-sm btn-ihs-danger" title="{{ 'لم يحضر المريض' if g.lang == 'ar' else 'Patient did not arrive' }}">
+                                        <i class="fas fa-user-slash"></i> {{ 'لم يحضر' if g.lang == 'ar' else 'No-Show' }}
+                                    </button>
+                                </form>
+                            </div>
                             {% elif item.status == 'CheckedIn' %}
                             <form action="{{ url_for('reception.set_status', id=item.id) }}" method="post" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="mode" value="Complete">
-                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Mark visit complete & bill consultation">
-                                    <i class="fas fa-check"></i> Complete
+                                <button type="submit" class="btn-ihs btn-ihs-sm btn-ihs-primary" title="{{ 'إنهاء الزيارة وفوترة الاستشارة' if g.lang == 'ar' else 'Mark visit complete & bill consultation' }}">
+                                    <i class="fas fa-check"></i> {{ 'إنهاء' if g.lang == 'ar' else 'Complete' }}
                                 </button>
                             </form>
                             {% else %}
-                            <span class="text-muted">-</span>
+                            <span class="cell-muted">-</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center">No appointments found.</td>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+                                <div class="empty-title">{{ 'لا توجد مواعيد' if g.lang == 'ar' else 'No appointments found.' }}</div>
+                                <div class="empty-desc">{{ 'لم يتم العثور على أي مواعيد مسجلة' if g.lang == 'ar' else 'No appointments have been scheduled yet.' }}</div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

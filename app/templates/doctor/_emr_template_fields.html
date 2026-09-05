@@ -1,0 +1,33 @@
+{% macro render_template_fields(sections) %}
+    {% for s in sections %}
+    <div class="form-group">
+        <label class="form-label-ihs">{{ s.label }}{% if s.required %}<span class="required">*</span>{% endif %}</label>
+        {% if s.type == 'select' %}
+        <select class="form-control" name="field__{{ s.key }}" {{ 'required' if s.required }}>
+            <option value="">{{ 'اختر...' if g.lang == 'ar' else 'Select...' }}</option>
+            {% for opt in s.options %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+        </select>
+        {% elif s.type == 'radio' %}
+        <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;padding-top:var(--sp-1)">
+            {% for opt in s.options %}
+            <label style="font-size:0.8125rem;display:inline-flex;gap:var(--sp-2);align-items:center"><input type="radio" name="field__{{ s.key }}" value="{{ opt }}"> {{ opt }}</label>
+            {% endfor %}
+        </div>
+        {% elif s.type == 'checkbox' %}
+        <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;padding-top:var(--sp-1)">
+            {% for opt in s.options %}
+            <label style="font-size:0.8125rem;display:inline-flex;gap:var(--sp-2);align-items:center"><input type="checkbox" name="field__{{ s.key }}" value="{{ opt }}"> {{ opt }}</label>
+            {% endfor %}
+        </div>
+        {% elif s.type == 'number' %}
+        <input type="number" step="any" class="form-control" name="field__{{ s.key }}" placeholder="{{ s.placeholder }}" {{ 'required' if s.required }}>
+        {% elif s.type == 'date' %}
+        <input type="date" class="form-control" name="field__{{ s.key }}" {{ 'required' if s.required }}>
+        {% elif s.type == 'text' %}
+        <input type="text" class="form-control" name="field__{{ s.key }}" placeholder="{{ s.placeholder }}" {{ 'required' if s.required }}>
+        {% else %}
+        <textarea class="form-control" rows="4" name="field__{{ s.key }}" placeholder="{{ s.placeholder }}" {{ 'required' if s.required }}></textarea>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% endmacro %}

@@ -1,39 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-users text-primary"></i> Care Team</h4>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('doctor.patients') if current_user.has_any_role('Doctor') else url_for('main.dashboard') }}">
-        <i class="fas fa-arrow-left me-1"></i>Back</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-users" style="color:var(--ihis-primary)"></i> {{ 'فريق الرعاية' if g.lang == 'ar' else 'Care Team' }}</h1>
+        <p class="page-subtitle">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}: {{ patient.user.full_name }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('doctor.patients') if current_user.has_any_role('Doctor') else url_for('main.dashboard') }}">
+            <i class="fas fa-arrow-left me-1"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-white fw-bold">Patient: {{ patient.user.full_name }}</div>
+<div class="card-premium" style="margin-bottom:var(--sp-4)">
     <div class="card-body">
-        <p class="text-muted mb-0">Multidisciplinary care team coordinating this patient's treatment.</p>
+        <p style="color:var(--ihis-text-secondary);margin:0">{{ 'فريق الرعاية المتعدد التخصصات المنسق لعلاج هذا المريض' if g.lang == 'ar' else 'Multidisciplinary care team coordinating this patient\'s treatment.' }}</p>
     </div>
 </div>
 
 <div class="row g-4">
     <div class="col-lg-7">
-        <div class="card card-shadow">
-            <div class="card-header bg-white fw-bold">Team Members</div>
-            <div class="card-body">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-friends" style="color:var(--ihis-primary)"></i> {{ 'أعضاء الفريق' if g.lang == 'ar' else 'Team Members' }}</div>
+            </div>
+            <div class="card-body flush">
                 {% if team and team.members %}
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead><tr><th>Member</th><th>Role</th><th></th></tr></thead>
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead><tr><th>{{ 'العضو' if g.lang == 'ar' else 'Member' }}</th><th>{{ 'الدور' if g.lang == 'ar' else 'Role' }}</th><th></th></tr></thead>
                         <tbody>
                         {% for m in team.members %}
                             <tr>
                                 <td>
-                                    <i class="fas fa-user-circle me-1"></i>{{ m.user.full_name if m.user else '-' }}
-                                    <span class="text-muted small">({{ m.user.email if m.user else '' }})</span>
+                                    <span class="cell-primary"><i class="fas fa-user-circle me-1" style="color:var(--ihis-primary)"></i>{{ m.user.full_name if m.user else '-' }}</span>
+                                    <span class="cell-muted small">({{ m.user.email if m.user else '' }})</span>
                                 </td>
-                                <td><span class="badge bg-info text-dark">{{ m.role }}</span></td>
+                                <td><span class="tag-ihs">{{ m.role }}</span></td>
                                 <td>
                                     <form method="post" action="{{ url_for('care.remove_member', patient_id=patient.id, member_id=m.id) }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                        <button class="btn-ihs btn-ihs-danger btn-ihs-sm"><i class="fas fa-trash"></i></button>
                                     </form>
                                 </td>
                             </tr>
@@ -42,28 +48,38 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-muted mb-0">No care team members yet.</p>
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-user-friends"></i></div>
+                    <div class="empty-title">{{ 'لا يوجد أعضاء في الفريق بعد' if g.lang == 'ar' else 'No care team members yet' }}</div>
+                    <div class="empty-desc">{{ 'أضف عضوًا جديدًا من اللوحة المجاورة' if g.lang == 'ar' else 'Add a member from the panel on the right' }}</div>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <div class="col-lg-5">
-        <div class="card card-shadow">
-            <div class="card-header bg-white fw-bold">Add Member</div>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-plus" style="color:var(--ihis-success)"></i> {{ 'إضافة عضو' if g.lang == 'ar' else 'Add Member' }}</div>
+            </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('care.add_member', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label class="form-label">Staff Member</label>
-                    <select name="user_id" class="form-select mb-2" required>
-                        <option value="">Select staff...</option>
-                        {% for u in staff %}
-                        <option value="{{ u.id }}">{{ u.full_name }} ({{ u.user_type }})</option>
-                        {% endfor %}
-                    </select>
-                    <label class="form-label">Role on Team</label>
-                    <input name="role" class="form-control mb-3" placeholder="e.g. Primary Physician, Nurse, PT">
-                    <button class="btn btn-primary w-100"><i class="fas fa-plus me-1"></i>Add Member</button>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'عضو الفريق' if g.lang == 'ar' else 'Staff Member' }} <span class="required">*</span></label>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">{{ 'اختر موظف...' if g.lang == 'ar' else 'Select staff...' }}</option>
+                            {% for u in staff %}
+                            <option value="{{ u.id }}">{{ u.full_name }} ({{ u.user_type }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الدور في الفريق' if g.lang == 'ar' else 'Role on Team' }}</label>
+                        <input name="role" class="form-control" placeholder="{{ 'مثال: طبيب رئيسي, ممرض, علاج طبيعي' if g.lang == 'ar' else 'e.g. Primary Physician, Nurse, PT' }}">
+                    </div>
+                    <button class="btn-ihs btn-ihs-success w-100"><i class="fas fa-plus me-1"></i>{{ 'إضافة عضو' if g.lang == 'ar' else 'Add Member' }}</button>
                 </form>
             </div>
         </div>

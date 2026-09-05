@@ -2,57 +2,74 @@
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
-        <li class="breadcrumb-item active">Dental Chart</li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">{{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</a></li>
+        <li class="breadcrumb-item active">{{ 'الرسم السني' if g.lang == 'ar' else 'Dental Chart' }}</li>
     </ol>
 </nav>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-tooth"></i> Dental Chart - {{ patient.user.full_name }}</h5>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'رسم الأسنان' if g.lang == 'ar' else 'Dental Chart' }} ? {{ patient.user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'توثيق حالة كل سن' if g.lang == 'ar' else 'Document the condition and status of each tooth' }}</p>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إضافة سمع' if g.lang == 'ar' else 'Add Tooth Entry' }}</div>
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('dentistry.add_chart', patient_id=patient.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="row g-2 mb-3">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <label class="form-label">Select Tooth (FDI)</label>
-                    <div class="d-grid gap-1">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'اختيار السن (FDI)' if g.lang == 'ar' else 'Select Tooth (FDI)' }}</label>
                         <input type="hidden" name="tooth_number" id="tooth_number">
-                        <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#toothModal" id="toothPickerBtn">
-                            <i class="fas fa-tooth me-1"></i>Pick Tooth
+                        <button type="button" class="btn-ihs btn-ihs-outline" data-bs-toggle="modal" data-bs-target="#toothModal" id="toothPickerBtn" style="width:100%;justify-content:flex-start">
+                            <i class="fas fa-tooth"></i> {{ 'اختيار سن' if g.lang == 'ar' else 'Pick Tooth' }}
                         </button>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Numbering System</label>
-                    <select class="form-select" name="numbering_system">
-                        <option value="FDI">FDI</option>
-                        <option value="Universal">Universal</option>
-                        <option value="Palmer">Palmer</option>
-                    </select>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نظام الترقيم' if g.lang == 'ar' else 'Numbering System' }}</label>
+                        <select class="form-control" name="numbering_system">
+                            <option value="FDI">FDI</option>
+                            <option value="Universal">Universal</option>
+                            <option value="Palmer">Palmer</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="status">
-                        <option value="Healthy">Healthy</option>
-                        <option value="Caries">Caries</option>
-                        <option value="Filling">Filling</option>
-                        <option value="Crown">Crown</option>
-                        <option value="Bridge">Bridge</option>
-                        <option value="Implant">Implant</option>
-                        <option value="RootCanal">Root Canal</option>
-                        <option value="Extraction">Extraction</option>
-                        <option value="Ortho">Ortho</option>
-                        <option value="Missing">Missing</option>
-                    </select>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</label>
+                        <select class="form-control" name="status">
+                            <option value="Healthy">{{ 'سليم' if g.lang == 'ar' else 'Healthy' }}</option>
+                            <option value="Caries">{{ 'تسوس' if g.lang == 'ar' else 'Caries' }}</option>
+                            <option value="Filling">{{ 'حشوة' if g.lang == 'ar' else 'Filling' }}</option>
+                            <option value="Crown">{{ 'تاج' if g.lang == 'ar' else 'Crown' }}</option>
+                            <option value="Bridge">{{ 'جسر' if g.lang == 'ar' else 'Bridge' }}</option>
+                            <option value="Implant">{{ 'زراعة' if g.lang == 'ar' else 'Implant' }}</option>
+                            <option value="RootCanal">{{ 'علاج جذور' if g.lang == 'ar' else 'Root Canal' }}</option>
+                            <option value="Extraction">{{ 'خلع' if g.lang == 'ar' else 'Extraction' }}</option>
+                            <option value="Ortho">{{ 'تقويم' if g.lang == 'ar' else 'Ortho' }}</option>
+                            <option value="Missing">{{ 'مفقود' if g.lang == 'ar' else 'Missing' }}</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Notes</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Optional notes">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</label>
+                        <input type="text" class="form-control" name="notes" placeholder="{{ 'ملاحظات اختيارية' if g.lang == 'ar' else 'Optional notes' }}">
+                    </div>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add to Chart</button>
+            <div style="margin-top:var(--sp-4)">
+                <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-plus"></i> {{ 'إضافة للرسم' if g.lang == 'ar' else 'Add to Chart' }}</button>
+            </div>
         </form>
     </div>
 </div>
@@ -62,57 +79,63 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-tooth me-1"></i>Select Tooth</h5>
+                <h5 class="modal-title"><i class="fas fa-tooth me-1"></i>{{ 'اختيار السن' if g.lang == 'ar' else 'Select Tooth' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="d-flex flex-wrap gap-2">
+                <div class="tooth-grid-ihs">
                     {% for n in range(1, 33) %}
-                    <button type="button" class="btn btn-outline-secondary tooth-btn" data-tooth="{{ n }}" style="min-width:48px;">
+                    <button type="button" class="tooth-ihs tooth-btn" data-tooth="{{ n }}">
                         {{ n }}
                     </button>
                     {% endfor %}
                 </div>
-                <p class="text-muted small mt-3 mb-0">Click a tooth number to select it. The selected tooth will be shown in bold.</p>
+                <p style="font-size:0.8125rem;color:var(--ihis-text-muted);margin-top:var(--sp-3);margin-bottom:0">{{ 'انقر على رقم السن لاختياره. السن المحدد يظهر بخط عريض.' if g.lang == 'ar' else 'Click a tooth number to select it. The selected tooth will be shown in bold.' }}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                <button type="button" class="btn-ihs btn-ihs-outline" data-bs-dismiss="modal">{{ 'إغلاق' if g.lang == 'ar' else 'Close' }}</button>
+                <button type="button" class="btn-ihs btn-ihs-primary" data-bs-dismiss="modal">OK</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5><i class="fas fa-list"></i> Charted Teeth</h5>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-info)"></i> {{ 'الأسنان الموثقة' if g.lang == 'ar' else 'Charted Teeth' }}</div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle">
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Tooth</th>
-                        <th>System</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                        <th>Last Updated</th>
+                        <th>{{ 'السن' if g.lang == 'ar' else 'Tooth' }}</th>
+                        <th>{{ 'النظام' if g.lang == 'ar' else 'System' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
+                        <th>{{ 'آخر تحديث' if g.lang == 'ar' else 'Last Updated' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for chart in charts %}
                     <tr>
-                        <td>{{ chart.id }}</td>
-                        <td><span class="badge bg-dark">{{ chart.tooth_number }}</span></td>
-                        <td>{{ chart.numbering_system }}</td>
-                        <td><span class="badge bg-primary">{{ chart.status }}</span></td>
-                        <td>{{ chart.notes or 'N/A' }}</td>
-                        <td>{{ chart.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td><span class="t-num">{{ chart.id }}</span></td>
+                        <td><span class="tag-ihs">{{ chart.tooth_number }}</span></td>
+                        <td><span class="cell-secondary">{{ chart.numbering_system }}</span></td>
+                        <td><span class="status-badge s-active">{{ chart.status }}</span></td>
+                        <td><span class="cell-muted">{{ chart.notes or 'N/A' }}</span></td>
+                        <td><span class="cell-muted">{{ chart.updated_at.strftime('%Y-%m-%d %H:%M') }}</span></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center">No teeth charted yet.</td>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-tooth"></i></div>
+                                <div class="empty-title">{{ 'لم يتم توثيق أي أسنان بعد' if g.lang == 'ar' else 'No teeth charted yet' }}</div>
+                                <div class="empty-desc">{{ 'استخدم النموذج أعلاه لتوثيق حالة الأسنان' if g.lang == 'ar' else 'Use the form above to document tooth conditions.' }}</div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -121,9 +144,11 @@
     </div>
 </div>
 
-<a href="{{ url_for('dentistry.record', patient_id=patient.id) }}" class="btn btn-outline-secondary mt-3">
-    <i class="fas fa-arrow-right me-1"></i>Continue to Dental Record
-</a>
+<div style="margin-top:var(--sp-4)">
+    <a href="{{ url_for('dentistry.record', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
+        <i class="fas fa-arrow-right"></i> {{ 'المتابعة للسجل السني' if g.lang == 'ar' else 'Continue to Dental Record' }}
+    </a>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -136,18 +161,14 @@ toothBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         const tooth = btn.dataset.tooth;
         toothInput.value = tooth;
-        toothBtns.forEach(b => {
-            b.classList.remove('btn-primary');
-            b.classList.add('btn-outline-secondary');
-        });
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-primary');
-        pickerBtn.innerHTML = `<i class="fas fa-tooth me-1"></i>Tooth ${tooth}`;
+        toothBtns.forEach(b => b.classList.remove('tooth-selected'));
+        btn.classList.add('tooth-selected');
+        pickerBtn.innerHTML = `<i class="fas fa-tooth"></i> ${'سن' } ${tooth}`;
     });
 });
 
 if (toothInput.value) {
-    pickerBtn.innerHTML = `<i class="fas fa-tooth me-1"></i>Tooth ${toothInput.value}`;
+    pickerBtn.innerHTML = `<i class="fas fa-tooth"></i> ${'Tooth'} ${toothInput.value}`;
 }
 </script>
 {% endblock %}

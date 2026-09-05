@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'كشف آفات الجلد بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Skin Lesion Detection' }}</h1>
+        <p class="page-subtitle">{{ 'ResNet-50 + EfficientNet-B0 - نيوس (حميد) مقابل ميلانوما (خبيث)' if g.lang == 'ar' else 'ResNet-50 + EfficientNet-B0 ensemble — Nevus vs Melanoma' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('main.dashboard') }}">
+            <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+{% if error %}
+<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+{% if selected_doc %}
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ 'صورة المريض المحددة' if g.lang == 'ar' else 'Selected Patient Image' }} <span class="tag-ihs">AI</span></div>
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <img src="{{ url_for('patient.download_document', doc_id=selected_doc.id, inline=1) }}"
+                 class="border rounded" alt="Patient image"
+                 style="width:130px;height:130px;object-fit:cover">
+            <div>
+                <div class="t-h4">{{ patient.user.full_name if patient else selected_doc.patient.user.full_name }}</div>
+                <p class="cell-secondary mb-1">{{ selected_doc.title or selected_doc.document_type or 'Document' }}</p>
+                <p class="cell-muted mb-0"><small><i class="fas fa-user-plus"></i>
+                    {{ 'أُرسلت من المريض' if g.lang == 'ar' else 'Uploaded by patient' }}
+                    — {{ selected_doc.uploaded_at.strftime('%d %b %Y') }}</small></p>
+            </div>
+            {% if patient %}
+            <a class="btn-ihs btn-ihs-outline" style="margin-left:auto" href="{{ url_for('doctor.patient_360', patient_id=patient.id) }}">
+                <i class="fas fa-folder-open"></i> {{ 'الملف الكامل' if g.lang == 'ar' else 'Full chart' }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if patient %}
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-danger)"></i> {{ 'التاريخ الطبي للمريض' if g.lang == 'ar' else 'Patient Medical History' }}</div>
+        <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('doctor.patient_360', patient_id=patient.id) }}">
+            <i class="fas fa-arrow-right"></i> {{ 'الملف' if g.lang == 'ar' else 'Chart' }}
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="t-h4" style="font-size:0.8125rem"><i class="fas fa-allergies" style="color:var(--ihis-warning)"></i>
+                    {{ 'الحساسية' if g.lang == 'ar' else 'Allergies' }}</div>
+                <div style="font-size:0.875rem">
+                    {% if patient.allergies %}{{ patient.allergies }}
+                    {% else %}<span class="cell-muted">{{ 'لا يوجد' if g.lang == 'ar' else 'None recorded' }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="t-h4" style="font-size:0.8125rem"><i class="fas fa-heart-pulse" style="color:var(--ihis-danger)"></i>
+                    {{ 'الأمراض المزمنة' if g.lang == 'ar' else 'Chronic Diseases' }}</div>
+                <div style="font-size:0.875rem">
+                    {% if patient.chronic_diseases %}{{ patient.chronic_diseases }}
+                    {% else %}<span class="cell-muted">{{ 'لا يوجد' if g.lang == 'ar' else 'None recorded' }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="t-h4" style="font-size:0.8125rem"><i class="fas fa-pills" style="color:var(--ihis-info)"></i>
+                    {{ 'الوصفات النشطة' if g.lang == 'ar' else 'Active Prescriptions' }}</div>
+                <div style="font-size:0.875rem">
+                    {% if patient.prescriptions %}
+                        {{ patient.prescriptions|length }} {{ 'وصفة' if g.lang == 'ar' else 'prescription(s)' }}
+                    {% else %}<span class="cell-muted">{{ 'لا يوجد' if g.lang == 'ar' else 'None active' }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% if patient.medical_records is defined and patient.medical_records %}
+        <div class="table-wrapper" style="margin-top:1rem">
+            <table class="table-ihs">
+                <thead><tr>
+                    <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                    <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                    <th>{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }}</th>
+                    <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                    <th>{{ 'الملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
+                </tr></thead>
+                <tbody>
+                    {% for rec in patient.medical_records|sort(attribute='created_at', reverse=True) %}
+                    <tr>
+                        <td class="cell-mono">{{ rec.created_at.strftime('%d %b %Y') if rec.created_at else '-' }}</td>
+                        <td><span class="tag-ihs">{{ rec.record_type or '-' }}</span></td>
+                        <td>{{ rec.diagnosis or '-' }}</td>
+                        <td>{{ rec.doctor.user.full_name if rec.doctor and rec.doctor.user else '-' }}</td>
+                        <td>{{ rec.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="cell-muted mt-3 mb-0"><i class="fas fa-circle-info"></i>
+            {{ 'لا توجد سجلات طبية مسجلة بعد لهذا المريض.' if g.lang == 'ar' else 'No medical records recorded for this patient yet.' }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-upload" style="color:var(--ihis-primary)"></i> {{ ('تحليل صورة المريض' if selected_doc else 'رفع صورة الآفة الجلدية') if g.lang == 'ar' else ('Analyze Patient Image' if selected_doc else 'Upload Skin Lesion Image') }} <span class="tag-ihs">AI</span></div>
+    </div>
+    <div class="card-body">
+        <p class="cell-secondary mb-3">
+            {{ 'يحلّل هذا النموذج صور الآفات الجلدية ويميّز بين النيوس (الحميد) والميلانوما (الخبيث). الأداة مساعدة للأطباء ولا تُغني عن الفحص السريري والخزعة.' if g.lang == 'ar' else 'This AI tool classifies skin lesion images as Nevus (benign) or Melanoma (malignant). It assists clinicians — it does not replace clinical examination or biopsy.' }}
+        </p>
+        {% if not available %}
+        <div class="alert alert-warning">
+            <i class="fas fa-download me-2"></i>
+            {{ 'النموذج غير مثبّت على هذا الخادم بعد. ضع ملفي' if g.lang == 'ar' else 'The model is not installed on this server yet. Place the' }}
+            <code>resnet50_best.pth</code>
+            {{ 'و' if g.lang == 'ar' else 'and' }}
+            <code>efficientnet_b0_best.pth</code>
+            {{ 'في مجلد ai_models.' if g.lang == 'ar' else 'in the ai_models folder.' }}
+        </div>
+        {% endif %}
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('ai.skin_lesion_detection') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if selected_doc %}<input type="hidden" name="doc" value="{{ selected_doc.id }}">{% endif %}
+
+            <!-- In-clinic camera capture -->
+            <div class="mb-3">
+                <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="openCameraBtn">
+                    <i class="fas fa-camera"></i> {{ 'التقاط صورة من الكاميرا' if g.lang == 'ar' else 'Capture from camera' }}
+                </button>
+                <div class="card-premium mt-2" id="cameraCard" style="display:none;border:1px dashed var(--ihis-primary)">
+                    <div class="card-body" style="text-align:center">
+                        <video id="cameraVideo" autoplay playsinline muted
+                               style="max-width:100%;max-height:280px;border-radius:10px;background:#000"></video>
+                        <canvas id="cameraCanvas" style="display:none"></canvas>
+                        <img id="cameraPreview" alt="capture" style="display:none;max-width:100%;max-height:280px;border-radius:10px">
+                        <div class="mt-2">
+                            <button type="button" class="btn-ihs btn-ihs-primary btn-ihs-sm" id="cameraCapture"
+                                    style="display:none"><i class="fas fa-camera-retro"></i> {{ 'التقاط' if g.lang == 'ar' else 'Capture' }}</button>
+                            <button type="button" class="btn-ihs btn-ihs-danger btn-ihs-sm" id="cameraRetake"
+                                    style="display:none"><i class="fas fa-rotate-left"></i> {{ 'إعادة' if g.lang == 'ar' else 'Retake' }}</button>
+                            <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="cameraClose">
+                                <i class="fas fa-times"></i> {{ 'إغلاق' if g.lang == 'ar' else 'Close' }}</button>
+                        </div>
+                        <p class="cell-muted mb-0 mt-2" id="cameraHint" style="font-size:0.75rem">
+                            {{ 'صوّر الآفة الجلدية من مسافة قريبة مع إضاءة جيدة.' if g.lang == 'ar' else 'Photograph the lesion up close with good lighting.' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <input type="file" class="form-control" name="file" id="fileInput" accept=".png,.jpg,.jpeg,capture=environment" {% if not selected_doc %}required{% endif %}>
+                <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-syringe"></i>{{ ('تحليل الصورة المحددة' if selected_doc else 'تحليل الصورة') if g.lang == 'ar' else ('Analyze This Image' if selected_doc else 'Analyze Image') }}</button>
+            </div>
+        </form>
+
+        <script>
+        (function () {
+            var openBtn = document.getElementById('openCameraBtn');
+            var card = document.getElementById('cameraCard');
+            var video = document.getElementById('cameraVideo');
+            var canvas = document.getElementById('cameraCanvas');
+            var preview = document.getElementById('cameraPreview');
+            var capBtn = document.getElementById('cameraCapture');
+            var retakeBtn = document.getElementById('cameraRetake');
+            var closeBtn = document.getElementById('cameraClose');
+            var fileInput = document.getElementById('fileInput');
+            var stream = null;
+            var capturedBlob = null;
+
+            function stopStream() {
+                if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+            }
+            openBtn.addEventListener('click', function () {
+                card.style.display = 'block';
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    return;
+                }
+                video.style.display = 'block'; preview.style.display = 'none'; capBtn.style.display = 'inline-block';
+                retakeBtn.style.display = 'none'; capturedBlob = null;
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then(function (s) { stream = s; video.srcObject = s; video.play(); })
+                    .catch(function () { capBtn.style.display = 'none'; });
+            });
+            capBtn.addEventListener('click', function () {
+                if (!video.videoWidth) return;
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                canvas.toBlob(function (blob) {
+                    if (!blob) return;
+                    capturedBlob = blob;
+                    preview.src = URL.createObjectURL(blob);
+                    video.style.display = 'none'; preview.style.display = 'block';
+                    capBtn.style.display = 'none'; retakeBtn.style.display = 'inline-block';
+                    try {
+                        var fd = new File([blob], 'clinic_capture_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                        var dt = new DataTransfer(); dt.items.add(fd); fileInput.files = dt.files;
+                        fileInput.setAttribute('required', 'required');
+                    } catch (e) { /* DataTransfer unsupported */ }
+                }, 'image/jpeg', 0.92);
+            });
+            retakeBtn.addEventListener('click', function () {
+                capturedBlob = null; fileInput.value = '';
+                video.style.display = 'block'; preview.style.display = 'none';
+                capBtn.style.display = 'inline-block'; retakeBtn.style.display = 'none';
+                if (stream) { var s = stream; /* refocus same track */ video.play(); }
+            });
+            closeBtn.addEventListener('click', function () {
+                stopStream(); card.style.display = 'none';
+            });
+            /* Fallback: if DataTransfer is unavailable, keep the captured blob for a manual pick */
+        })();
+        </script>
+    </div>
+</div>
+
+{% if result and result.error is not defined %}
+<div class="card-premium" style="border-top:3px solid {{ 'var(--ihis-danger)' if result.is_melanoma else 'var(--ihis-success)' }}">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-person-circle-question" style="color:{{ 'var(--ihis-danger)' if result.is_melanoma else 'var(--ihis-success)' }}"></i> {{ 'نتيجة التصنيف' if g.lang == 'ar' else 'Classification Result' }}</div>
+        {% if result.is_melanoma %}
+        <span class="status-badge s-cancelled"><i class="fas fa-exclamation-triangle"></i>{{ 'تنبيه: اشتباه ميلانوما' if g.lang == 'ar' else 'Warning: Melanoma Suspected' }}</span>
+        {% else %}
+        <span class="status-badge s-completed"><i class="fas fa-check"></i>{{ 'نيوس (حميد)' if g.lang == 'ar' else 'Nevus (Benign)' }}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+            <div class="t-h3">{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }}:
+                <span class="{{ 'text-danger' if result.is_melanoma else 'text-success' }}" style="font-weight:700">
+                    {{ 'ميلانوما' if g.lang == 'ar' else 'Melanoma' }}{% if not result.is_melanoma %}{{ ' (نيوس)' if g.lang == 'ar' else ' (Nevus)' }}{% endif %}
+                </span>
+            </div>
+            <div class="t-h4"><strong>{{ 'الثقة المجمّعة' if g.lang == 'ar' else 'Ensemble confidence' }}:</strong>
+                <span class="tag-ihs">{{ result.percent }}%</span></div>
+            <span class="cell-muted tag-ihs">{{ result.models_used|length }} {{ 'نموذج' if g.lang == 'ar' else 'model(s)' }}</span>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="t-h4">{{ 'الصورة الأصلية' if g.lang == 'ar' else 'Original Image' }}</div>
+                <img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" class="img-fluid border rounded" alt="Original">
+            </div>
+            {% if result.heatmap_key %}
+            <div class="col-md-6">
+                <div class="t-h4" style="color:var(--ihis-warning)">{{ 'خريطة الانتباه Grad-CAM' if g.lang == 'ar' else 'Grad-CAM Attention Map' }}</div>
+                <img src="{{ url_for('ai.ai_media', feature=result.feature, kind='results', filename=result.heatmap_key) }}" class="img-fluid border border-warning rounded" alt="Grad-CAM">
+                <p class="cell-muted mt-1 mb-0"><small>{{ 'حيث ينظر النموذج' if g.lang == 'ar' else 'Where the model is looking' }} ({{ result.heatmap_model }})</small></p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr>
+                    <th>{{ 'النموذج' if g.lang == 'ar' else 'Model' }}</th>
+                    <th>{{ 'التنبؤ' if g.lang == 'ar' else 'Prediction' }}</th>
+                    <th>{{ 'احتمال النيوس' if g.lang == 'ar' else 'P(Nevus)' }}</th>
+                    <th>{{ 'احتمال الميلانوما' if g.lang == 'ar' else 'P(Melanoma)' }}</th>
+                    <th>{{ 'الثقة' if g.lang == 'ar' else 'Confidence' }}</th>
+                </tr></thead>
+                <tbody>
+                    {% for m in result.per_model %}
+                    <tr>
+                        <td>{{ m.model }}</td>
+                        <td>
+                            {% if m.prediction == 'Melanoma' %}{{ 'ميلانوما' if g.lang == 'ar' else 'Melanoma' }}{% else %}{{ 'نيوس' if g.lang == 'ar' else 'Nevus' }}{% endif %}
+                        </td>
+                        <td class="t-num">{{ '%.1f'|format(m.proba_nevus * 100) }}%</td>
+                        <td class="t-num">{{ '%.1f'|format(m.proba_melanoma * 100) }}%</td>
+                        <td>{{ '%.1f'|format(m.confidence * 100) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="cell-muted mb-0 mt-3">
+            <i class="fas fa-info-circle"></i>
+            {{ 'نتيجة ذكاء اصطناعي للدعم فقط. يجب تأكيد أي اشتباه في الميلانوما سريرياً ونسيجياً.' if g.lang == 'ar' else 'AI decision-support output only. Any melanoma suspicion must be confirmed clinically and histopathologically.' }}
+        </p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

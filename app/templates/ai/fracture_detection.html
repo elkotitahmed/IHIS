@@ -1,88 +1,117 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-bone me-2 text-primary"></i>AI Fracture Detection</h4>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('radiology.orders') }}">
-        <i class="fas fa-arrow-left me-1"></i>Back</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'كشف الكسور بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Fracture Detection' }}</h1>
+        <p class="page-subtitle">{{ 'YOLOv8 - دقة 92.5% mAP@50' if g.lang == 'ar' else 'Fine-tuned YOLOv8, 92.5% mAP@50' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.orders') }}">
+            <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
 </div>
+
+{% include 'clinical/_patient_header.html' %}
 
 {% if error %}
 <div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>
 {% endif %}
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Bone X-Ray</h5>
+{% if selected_doc %}
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ 'صورة المريض المحددة' if g.lang == 'ar' else 'Selected Patient Image' }} <span class="tag-ihs">AI</span></div>
     </div>
     <div class="card-body">
-        <p class="text-muted mb-3">
-            This AI tool (fine-tuned <strong>YOLOv8</strong>, 92.5% mAP@50) detects bone
-            fractures from X-ray images. It assists clinicians — it does not replace
-            radiological interpretation.
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <img src="{{ url_for('patient.download_document', doc_id=selected_doc.id, inline=1) }}"
+                 class="border rounded" alt="Patient image"
+                 style="width:130px;height:130px;object-fit:cover">
+            <div>
+                <div class="t-h4">{{ patient.user.full_name if patient else selected_doc.patient.user.full_name }}</div>
+                <p class="cell-secondary mb-1">{{ selected_doc.title or selected_doc.document_type or 'Document' }}</p>
+                <p class="cell-muted mb-0"><small><i class="fas fa-user-plus"></i>
+                    {{ 'أُرسلت من المريض' if g.lang == 'ar' else 'Uploaded by patient' }}
+                    — {{ selected_doc.uploaded_at.strftime('%d %b %Y') }}</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-upload" style="color:var(--ihis-primary)"></i> {{ ('تحليل أشعة المريض' if selected_doc else 'رفع أشعة عظمية') if g.lang == 'ar' else ('Analyze Patient X-Ray' if selected_doc else 'Upload Bone X-Ray') }} <span class="tag-ihs">AI</span></div>
+    </div>
+    <div class="card-body">
+        <p class="cell-secondary mb-3">
+            {{ 'تكتشف هذه الأداة الذكية كسور العظام من صور الأشعة. تساعد الأطباء ولا تحل محل التفسير الشعاعي.' if g.lang == 'ar' else 'This AI tool detects bone fractures from X-ray images. It assists clinicians — it does not replace radiological interpretation.' }}
         </p>
         <form method="POST" enctype="multipart/form-data" action="{{ url_for('ai.fracture_detection') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if selected_doc %}<input type="hidden" name="doc" value="{{ selected_doc.id }}">{% endif %}
             <div class="input-group">
-                <input type="file" class="form-control" name="file" accept=".png,.jpg,.jpeg" required>
-                <button class="btn btn-primary" type="submit"><i class="fas fa-x-ray me-1"></i>Analyze X-Ray</button>
+                <input type="file" class="form-control" name="file" accept=".png,.jpg,.jpeg" {% if not selected_doc %}required{% endif %}>
+                <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-x-ray"></i>{{ ('تحليل الأشعة المحددة' if selected_doc else 'تحليل الأشعة') if g.lang == 'ar' else ('Analyze This X-Ray' if selected_doc else 'Analyze X-Ray') }}</button>
             </div>
         </form>
     </div>
 </div>
 
 {% if result and result.error is not defined %}
-<div class="card card-shadow">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Detection Result</span>
+<div class="card-premium" style="border-top:3px solid {{ 'var(--ihis-danger)' if result.detected else 'var(--ihis-success)' }}">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-bone" style="color:var(--ihis-info)"></i> {{ 'نتيجة الكشف' if g.lang == 'ar' else 'Detection Result' }}</div>
         {% if result.detected %}
-        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Fracture Detected</span>
+        <span class="status-badge s-cancelled"><i class="fas fa-exclamation-triangle"></i>{{ 'تم اكتشاف كسر' if g.lang == 'ar' else 'Fracture Detected' }}</span>
         {% else %}
-        <span class="badge bg-success"><i class="fas fa-check me-1"></i>No Fracture Detected</span>
+        <span class="status-badge s-completed"><i class="fas fa-check"></i>{{ 'لا يوجد كسر' if g.lang == 'ar' else 'No Fracture Detected' }}</span>
         {% endif %}
     </div>
     <div class="card-body">
         {% if result.detected %}
         <div class="mb-3">
-            <p class="mb-1"><strong>Average confidence:</strong>
-                <span class="badge bg-primary">{{ result.avg_confidence }}%</span></p>
-            <div class="d-flex flex-wrap gap-2">
+            <p class="mb-1"><strong>{{ 'متوسط الثقة' if g.lang == 'ar' else 'Average confidence' }}:</strong>
+                <span class="tag-ihs">{{ result.avg_confidence }}%</span></p>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
                 {% for label, count in result.count_by_class.items() %}
-                <span class="badge bg-secondary">{{ label }}: {{ count }}</span>
+                <span class="tag-ihs">{{ label }}: {{ count }}</span>
                 {% endfor %}
             </div>
         </div>
-        <table class="table table-sm">
-            <thead class="table-light"><tr><th>#</th><th>Location / Type</th><th>Confidence</th></tr></thead>
-            <tbody>
-                {% for d in result.detections %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ d.label }}</td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="progress flex-grow-1" style="height:8px;">
-                                <div class="progress-bar {{ 'bg-danger' if d.percent >= 70 else ('bg-warning' if d.percent >= 40 else 'bg-info') }}"
-                                     style="width: {{ d.percent }}%"></div>
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr><th>#</th><th>{{ 'الموقع / النوع' if g.lang == 'ar' else 'Location / Type' }}</th><th>{{ 'الثقة' if g.lang == 'ar' else 'Confidence' }}</th></tr></thead>
+                <tbody>
+                    {% for d in result.detections %}
+                    <tr>
+                        <td class="cell-mono">{{ loop.index }}</td>
+                        <td>{{ d.label }}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:0.5rem">
+                                <div style="flex:1;height:8px;background:var(--ihis-surface-inset);border-radius:999px;overflow:hidden">
+                                    <div style="height:100%;width: {{ d.percent }}%;background:{{ 'var(--ihis-danger)' if d.percent >= 70 else ('var(--ihis-warning)' if d.percent >= 40 else 'var(--ihis-info)') }}"></div>
+                                </div>
+                                <span class="t-num">{{ d.percent }}%</span>
                             </div>
-                            <span class="small">{{ d.percent }}%</span>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-        <p class="text-muted mb-0">No fracture was detected in the submitted image.</p>
+        <p class="cell-muted mb-0">{{ 'لم يتم اكتشاف كسر في الصورة المقدمة.' if g.lang == 'ar' else 'No fracture was detected in the submitted image.' }}</p>
         {% endif %}
         <hr>
         <div class="row g-3">
             <div class="col-md-6">
-                <h6 class="fw-bold">Original X-Ray</h6>
-                <img src="{{ url_for('static', filename=result.orig_url) }}" class="img-fluid border rounded" alt="Original">
+                <div class="t-h4">{{ 'الأشعة الأصلية' if g.lang == 'ar' else 'Original X-Ray' }}</div>
+<img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" class="img-fluid border rounded" alt="Original">
             </div>
             <div class="col-md-6">
-                <h6 class="fw-bold text-danger">AI Annotated Result</h6>
-                <img src="{{ url_for('static', filename=result.result_url) }}" class="img-fluid border border-danger rounded" alt="Annotated">
+                <div class="t-h4" style="color:var(--ihis-danger)">{{ 'النتيجة المعلّمة' if g.lang == 'ar' else 'AI Annotated Result' }}</div>
+                <img src="{{ url_for('ai.ai_media', feature=result.feature, kind='results', filename=result.result_key) }}" class="img-fluid border border-danger rounded" alt="Annotated">
             </div>
         </div>
     </div>

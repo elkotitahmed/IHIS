@@ -9,6 +9,10 @@ from app.models import (
 from app.routes.decorators import roles_required, permissions_required, log_activity, log_change
 from app.services.status import assert_transition, StatusTransitionError
 from app.services.notifications import notify_doctor, notify_patient, notify_role
+from app.services.timeline import record_event
+from app.services import alerts as alert_svc
+from app.services.patient_safety import patient_safety_context
+from app.utils import utcnow
 
 pharmacy_bp = Blueprint('pharmacy', __name__)
 
@@ -25,6 +29,13 @@ def dashboard():
     recent_dispensed = DispensingRecord.query.order_by(
         DispensingRecord.dispensed_at.desc()
     ).limit(10).all()
+    from datetime import timedelta
+    expiring_soon = PharmacyInventory.query.filter(
+        PharmacyInventory.expiry_date.isnot(None),
+        PharmacyInventory.expiry_date <= date.today() + timedelta(days=60),
+        PharmacyInventory.quantity > 0,
+    ).order_by(PharmacyInventory.expiry_date.asc()).all()
+    expiring_count = len(expiring_soon)
     return render_template(
         'pharmacy/dashboard.html',
         total_medications=total_medications,
@@ -32,6 +43,9 @@ def dashboard():
         recent_dispensed_count=DispensingRecord.query.count(),
         low_stock=low_stock,
         recent_dispensed=recent_dispensed,
+        expiring_soon=expiring_soon,
+        expiring_count=expiring_count,
+        today=date.today(),
     )
 
 
@@ -39,10 +53,29 @@ def dashboard():
 @login_required
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def inventory():
+    today = date.today()
+    f = request.args.get('f', '').strip()
     items = PharmacyInventory.query.join(Medication).order_by(
         PharmacyInventory.updated_at.desc()
     ).all()
-    return render_template('pharmacy/inventory.html', items=items, today=date.today())
+
+    def classify(it):
+        expired = it.expiry_date is not None and it.expiry_date < today
+        low = it.quantity <= it.reorder_level
+        expiring = (not expired) and it.expiry_date and (
+            it.expiry_date - today).days <= 90
+        if expired:
+            return 'expired'
+        if low:
+            return 'low'
+        if expiring:
+            return 'expiring'
+        return 'ok'
+
+    if f in ('expired', 'low', 'expiring', 'ok'):
+        items = [i for i in items if classify(i) == f]
+    return render_template('pharmacy/inventory.html', items=items,
+                           today=today, f=f)
 
 
 @pharmacy_bp.route('/inventory/add', methods=['GET', 'POST'])
@@ -90,8 +123,17 @@ def add_inventory():
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def prescriptions():
     pending = Prescription.query.filter(
-        Prescription.status != 'Dispensed'
+        Prescription.status.notin_(('Dispensed', 'Cancelled'))
     ).order_by(Prescription.prescribed_date.desc()).all()
+
+    def partial_key(rx):
+        # Partially dispensed prescriptions float to the top of the queue so
+        # the pharmacist finishes what is owed before starting new work.
+        partial = any(i.dispensed_qty() > 0 and i.status != 'Dispensed'
+                      for i in list(rx.items))
+        return (0 if partial else 1, -(rx.id or 0))
+
+    pending = sorted(pending, key=partial_key)
     return render_template('pharmacy/prescriptions.html', prescriptions=pending)
 
 
@@ -156,7 +198,27 @@ def dispense(id):
         if remaining <= 0:
             break
         take = min(stock.quantity, remaining)
-        stock.quantity -= take
+        # Atomic conditional decrement: only succeeds if the batch still has at
+        # least `take` units, preventing a concurrent dispense from creating a
+        # lost update or negative inventory (Phase 27). If another transaction
+        # has already depleted this batch, zero rows match and we skip it.
+        from sqlalchemy import update as sql_update
+        res = db.session.execute(
+            sql_update(PharmacyInventory)
+            .where(PharmacyInventory.id == stock.id,
+                   PharmacyInventory.quantity >= take)
+            .values(quantity=PharmacyInventory.quantity - take)
+        )
+        if res.rowcount != 1:
+            db.session.rollback()
+            flash('Stock changed by another pharmacist while dispensing. '
+                  'Please review inventory and retry.', 'danger')
+            return redirect(url_for('pharmacy.prescriptions'))
+        # Reload the batch with a fresh DB read so quantity_after reflects the
+        # post-decrement value (Session.get returns the identity-map object, so
+        # force a database refresh with populate_existing).
+        stock = db.session.get(PharmacyInventory, stock.id,
+                               populate_existing=True)
         db.session.add(StockTransaction(
             inventory_id=stock.id,
             medication_id=item.medication_id,
@@ -199,6 +261,17 @@ def dispense(id):
         from app.services.notifications import notify_patient
         notify_patient(rx.patient, 'Prescription dispensed',
                        f'Your prescription #{rx.id} has been fully dispensed and is ready for pickup.')
+        record_event(rx.patient_id, 'DISPENSE',
+                     f'Prescription dispensed fully (#{rx.id})',
+                     f'{med_name} · {dispensed}',
+                     source_type='prescription', source_id=rx.id,
+                     department='Pharmacy')
+    else:
+        record_event(rx.patient_id, 'DISPENSE',
+                     f'Prescription dispensed ({med_name})',
+                     f'{dispensed} unit(s){" · partial" if partial else ""} of {quantity} ordered',
+                     source_type='prescription', source_id=rx.id,
+                     department='Pharmacy')
     from app.services.billing import ensure_bill_for_pharmacy
     ensure_bill_for_pharmacy(rx.id)
     db.session.commit()
@@ -326,3 +399,250 @@ def medications():
         )
     meds = query.order_by(Medication.generic_name).all()
     return render_template('pharmacy/medications.html', medications=meds, search=search)
+
+
+@pharmacy_bp.route('/ai-workbench')
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('MEDICATION_REVIEW')
+def ai_workbench():
+    """Clinical Pharmacist AI workbench:
+    patients with active/pending prescriptions ready for a medication review."""
+    rows = (db.session.query(Patient, Prescription)
+            .join(Prescription, Prescription.patient_id == Patient.id)
+            .filter(Prescription.status != 'Dispensed')
+            .order_by(Prescription.prescribed_date.desc())
+            .all())
+    cases = []
+    seen = set()
+    for patient, rx in rows:
+        if patient.id in seen:
+            continue
+        seen.add(patient.id)
+        active_items = [i for i in rx.items if i.status != 'Cancelled']
+        cases.append({
+            'patient': patient,
+            'pending_prescriptions': Prescription.query.filter_by(
+                patient_id=patient.id).filter(Prescription.status != 'Dispensed').count(),
+            'active_items': len(active_items),
+            'latest_rx': rx,
+        })
+    total_active = Prescription.query.filter(Prescription.status != 'Dispensed').count()
+    return render_template('pharmacy/ai_workbench.html', cases=cases,
+                           total_active=total_active)
+
+
+@pharmacy_bp.route('/reconciliations')
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('RECONCILIATION_VIEW')
+def reconciliations():
+    from app.models import MedicationReconciliation
+    items = MedicationReconciliation.query.order_by(
+        MedicationReconciliation.created_at.desc()).limit(100).all()
+    return render_template('pharmacy/reconciliations.html', items=items)
+
+
+@pharmacy_bp.route('/patient/<int:patient_id>/reconcile', methods=['GET', 'POST'])
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('RECONCILIATION_CREATE')
+def reconcile(patient_id):
+    """Create a medication reconciliation: home list vs active prescriptions."""
+    from app.access import require_patient_access
+    patient = Patient.query.get_or_404(patient_id)
+    require_patient_access(patient)
+    from app.services.reconciliation import (run_reconciliation,
+                                             normalize_home_medications)
+    from app.models import MedicationReconciliation
+    existing = MedicationReconciliation.query.filter_by(
+        patient_id=patient_id, status='Open').first()
+    if request.method == 'POST':
+        if existing:
+            flash('An open reconciliation already exists for this patient.', 'info')
+            return redirect(url_for('pharmacy.reconciliations'))
+        home_raw = request.form.get('home_medications') or ''
+        home_list = normalize_home_medications(home_raw)
+        rec, discrepancies = run_reconciliation(
+            patient_id=patient_id,
+            pharmacist_id=current_user.id,
+            home_medications=home_list,
+            reconciliation_type=request.form.get('reconciliation_type') or 'Admission',
+            summary=request.form.get('summary') or None,
+        )
+        record_event(patient_id, 'MESSAGE',
+                     'Medication reconciliation performed',
+                     f'{len(discrepancies)} finding(s)',
+                     source_type='reconciliation', source_id=rec.id,
+                     department='Pharmacy')
+        for d in discrepancies:
+            if d.severity in ('HIGH', 'CRITICAL'):
+                _atype = {'INTERACTION': 'DRUG_INTERACTION',
+                          'ALLERGY': 'ALLERGY'}.get(
+                    d.discrepancy_type, 'DUPLICATE_THERAPY')
+                alert_svc.ensure_open_alert(
+                    patient_id, _atype, severity=d.severity.upper(),
+                    title=f'{d.discrepancy_type.replace("_", " ")}: {d.description[:90]}',
+                    message=d.recommended_action,
+                    source_type='reconciliation', source_id=rec.id)
+        log_activity('CREATE_RECONCILIATION', 'reconciliation', rec.id,
+                     f'patient={patient_id} findings={len(discrepancies)}')
+        db.session.commit()
+        flash(f'Reconciliation created with {len(discrepancies)} finding(s).', 'success')
+        return redirect(url_for('pharmacy.reconciliation_detail', rec_id=rec.id))
+    return render_template('pharmacy/reconcile.html', patient=patient,
+                           existing=existing,
+                           **patient_safety_context(patient.id),
+                           today=utcnow().date())
+
+
+@pharmacy_bp.route('/reconciliations/<int:rec_id>')
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('RECONCILIATION_VIEW')
+def reconciliation_detail(rec_id):
+    from app.models import MedicationReconciliation
+    rec = MedicationReconciliation.query.get_or_404(rec_id)
+    return render_template('pharmacy/reconciliation_detail.html', rec=rec)
+
+
+@pharmacy_bp.route('/reconciliations/<int:rec_id>/complete', methods=['POST'])
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('RECONCILIATION_COMPLETE')
+def complete_reconciliation(rec_id):
+    from app.models import MedicationReconciliation
+    from app.services.reconciliation import complete_reconciliation as mark_done
+    rec = MedicationReconciliation.query.get_or_404(rec_id)
+    mark_done(rec, request.form.get('notes'))
+    log_activity('COMPLETE_RECONCILIATION', 'reconciliation', rec.id)
+    db.session.commit()
+    flash('Reconciliation completed.', 'success')
+    return redirect(url_for('pharmacy.reconciliation_detail', rec_id=rec.id))
+
+
+@pharmacy_bp.route('/discrepancies/<int:d_id>/resolve', methods=['POST'])
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('RECONCILIATION_COMPLETE')
+def resolve_discrepancy(d_id):
+    from app.models import ReconciliationDiscrepancy
+    d = ReconciliationDiscrepancy.query.get_or_404(d_id)
+    d.status = 'Resolved'
+    d.resolved_note = request.form.get('resolved_note') or d.resolved_note
+    db.session.commit()
+    log_activity('RESOLVE_DISCREPANCY', 'reconciliation_discrepancy', d.id)
+    flash('Discrepancy resolved.', 'success')
+    return redirect(url_for('pharmacy.reconciliation_detail', rec_id=d.reconciliation_id))
+
+
+# ------------------------- Pharmacist interventions -------------------------
+@pharmacy_bp.route('/interventions')
+@login_required
+@roles_required('Pharmacist', 'Doctor', 'Admin', 'SuperAdmin')
+@permissions_required('INTERVENTION_VIEW')
+def interventions():
+    from app.models import PharmacyIntervention
+    items = PharmacyIntervention.query.order_by(
+        PharmacyIntervention.created_at.desc()).limit(100).all()
+    return render_template('pharmacy/interventions.html', items=items)
+
+
+@pharmacy_bp.route('/prescriptions/<int:rx_id>/intervene', methods=['POST'])
+@login_required
+@roles_required('Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('INTERVENTION_CREATE')
+def create_intervention(rx_id):
+    """Raise a clinical intervention on a prescription without mutating it."""
+    from app.models import PharmacyIntervention
+    from app.access import require_patient_access
+    rx = Prescription.query.get_or_404(rx_id)
+    require_patient_access(rx.patient)
+    issue = (request.form.get('issue') or '').strip()
+    if not issue:
+        flash('Describe the medication issue.', 'warning')
+        return redirect(url_for('pharmacy.prescription_detail', rx_id=rx.id))
+    intervention = PharmacyIntervention(
+        patient_id=rx.patient_id,
+        prescription_id=rx.id,
+        pharmacist_id=current_user.id,
+        prescriber_id=rx.doctor.user_id if rx.doctor else None,
+        issue=issue,
+        severity=request.form.get('severity') or 'Moderate',
+        recommendation=request.form.get('recommendation') or None,
+        category=request.form.get('category') or 'OTHER',
+        status='OPEN',
+    )
+    db.session.add(intervention)
+    db.session.flush()
+    record_event(rx.patient_id, 'MESSAGE',
+                 f'Pharmacist intervention on Rx #{rx.id}',
+                 f'{intervention.severity} · {issue[:120]}',
+                 source_type='intervention', source_id=intervention.id,
+                 department='Pharmacy')
+    log_activity('CREATE_INTERVENTION', 'pharmacy_intervention', intervention.id,
+                 f'rx={rx.id} severity={intervention.severity}')
+    if intervention.prescriber_id:
+        notify_role('Doctor',
+                    f'Pharmacy intervention on Rx #{rx.id}',
+                    f'{issue} — please review the recommendation.',
+                    entity_type='pharmacy_intervention',
+                    entity_id=intervention.id)
+    db.session.commit()
+    flash('Intervention raised with the prescriber.', 'success')
+    return redirect(url_for('pharmacy.prescription_detail', rx_id=rx.id))
+
+
+@pharmacy_bp.route('/interventions/<int:i_id>/respond', methods=['POST'])
+@login_required
+@roles_required('Doctor', 'Pharmacist', 'Admin', 'SuperAdmin')
+@permissions_required('INTERVENTION_RESPOND')
+def respond_intervention(i_id):
+    from app.models import PharmacyIntervention
+    from app.access import require_patient_access
+    intervention = PharmacyIntervention.query.get_or_404(i_id)
+    require_patient_access(intervention.patient)
+    status = request.form.get('status')
+    if status not in ('ACCEPTED', 'REJECTED', 'RESOLVED'):
+        flash('Invalid response status.', 'warning')
+        return redirect(url_for('pharmacy.interventions'))
+    intervention.status = status
+    intervention.response = request.form.get('response') or intervention.response
+    log_activity('RESPOND_INTERVENTION', 'pharmacy_intervention', intervention.id,
+                 f'{status}')
+    if status == 'ACCEPTED':
+        alert_svc.ensure_open_alert(
+            intervention.patient_id, 'DUPLICATE_THERAPY', severity='INFO',
+            title=f'Pharmacist recommendation accepted (Rx #{intervention.prescription_id})',
+            message=intervention.recommendation,
+            source_type='pharmacy_intervention', source_id=intervention.id)
+    db.session.commit()
+    flash(f'Intervention {status}.', 'success')
+    return redirect(url_for('pharmacy.interventions'))
+
+
+# ------------------------- Formulary interactions -------------------------
+@pharmacy_bp.route('/drug-check', methods=['GET', 'POST'])
+@login_required
+@roles_required('Pharmacist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
+@permissions_required('DRUG_INTERACTION')
+def drug_check():
+    """Standalone drug-drug interaction checker over the formulary."""
+    meds = Medication.query.filter_by(is_active=True).order_by(
+        Medication.generic_name).all()
+    result = None
+    if request.method == 'POST':
+        try:
+            ids = [int(x) for x in request.form.getlist('medications')]
+        except (TypeError, ValueError):
+            ids = []
+        if len(ids) < 2:
+            result = {'note': 'Select at least two medications to check for interactions.',
+                      'interactions': [], 'count': 0}
+        else:
+            from app.services.ai import AIDrugInteractionEngine
+            result = AIDrugInteractionEngine().check_interactions(ids)
+            log_activity('DRUG_INTERACTION_CHECK', 'medication', None,
+                         f'{len(ids)} medications checked, {result.get("count", 0)} interactions')
+            db.session.commit()
+    return render_template('pharmacy/drug_check.html', medications=meds, result=result)

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-layer-group" style="color:var(--ihis-primary)"></i>
+            {{ 'إنشاء حزمة أوامر' if g.lang == 'ar' else 'New Order Set' }}</h1>
+    </div>
+    <a href="{{ url_for('clinical.order_sets') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+        <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+    </a>
+</div>
+
+<form method="POST" id="oset-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card-premium mb-4">
+        <div class="card-header"><div class="card-title"><i class="fas fa-tag"></i> {{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</div></div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'الاسم' if g.lang == 'ar' else 'Name' }} *</label>
+                    <input class="form-control" name="name" required value="{{ oset.name if oset else '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</label>
+                    <select class="form-control" name="category">
+                        <option value="">{{ 'عام' if g.lang == 'ar' else 'General' }}</option>
+                        {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'التخصص' if g.lang == 'ar' else 'Specialty' }}</label>
+                    <select class="form-control" name="specialty_id"><option value="">—</option>
+                        {% for sp in specialties %}<option value="{{ sp.id }}">{{ sp.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'القسم' if g.lang == 'ar' else 'Department' }}</label>
+                    <select class="form-control" name="department_id"><option value="">—</option>
+                        {% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_published" id="pub">
+                        <label class="form-check-label" for="pub">{{ 'منشورة' if g.lang == 'ar' else 'Published' }}</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
+                    <textarea class="form-control" name="description" rows="2">{{ oset.description or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-premium mb-4">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <div class="card-title"><i class="fas fa-list-check"></i> {{ 'العناصر' if g.lang == 'ar' else 'Items' }}</div>
+            <button type="button" class="btn-ihs btn-ihs-primary btn-ihs-sm" id="add-row"><i class="fas fa-plus"></i> {{ 'عنصر' if g.lang == 'ar' else 'Add' }}</button>
+        </div>
+        <div class="card-body">
+            <div id="rows"></div>
+            <div style="text-align:center;padding:1.5rem;color:var(--ihis-text-muted)" id="empty-hint">
+                {{ 'أضف أول عنصر للحزمة…' if g.lang == 'ar' else 'Add the first item to this order set…' }}
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn-ihs btn-ihs-primary btn-ihs-lg"><i class="fas fa-save"></i> {{ 'حفظ الحزمة' if g.lang == 'ar' else 'Save Order Set' }}</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const types = ['LAB', 'RADIOLOGY', 'MEDICATION', 'REFERRAL'];
+    const tests = {{ tests|map(attribute='id')|list|tojson }};
+    const testNames = {{ tests|map(attribute='test_name')|list|tojson }};
+    const imaging = {{ imaging|map(attribute='id')|list|tojson }};
+    const imageNames = {{ imaging|map(attribute='name')|list|tojson }};
+    const meds = {{ meds|map(attribute='id')|list|tojson }};
+    const medNames = {{ meds|map(attribute='generic_name')|list|tojson }};
+    const specialities = {{ specialties|map(attribute='id')|list|tojson }};
+    const specialityNames = {{ specialties|map(attribute='name')|list|tojson }};
+
+    const rows = document.getElementById('rows');
+    const emptyHint = document.getElementById('empty-hint');
+
+    function opt(vals, names, selected) {
+        let h = '<option value="">—</option>';
+        vals.forEach(function (v, i) {
+            h += '<option value="' + v + '"' + (selected == v ? ' selected' : '') + '>' + names[i] + '</option>';
+        });
+        return h;
+    }
+
+    function addRow() {
+        emptyHint.style.display = 'none';
+        const idx = rows.children.length;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'oset-row';
+        wrapper.dataset.idx = idx;
+        wrapper.innerHTML =
+            '<div class="row g-2" style="align-items:center;border:1px solid var(--ihis-border);border-radius:var(--radius-md);padding:var(--sp-3)">' +
+            '<div class="col-md-2"><select class="form-control oset-type" name="item_type">' +
+            types.map(t => '<option value="'+t+'">'+t+'</option>').join('') +
+            '</select></div>' +
+            '<div class="col-md-3 oset-sel oset-Lab" style="display:none"><select class="form-control" name="lab_test_id"></select></div>' +
+            '<div class="col-md-3 oset-sel oset-RADIOLOGY" style="display:none"><select class="form-control" name="imaging_type_id"></select></div>' +
+            '<div class="col-md-6 oset-sel oset-MEDICATION" style="display:none">' +
+              '<div class="row g-1"><div class="col-md-4"><select class="form-control" name="medication_id"></select></div>' +
+              '<div class="col-md-3"><input class="form-control" name="dosage" placeholder="Dosage"></div>' +
+              '<div class="col-md-3"><input class="form-control" name="frequency" placeholder="Frequency"></div>' +
+              '<div class="col-md-2"><input class="form-control" name="duration" placeholder="Duration"></div>' +
+              '</div></div>' +
+            '<div class="col-md-3 oset-sel oset-REFERRAL" style="display:none"><select class="form-control" name="referral_specialty_id"></select></div>' +
+            '<div class="col-md-2"><select class="form-control" name="priority">' +
+              '<option>Normal</option><option>Urgent</option><option>Stat</option><option>Routine</option></select></div>' +
+            '<div class="col-md-3"><input class="form-control" name="quantity" type="number" min="1" value="1" placeholder="Qty"></div>' +
+            '<div class="col-md-5"><input class="form-control" name="instructions" placeholder="Instructions"></div>' +
+            '<div class="col-md-2"><input class="form-control" name="item_notes" placeholder="Notes"></div>' +
+            '<div class="col-md-1"><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm oset-remove">&times;</button></div>' +
+            '</div>';
+        wrapper.querySelectorAll('select[name="lab_test_id"]')[0].innerHTML = opt(tests, testNames);
+        wrapper.querySelectorAll('select[name="imaging_type_id"]')[0].innerHTML = opt(imaging, imageNames);
+        wrapper.querySelectorAll('select[name="medication_id"]')[0].innerHTML = opt(meds, medNames);
+        wrapper.querySelectorAll('select[name="referral_specialty_id"]')[0].innerHTML = opt(specialities, specialityNames);
+        hook(wrapper);
+        rows.appendChild(wrapper);
+        toggle(wrapper);
+    }
+
+    function toggle(wrapper) {
+        const type = wrapper.querySelector('.oset-type').value;
+        wrapper.querySelectorAll('.oset-sel').forEach(function (el) {
+            el.style.display = (el.classList.contains('oset-' + type)) ? '' : 'none';
+        });
+    }
+
+    function hook(wrapper) {
+        wrapper.querySelector('.oset-type').addEventListener('change', function () { toggle(wrapper); });
+        wrapper.querySelector('.oset-remove').addEventListener('click', function () { wrapper.remove(); syncHint(); });
+    }
+
+    function syncHint() {
+        if (!rows.children.length) { emptyHint.style.display = ''; }
+    }
+
+    document.getElementById('add-row').addEventListener('click', addRow);
+    addRow();
+})();
+</script>
+{% endblock %}

@@ -1,76 +1,88 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 no-print">
-    <h4 class="mb-0"><i class="fas fa-scroll text-primary me-2"></i>Discharge Summary</h4>
-    <div>
-        <button class="btn btn-outline-primary" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
-        <a href="{{ url_for('admissions.dashboard') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
-    </div>
+<div class="page-header no-print">
+  <div>
+    <h1 class="page-title">{{ 'ملخص الخروج' if g.lang == 'ar' else 'Discharge Summary' }}</h1>
+    <p class="page-subtitle">{{ 'سجل خروج المريض من المستشفى' if g.lang == 'ar' else 'Patient inpatient discharge record' }}</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn-ihs btn-ihs-outline" onclick="window.print()"><i class="fas fa-print"></i> {{ 'طباعة' if g.lang == 'ar' else 'Print' }}</button>
+    <a class="btn-ihs btn-ihs-ghost" href="{{ url_for('admissions.dashboard') }}"><i class="fas fa-arrow-left"></i> {{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+  </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body">
-        <div class="text-center border-bottom pb-3 mb-3">
-            <h5 class="mb-0">iHIS Hospital</h5>
-            <small class="text-muted">Inpatient Discharge Summary</small>
-        </div>
-
-        <div class="row g-3 mb-3">
-            <div class="col-md-6">
-                <p class="mb-0 text-muted small">Patient</p>
-                <p class="mb-1 fw-bold">{{ admission.patient.user.full_name if admission.patient and admission.patient.user else 'Unknown' }}</p>
-                <small class="text-muted">Admission # {{ admission.admission_no }}</small>
-            </div>
-            <div class="col-md-3">
-                <p class="mb-0 text-muted small">Admitted</p>
-                <p class="mb-0">{{ admission.admitted_at.strftime('%d %b %Y') if admission.admitted_at else '-' }}</p>
-            </div>
-            <div class="col-md-3">
-                <p class="mb-0 text-muted small">Discharged</p>
-                <p class="mb-0">{{ admission.discharged_at.strftime('%d %b %Y') if admission.discharged_at else '-' }}</p>
-                <small class="text-muted">{{ admission.days_stayed() }} day(s) stayed</small>
-            </div>
-        </div>
-
-        <hr>
-        <h6 class="text-primary"><i class="fas fa-stethoscope me-1"></i>Discharge Diagnosis</h6>
-        <p class="text-muted">{{ admission.discharge_diagnosis or '-' }}</p>
-
-        <h6 class="text-primary"><i class="fas fa-align-left me-1"></i>Clinical Summary</h6>
-        <p class="text-muted">{{ admission.discharge_summary or '-' }}</p>
-
-        {% if admission.discharge_medications %}
-        <h6 class="text-primary"><i class="fas fa-pills me-1"></i>Medications on Discharge</h6>
-        <p class="text-muted">{{ admission.discharge_medications }}</p>
-        {% endif %}
-
-        {% if admission.follow_up_instructions %}
-        <h6 class="text-primary"><i class="fas fa-calendar-check me-1"></i>Follow-Up Instructions</h6>
-        <p class="text-muted">{{ admission.follow_up_instructions }}</p>
-        {% endif %}
-
-        {% if admission.discharge_notes %}
-        <h6 class="text-primary"><i class="fas fa-notes-medical me-1"></i>Discharge Notes</h6>
-        <p class="text-muted">{{ admission.discharge_notes }}</p>
-        {% endif %}
-
-        {% if bills %}
-        <hr>
-        <h6 class="text-primary"><i class="fas fa-receipt me-1"></i>Related Current Bills</h6>
-        <table class="table table-sm table-striped mb-0">
-            <thead><tr><th>Bill</th><th>Type</th><th>Status</th><th>Total</th></tr></thead>
-            <tbody>
-            {% for b in bills %}
-                <tr>
-                    <td>#{{ b.id }}</td>
-                    <td>{{ b.source_type }}</td>
-                    <td>{{ b.status }}</td>
-                    <td>{{ '%.2f'|format(b.total() or 0) }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% endif %}
+<div class="card-premium">
+  <div class="card-body">
+    <div class="text-center" style="border-bottom:1px solid var(--ihis-border);padding-bottom:var(--sp-4);margin-bottom:var(--sp-4)">
+      <h5 style="font-weight:700;margin-bottom:var(--sp-1)">iHIS Hospital</h5>
+      <span class="cell-muted">{{ 'ملخص دخول المريض من المستشفى' if g.lang == 'ar' else 'Inpatient Discharge Summary' }}</span>
     </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <span class="cell-muted" style="font-size:0.75rem;display:block;margin-bottom:var(--sp-1)">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</span>
+        <span style="font-weight:700;font-size:1.1rem">{{ admission.patient.user.full_name if admission.patient and admission.patient.user else 'Unknown' }}</span>
+        <br><span class="cell-muted" style="font-size:0.85rem">{{ 'رقم الدخول' if g.lang == 'ar' else 'Admission #{{ admission.admission_no }}' }}</span>
+      </div>
+      <div class="col-md-3">
+        <span class="cell-muted" style="font-size:0.75rem;display:block;margin-bottom:var(--sp-1)">{{ 'تاريخ الدخول' if g.lang == 'ar' else 'Admitted' }}</span>
+        <span>{{ admission.admitted_at.strftime('%d %b %Y') if admission.admitted_at else '-' }}</span>
+      </div>
+      <div class="col-md-3">
+        <span class="cell-muted" style="font-size:0.75rem;display:block;margin-bottom:var(--sp-1)">{{ 'تاريخ الخروج' if g.lang == 'ar' else 'Discharged' }}</span>
+        <span>{{ admission.discharged_at.strftime('%d %b %Y') if admission.discharged_at else '-' }}</span>
+        <br><span class="cell-muted" style="font-size:0.85rem">{{ admission.days_stayed() }} {{ 'يوم مبيت' if g.lang == 'ar' else 'day(s) stayed' }}</span>
+      </div>
+    </div>
+
+    <hr style="border-color:var(--ihis-border)">
+    <h6 style="color:var(--ihis-primary);font-weight:600"><i class="fas fa-stethoscope"></i> {{ 'تشخيص الخروج' if g.lang == 'ar' else 'Discharge Diagnosis' }}</h6>
+    <p class="cell-muted">{{ admission.discharge_diagnosis or '-' }}</p>
+
+    <h6 style="color:var(--ihis-primary);font-weight:600"><i class="fas fa-align-left"></i> {{ 'الملخص السريري' if g.lang == 'ar' else 'Clinical Summary' }}</h6>
+    <p class="cell-muted">{{ admission.discharge_summary or '-' }}</p>
+
+    {% if admission.discharge_medications %}
+    <h6 style="color:var(--ihis-primary);font-weight:600"><i class="fas fa-pills"></i> {{ 'الأدوية عند الخروج' if g.lang == 'ar' else 'Medications on Discharge' }}</h6>
+    <p class="cell-muted">{{ admission.discharge_medications }}</p>
+    {% endif %}
+
+    {% if admission.follow_up_instructions %}
+    <h6 style="color:var(--ihis-primary);font-weight:600"><i class="fas fa-calendar-check"></i> {{ 'تعليمات المتابعة' if g.lang == 'ar' else 'Follow-Up Instructions' }}</h6>
+    <p class="cell-muted">{{ admission.follow_up_instructions }}</p>
+    {% endif %}
+
+    {% if admission.discharge_notes %}
+    <h6 style="color:var(--ihis-primary);font-weight:600"><i class="fas fa-notes-medical"></i> {{ 'ملاحظات الخروج' if g.lang == 'ar' else 'Discharge Notes' }}</h6>
+    <p class="cell-muted">{{ admission.discharge_notes }}</p>
+    {% endif %}
+
+    {% if bills %}
+    <hr style="border-color:var(--ihis-border)">
+    <h6 style="color:var(--ihis-primary);font-weight:600"><i class="fas fa-receipt"></i> {{ 'الفواتير المرتبطة' if g.lang == 'ar' else 'Related Current Bills' }}</h6>
+    <div class="table-wrapper">
+      <table class="table-ihs">
+        <thead>
+          <tr>
+            <th>{{ 'الفاتورة' if g.lang == 'ar' else 'Bill' }}</th>
+            <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+            <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+            <th style="text-align:right">{{ 'الإجمالي' if g.lang == 'ar' else 'Total' }}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for b in bills %}
+          <tr>
+            <td><span class="cell-primary">#{{ b.id }}</span></td>
+            <td><span class="tag-ihs">{{ b.source_type }}</span></td>
+            <td><span class="status-badge s-pending">{{ b.status }}</span></td>
+            <td style="text-align:right"><span class="t-num">{{ '%.2f'|format(b.total() or 0) }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

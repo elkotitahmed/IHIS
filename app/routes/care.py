@@ -9,6 +9,7 @@ from app.models import (
 )
 from app.routes.decorators import roles_required, log_activity
 from app.access import require_patient_access, patient_access_required
+from app.services.timeline import record_event
 
 care_bp = Blueprint('care', __name__)
 
@@ -59,6 +60,9 @@ def new_referral():
     to_doctor_id = request.form.get('to_doctor_id') or None
     to_specialty = request.form.get('to_specialty') or None
     reason = request.form.get('reason')
+    urgency = (request.form.get('urgency') or 'Routine').strip()
+    if urgency not in ('Routine', 'Urgent', 'Emergency'):
+        urgency = 'Routine'
     if not patient_id or not reason:
         flash('Patient and reason are required.', 'warning')
         return redirect(url_for('care.referrals'))
@@ -71,14 +75,39 @@ def new_referral():
         patient_id=p.id,
         from_doctor_id=doc.id if doc else None,
         to_doctor_id=int(to_doctor_id) if to_doctor_id else None,
-        to_specialty=to_specialty, reason=reason, status='Pending',
+        to_specialty=to_specialty, reason=reason, status='SENT',
+        urgency=urgency, created_by=current_user.id,
     )
     db.session.add(ref)
     db.session.flush()
     log_activity('CREATE_REFERRAL', 'referral', ref.id,
-                 f'patient_id={patient_id} to={to_specialty or to_doctor_id}')
+                 f'patient_id={patient_id} to={to_specialty or to_doctor_id} urgency={urgency}')
+    record_event(p.id, 'REFERRAL',
+                 f'Referral to {to_specialty or "specialist"}',
+                 f'{urgency} · {reason}',
+                 source_type='referral', source_id=ref.id,
+                 department='Care Coordination')
+    if ref.to_doctor and ref.to_doctor.user_id:
+        try:
+            from app.services.notifications import notify
+            notify(ref.to_doctor.user_id, f'New referral ({urgency})',
+                   f'A {urgency.lower()} referral for {p.user.full_name if p.user else "patient"} awaits your review.',
+                   entity_type='referral', entity_id=ref.id)
+        except Exception:
+            db.session.rollback()
+    if ref.to_doctor and ref.to_doctor.user_id:
+        from app.services.tasks import create_task
+        create_task(
+            title=f'Referral — {"specialist" if to_specialty else "doctor"} review',
+            description=f'{urgency} referral: {reason}',
+            task_type='REFERRAL', department='Care Coordination',
+            patient_id=p.id, assigned_to=ref.to_doctor.user_id,
+            assigned_role='Doctor',
+            priority='High' if urgency == 'Emergency' else ('Medium' if urgency == 'Urgent' else 'Normal'),
+            due_at=None, related_resource_type='referral',
+            related_resource_id=ref.id)
     db.session.commit()
-    flash('Referral created.', 'success')
+    flash('Referral sent to the receiving provider.', 'success')
     return redirect(url_for('care.referrals'))
 
 

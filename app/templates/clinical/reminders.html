@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-bell" style="color:var(--ihis-primary)"></i>
+            {{ 'التذكيرات السريرية' if g.lang == 'ar' else 'Clinical Reminders' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'متابعات ومواعيد تحصين ومراجعات مستحقة تلقائياً من سجل المريض.' if g.lang == 'ar' else 'Follow-ups, immunizations and reviews auto-built from the patient record.' }}
+        </p>
+    </div>
+    <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
+        <span class="tag-ihs">{{ reminders|length }} {{ 'مفتوح' if g.lang == 'ar' else 'open' }}</span>
+        <span class="tag-ihs">{{ overdue|length }} {{ 'متأخر' if g.lang == 'ar' else 'overdue' }}</span>
+    </div>
+</div>
+
+{% if overdue %}
+<div class="alert alert-warning" style="border-radius:var(--radius-md)">
+    <i class="fas fa-clock me-2"></i><strong>{{ overdue|length }}</strong>
+    {{ 'تذكير متأخر يتطلب مراجعة.' if g.lang == 'ar' else 'overdue reminder(s) need review.' }}
+</div>
+{% endif %}
+
+<div class="card-premium mb-4">
+    <div class="card-header"><div class="card-title"><i class="fas fa-list"></i> {{ 'التذكيرات المفتوحة' if g.lang == 'ar' else 'Open Reminders' }} ({{ reminders|length }})</div></div>
+    <div class="card-body flush">
+        {% if reminders %}
+        <div class="list-compact">
+            {% for r in reminders %}
+            <div class="list-item" style="align-items:flex-start">
+                <i class="fas fa {{ 'fa-triangle-exclamation' if r.priority == 'High' else 'fa-calendar-day' }}"
+                   style="color:{{ 'var(--ihis-danger)' if r.priority == 'High' else 'var(--ihis-warning)' }}"></i>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:0.8125rem;font-weight:500">
+                        <a href="{{ url_for('clinical.patient_360', patient_id=r.patient_id) }}" style="color:var(--ihis-primary);text-decoration:none">{{ r.patient.user.full_name if r.patient and r.patient.user else 'Patient' }}</a>
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ r.title }}</div>
+                    <div style="font-size:0.7rem;color:var(--ihis-text-muted)">
+                        {% if r.due_date %}{{ r.due_date.strftime('%A %d %b %Y') }}{% endif %} · {{ r.reminder_type }}{% if r.source_type %} · via {{ r.source_type }}{% endif %}
+                    </div>
+                </div>
+                <span class="status-badge {{ 's-cancelled' if r.due_date and r.due_date < today else 's-pending' }}">{{ 'متأخر' if g.lang == 'ar' else 'Overdue' if (r.due_date and r.due_date < today) else r.priority }}</span>
+                <form method="POST" action="{{ url_for('clinical.reminder_done', reminder_id=r.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'أنجز' if g.lang == 'ar' else 'Done' }}</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">{{ 'لا تذكيرات مفتوحة.' if g.lang == 'ar' else 'No open reminders.' }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

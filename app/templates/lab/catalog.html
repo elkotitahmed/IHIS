@@ -1,42 +1,65 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-book me-2"></i>Test Catalog</h4>
-    <a href="{{ url_for('lab.add_test') }}" class="btn btn-info text-white"><i class="fas fa-plus me-1"></i>Add Test</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-book" style="color:var(--ihis-primary);margin-inline-end:var(--sp-2)"></i>{{ 'كتالوج الفحوصات' if g.lang == 'ar' else 'Test Catalog' }}</h1>
+        <p class="page-subtitle">{{ 'إدارة الفحوصات المخبرية المتاحة' if g.lang == 'ar' else 'Manage available laboratory tests' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('lab.add_test') }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-plus"></i> {{ 'إضافة فحص' if g.lang == 'ar' else 'Add Test' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
+<div class="card-premium">
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
                     <tr>
-                        <th>Test Name</th>
-                        <th>Category</th>
-                        <th>Normal Range</th>
-                        <th>Unit</th>
-                        <th>Price</th>
-                        <th>Active</th>
+                        <th>{{ 'اسم الفحص' if g.lang == 'ar' else 'Test Name' }}</th>
+                        <th>{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</th>
+                        <th>{{ 'المجال الطبيعي' if g.lang == 'ar' else 'Normal Range' }}</th>
+                        <th>{{ 'عتبة القيمة الحرجة' if g.lang == 'ar' else 'Critical Range' }}</th>
+                        <th>{{ 'الوحدة' if g.lang == 'ar' else 'Unit' }}</th>
+                        <th>{{ 'السعر' if g.lang == 'ar' else 'Price' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for test in tests %}
                     <tr>
-                        <td class="fw-semibold">{{ test.test_name }}</td>
-                        <td>{{ test.category or '-' }}</td>
-                        <td>{{ test.normal_range or '-' }}</td>
-                        <td>{{ test.unit or '-' }}</td>
-                        <td>${{ "{:.2f}".format(test.price) if test.price else '0.00' }}</td>
+                        <td class="cell-primary">{{ test.test_name }}</td>
+                        <td class="cell-secondary">{{ test.category or '-' }}</td>
+                        <td class="cell-mono">{{ test.normal_range or '-' }}</td>
+                        <td>
+                            {% if test.critical_low is not none or test.critical_high is not none %}
+                            <span class="tag-ihs" style="color:var(--ihis-danger);border-color:rgba(192,57,43,.3)">
+                                {{ '&lt; ' ~ test.critical_low if test.critical_low is not none else '' }}{{ ' / ' if test.critical_low is not none and test.critical_high is not none }}{{ '&gt; ' ~ test.critical_high if test.critical_high is not none else '' }}
+                            </span>
+                            {% else %}
+                            <span class="cell-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-secondary">{{ test.unit or '-' }}</td>
+                        <td class="cell-mono">${{ "{:.2f}".format(test.price) if test.price else '0.00' }}</td>
                         <td>
                             {% if test.is_active %}
-                            <span class="badge bg-success">Active</span>
+                            <span class="status-badge s-active">{{ 'نشط' if g.lang == 'ar' else 'Active' }}</span>
                             {% else %}
-                            <span class="badge bg-secondary">Inactive</span>
+                            <span class="status-badge s-cancelled">{{ 'غير نشط' if g.lang == 'ar' else 'Inactive' }}</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="text-center text-muted py-3">No tests in catalog</td></tr>
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state" style="padding:var(--sp-8)">
+                                <div class="empty-icon"><i class="fas fa-book"></i></div>
+                                <div class="empty-title">{{ 'لا توجد فحوصات في الكتالوج' if g.lang == 'ar' else 'No tests in catalog' }}</div>
+                                <div class="empty-desc">{{ 'أضف فحوصات مخبرية جديدة للبدء' if g.lang == 'ar' else 'Add new laboratory tests to get started' }}</div>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>

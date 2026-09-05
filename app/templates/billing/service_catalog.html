@@ -1,57 +1,102 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-boxes-stacked text-warning"></i> Service Catalog</h4>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ 'دليل الخدمات' if g.lang == 'ar' else 'Service Catalog' }}</h1>
+    <p class="page-subtitle">{{ 'إدارة خدمات المستشفى وأسعارها' if g.lang == 'ar' else 'Manage hospital services and pricing' }}</p>
+  </div>
+</div>
 
-<div class="card card-shadow">
-    <div class="card-body">
-        {% if current_user.has_permission('SERVICE_CATALOG_MANAGE') %}
-        <form method="post" action="{{ url_for('billing.add_service') }}" class="row g-2 align-items-end mb-3">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="col-md-4">
-                <label class="form-label small">Service name</label>
-                <input class="form-control" name="name" required>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Category</label>
-                <select class="form-select" name="category">
-                    {% for c in ['General','Consultation','Room','Procedure','Other'] %}
-                    <option>{{ c }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small">Price</label>
-                <input class="form-control" type="number" step="0.01" name="price" value="0">
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-success"><i class="fas fa-plus"></i> Add Service</button>
-            </div>
-        </form>
-        {% endif %}
-
-        <table class="table table-hover align-middle">
-            <thead><tr><th>Name</th><th>Category</th><th class="text-end">Price</th><th>Active</th><th></th></tr></thead>
-            <tbody>
-            {% for s in items %}
-                <tr class="{% if not s.is_active %}text-muted{% endif %}">
-                    <td>{{ s.name }}</td>
-                    <td><span class="badge bg-light text-dark">{{ s.category }}</span></td>
-                    <td class="text-end">{{ "%.2f"|format(s.price) }}</td>
-                    <td>{% if s.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
-                    <td>
-                        {% if current_user.has_permission('SERVICE_CATALOG_MANAGE') %}
-                        <form method="post" action="{{ url_for('billing.toggle_service', sid=s.id) }}" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button class="btn btn-sm btn-outline-secondary">{{ 'Deactivate' if s.is_active else 'Activate' }}</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <tr><td colspan="5" class="text-center text-muted py-4">No services defined.</td></tr>
+{% if current_user.has_permission('SERVICE_CATALOG_MANAGE') %}
+<div class="card-premium">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إضافة خدمة جديدة' if g.lang == 'ar' else 'Add New Service' }}</div>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('billing.add_service') }}" class="row g-3 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'اسم الخدمة' if g.lang == 'ar' else 'Service name' }} <span class="required">*</span></label>
+          <input class="form-control" name="name" required>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</label>
+          <select class="form-control" name="category">
+            {% for c in ['General','Consultation','Room','Procedure','Other'] %}
+            <option>{{ c }}</option>
             {% endfor %}
-            </tbody>
-        </table>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="form-group">
+          <label class="form-label-ihs">{{ 'السعر' if g.lang == 'ar' else 'Price' }}</label>
+          <input class="form-control" type="number" step="0.01" name="price" value="0">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <button class="btn-ihs btn-ihs-success"><i class="fas fa-plus"></i> {{ 'إضافة خدمة' if g.lang == 'ar' else 'Add Service' }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="card-premium" style="margin-top:var(--sp-4)">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-boxes-stacked" style="color:var(--ihis-warning)"></i> {{ 'الخدمات المسجلة' if g.lang == 'ar' else 'Registered Services' }}</div>
+  </div>
+  <div class="card-body flush">
+    <div class="table-wrapper">
+      <table class="table-ihs">
+        <thead>
+          <tr>
+            <th>{{ 'الاسم' if g.lang == 'ar' else 'Name' }}</th>
+            <th>{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</th>
+            <th style="text-align:right">{{ 'السعر' if g.lang == 'ar' else 'Price' }}</th>
+            <th>{{ 'الحالة' if g.lang == 'ar' else 'Active' }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for s in items %}
+          <tr class="{% if not s.is_active %}cell-muted{% endif %}">
+            <td><span class="cell-primary">{{ s.name }}</span></td>
+            <td><span class="tag-ihs">{{ s.category }}</span></td>
+            <td style="text-align:right"><span class="t-num">{{ "%.2f"|format(s.price) }}</span></td>
+            <td>
+              {% if s.is_active %}
+              <span class="status-badge s-active">{{ 'نشط' if g.lang == 'ar' else 'Active' }}</span>
+              {% else %}
+              <span class="status-badge s-cancelled">{{ 'غير نشط' if g.lang == 'ar' else 'Inactive' }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if current_user.has_permission('SERVICE_CATALOG_MANAGE') %}
+              <form method="post" action="{{ url_for('billing.toggle_service', sid=s.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'تعطيل' if g.lang == 'ar' else ('Deactivate' if s.is_active else 'Activate') }}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-boxes-stacked"></i></div>
+                <div class="empty-title">{{ 'لا توجد خدمات' if g.lang == 'ar' else 'No services defined' }}</div>
+                <div class="empty-desc">{{ 'لم يتم تعريف أي خدمات بعد. أضف خدمة للبدء.' if g.lang == 'ar' else 'No services have been defined yet. Add a service to get started.' }}</div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
 {% endblock %}

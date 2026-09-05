@@ -1,88 +1,89 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-tasks text-primary"></i> {{ task.title }}</h4>
-    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tasks.my_tasks') }}"><i class="fas fa-arrow-left"></i> My Tasks</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-tasks" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ task.title }}</h1>
+        <p class="page-subtitle">{{ t('task') }} #{{ task.id }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('tasks.my_tasks') }}"><i class="fas fa-arrow-left"></i> {{ t('back') }}</a>
+    </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-7">
-        <div class="card card-shadow mb-3">
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-circle-info" style="color:var(--ihis-info)"></i> {{ t('details') }}</div>
+            </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Status</div>
-                        <span class="badge bg-{{ 'success' if task.status=='COMPLETED' else ('danger' if task.status in ('CANCELLED','REJECTED') else ('primary' if task.status=='IN_PROGRESS' else 'secondary')) }}">{{ task.status }}</span>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">{{ t('status') }}</div>
+                        <div><span class="status-badge s-{{ 'completed' if task.status=='COMPLETED' else ('cancelled' if task.status in ('CANCELLED','REJECTED') else 'in-progress' if task.status=='IN_PROGRESS' else 'draft') }}">{{ task.status }}</span></div>
                     </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Priority</div>
-                        <span class="badge bg-{{ 'danger' if task.priority in ('URGENT','CRITICAL') else ('warning text-dark' if task.priority=='HIGH' else 'info') }}">{{ task.priority }}</span>
+                    <div class="info-item">
+                        <div class="info-label">{{ 'أولوية' if g.lang == 'ar' else 'Priority' }}</div>
+                        <div><span class="status-badge {{ 's-cancelled' if task.priority in ('URGENT','CRITICAL') else ('s-hold' if task.priority=='HIGH' else 's-pending') }}">{{ task.priority }}</span></div>
                     </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Type</div><div>{{ task.task_type }}</div>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Department</div><div>{{ task.department or '-' }}</div>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Patient</div>
-                        <div>{{ task.patient.user.full_name if task.patient and task.patient.user else '-' }}{% if task.patient %} ({{ task.patient.mrn or task.patient.id }}){% endif %}</div>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Assigned To</div>
-                        <div>{{ task.assignee.full_name if task.assignee else (task.assigned_role or 'Unassigned') }}</div>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Created By</div><div>{{ task.creator.full_name if task.creator else '-' }}</div>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <div class="text-muted small">Due</div>
-                        <div>{{ task.due_at.strftime('%Y-%m-%d %H:%M') if task.due_at else '-' }}</div>
-                    </div>
+                    <div class="info-item"><div class="info-label">{{ 'نوع' if g.lang == 'ar' else 'Type' }}</div><div>{{ task.task_type }}</div></div>
+                    <div class="info-item"><div class="info-label">{{ 'القسم' if g.lang == 'ar' else 'Department' }}</div><div>{{ task.department or '-' }}</div></div>
+                    <div class="info-item"><div class="info-label">{{ t('patient') }}</div><div>{{ task.patient.user.full_name if task.patient and task.patient.user else '-' }}{% if task.patient %} <span class="cell-mono">({{ task.patient.mrn or task.patient.id }})</span>{% endif %}</div></div>
+                    <div class="info-item"><div class="info-label">{{ 'المسند إلى' if g.lang == 'ar' else 'Assigned To' }}</div><div>{{ task.assignee.full_name if task.assignee else (task.assigned_role or '-') }}</div></div>
+                    <div class="info-item"><div class="info-label">{{ 'أنشأها' if g.lang == 'ar' else 'Created By' }}</div><div>{{ task.creator.full_name if task.creator else '-' }}</div></div>
+                    <div class="info-item"><div class="info-label">{{ 'الموعد' if g.lang == 'ar' else 'Due' }}</div><div>{{ task.due_at.strftime('%d %b %Y %H:%M') if task.due_at else '-' }}</div></div>
                 </div>
                 {% if task.related_resource_type %}
-                <hr>
-                <div class="small">Related: <span class="badge bg-light text-dark border">{{ task.related_resource_type }}</span> #{{ task.related_resource_id }}</div>
+                <div style="margin-top:var(--sp-4);padding:var(--sp-3);background:var(--ihis-surface-inset);border-radius:var(--radius-sm);font-size:0.8125rem">
+                    {{ 'مرتبط بطرف' if g.lang == 'ar' else 'Related to' }}: <span style="font-weight:600">{{ task.related_resource_type }}</span> #{{ task.related_resource_id }}
+                </div>
                 {% endif %}
                 {% if task.description %}
-                <hr><h6>Description</h6><p class="mb-0">{{ task.description }}</p>
+                <div style="margin-top:var(--sp-4)">
+                    <div style="font-size:0.75rem;color:var(--ihis-text-muted);margin-bottom:var(--sp-2)">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</div>
+                    <p style="margin:0;font-size:0.875rem;color:var(--ihis-text);background:var(--ihis-surface-inset);padding:var(--sp-3);border-radius:var(--radius-sm)">{{ task.description }}</p>
+                </div>
                 {% endif %}
             </div>
         </div>
 
-        <div class="card card-shadow">
-            <div class="card-header fw-bold">Activity</div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-clock-rotate-left" style="color:var(--ihis-warning)"></i> {{ t('activity') }}</div>
+            </div>
+            <div class="card-body flush">
+                {% if activities %}
+                <div class="timeline-ihs">
                 {% for a in activities %}
-                    <div class="list-group-item d-flex justify-content-between">
-                        <div>
-                            <strong>{{ a.action }}</strong>
-                            {% if a.from_status and a.to_status %}
-                            <span class="text-muted">({{ a.from_status }} &rarr; {{ a.to_status }})</span>
-                            {% endif %}
-                            {% if a.note %}<div class="text-muted small">{{ a.note }}</div>{% endif %}
-                        </div>
-                        <div class="text-muted small text-end">
-                            {{ a.user.full_name if a.user else 'System' }}<br>
-                            {{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '' }}
-                        </div>
+                    <div class="timeline-entry">
+                        <div class="tl-dot dot-info"></div>
+                        <div class="tl-time">{{ a.created_at.strftime('%d %b %H:%M') if a.created_at else '' }}</div>
+                        <div class="tl-label">{{ a.action }}{% if a.from_status and a.to_status %} <span style="color:var(--ihis-text-muted)">({{ a.from_status }} → {{ a.to_status }})</span>{% endif %}</div>
+                        {% if a.note %}<div class="tl-detail">{{ a.note }}</div>{% endif %}
+                        <div class="tl-dept">{{ a.user.full_name if a.user else 'System' }}</div>
                     </div>
-                {% else %}
-                    <div class="list-group-item text-muted">No activity recorded.</div>
                 {% endfor %}
                 </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-clock-rotate-left"></i></div>
+                    <div class="empty-title">{{ 'لا يوجد نشاط مسجل' if g.lang == 'ar' else 'No activity recorded' }}</div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-md-5">
-        <div class="card card-shadow mb-3">
-            <div class="card-header fw-bold">Update Status</div>
+    <div class="col-lg-5">
+        <div class="card-premium mb-4">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-rotate" style="color:var(--ihis-primary)"></i> {{ 'تحديث الحالة' if g.lang == 'ar' else 'Update Status' }}</div>
+            </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('tasks.transition', task_id=task.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-2">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ t('status') }}</label>
                         <select name="status" class="form-select">
                             {% for s in ['ASSIGNED','IN_PROGRESS','ON_HOLD','COMPLETED','REJECTED','CANCELLED','NEW'] %}
                             {% if s != task.status and (task.status=='NEW' or s != 'NEW') %}
@@ -91,25 +92,32 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="mb-2">
-                        <textarea name="note" class="form-control" rows="2" placeholder="Note (optional)"></textarea>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'ملاحظة' if g.lang == 'ar' else 'Note' }}</label>
+                        <textarea name="note" class="form-control" rows="2" placeholder="{{ 'ملاحظة (اختياري)' if g.lang == 'ar' else 'Note (optional)' }}"></textarea>
                     </div>
-                    <button class="btn btn-primary w-100">Update Task</button>
+                    <button class="btn-ihs btn-ihs-primary" style="width:100%">{{ 'تحديث المهمة' if g.lang == 'ar' else 'Update Task' }}</button>
                 </form>
             </div>
         </div>
 
         {% if current_user.has_any_role('Admin','SuperAdmin') %}
-        <div class="card card-shadow">
-            <div class="card-header fw-bold">Reassign</div>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-arrows" style="color:var(--ihis-warning)"></i> {{ 'إعادة إسناد' if g.lang == 'ar' else 'Reassign' }}</div>
+            </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('tasks.assign', task_id=task.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-2">
+                    <div class="form-group">
+                        <label class="form-label-ihs">User ID</label>
                         <input type="text" name="assignee_id" class="form-control" placeholder="User ID" inputmode="numeric">
                     </div>
-                    <div class="mb-2"><input type="text" name="note" class="form-control" placeholder="Note (optional)"></div>
-                    <button class="btn btn-outline-primary w-100">Reassign</button>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'ملاحظة' if g.lang == 'ar' else 'Note' }}</label>
+                        <input type="text" name="note" class="form-control" placeholder="{{ 'ملاحظة (اختياري)' if g.lang == 'ar' else 'Note (optional)' }}">
+                    </div>
+                    <button class="btn-ihs btn-ihs-outline" style="width:100%">{{ 'إعادة إسناد' if g.lang == 'ar' else 'Reassign' }}</button>
                 </form>
             </div>
         </div>

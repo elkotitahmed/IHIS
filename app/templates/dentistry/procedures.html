@@ -2,81 +2,103 @@
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
-        <li class="breadcrumb-item active">Dental Procedures</li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">{{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</a></li>
+        <li class="breadcrumb-item active">{{ 'الإجراءات السنية' if g.lang == 'ar' else 'Dental Procedures' }}</li>
     </ol>
 </nav>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-hand-holding-medical"></i> Record Procedure - {{ patient.user.full_name }}</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('dentistry.procedures', patient_id=patient.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Procedure Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="procedure_name" required
-                           placeholder="E.g. Scaling and polishing">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Tooth Number</label>
-                    <input type="text" class="form-control" name="tooth_number" placeholder="E.g. 16">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Cost</label>
-                    <input type="number" step="0.01" class="form-control" name="cost" min="0" value="0">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Notes</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Optional notes">
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-plus me-1"></i>Add Procedure</button>
-        </form>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'تسجيل إجراء' if g.lang == 'ar' else 'Record Procedure' }} ? {{ patient.user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'تسجيل وإدارة الإجراءات السنية للمريض' if g.lang == 'ar' else 'Record and manage dental procedures for the patient' }}</p>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5><i class="fas fa-list"></i> Procedure History</h5>
+{% include 'clinical/_patient_header.html' %}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'إجراء جديد' if g.lang == 'ar' else 'New Procedure' }}</div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dentistry.procedures', patient_id=patient.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'اسم الإجراء' if g.lang == 'ar' else 'Procedure Name' }} <span class="required">*</span></label>
+                        <input type="text" class="form-control" name="procedure_name" required
+                               placeholder="{{ 'مثال: تنظيف وتلميع' if g.lang == 'ar' else 'E.g. Scaling and polishing' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'رقم السن' if g.lang == 'ar' else 'Tooth Number' }}</label>
+                        <input type="text" class="form-control" name="tooth_number" placeholder="{{ 'مثال: 16' if g.lang == 'ar' else 'E.g. 16' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التكلفة' if g.lang == 'ar' else 'Cost' }}</label>
+                        <input type="number" step="0.01" class="form-control" name="cost" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</label>
+                        <input type="text" class="form-control" name="notes" placeholder="{{ 'ملاحظات اختيارية' if g.lang == 'ar' else 'Optional notes' }}">
+                    </div>
+                    <div style="margin-top:var(--sp-4)">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-plus"></i> {{ 'إضافة إجراء' if g.lang == 'ar' else 'Add Procedure' }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Procedure</th>
-                        <th>Tooth</th>
-                        <th>Cost</th>
-                        <th>Notes</th>
-                        <th>Performed At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for procedure in procedures %}
-                    <tr>
-                        <td>{{ procedure.id }}</td>
-                        <td>{{ procedure.procedure_name }}</td>
-                        <td>{{ procedure.tooth_number or 'N/A' }}</td>
-                        <td>${{ '%.2f'|format(procedure.cost or 0) }}</td>
-                        <td>{{ procedure.notes or 'N/A' }}</td>
-                        <td>{{ procedure.performed_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center">No procedures recorded yet.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+    <div class="col-lg-7">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-info)"></i> {{ 'سجل الإجراءات' if g.lang == 'ar' else 'Procedure History' }}</div>
+            </div>
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>{{ 'الإجراء' if g.lang == 'ar' else 'Procedure' }}</th>
+                                <th>{{ 'السن' if g.lang == 'ar' else 'Tooth' }}</th>
+                                <th>{{ 'التكلفة' if g.lang == 'ar' else 'Cost' }}</th>
+                                <th>{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
+                                <th>{{ 'تاريخ التنفيذ' if g.lang == 'ar' else 'Performed At' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for procedure in procedures %}
+                            <tr>
+                                <td><span class="t-num">{{ procedure.id }}</span></td>
+                                <td><span class="cell-primary">{{ procedure.procedure_name }}</span></td>
+                                <td><span class="tag-ihs">{{ procedure.tooth_number or 'N/A' }}</span></td>
+                                <td><span class="t-num">${{ '%.2f'|format(procedure.cost or 0) }}</span></td>
+                                <td><span class="cell-muted">{{ procedure.notes or 'N/A' }}</span></td>
+                                <td><span class="cell-muted">{{ procedure.performed_at.strftime('%Y-%m-%d %H:%M') }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <div class="empty-icon"><i class="fas fa-hand-holding-medical"></i></div>
+                                        <div class="empty-title">{{ 'لم يتم تسجيل أي إجراءات بعد' if g.lang == 'ar' else 'No procedures recorded yet' }}</div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<a href="{{ url_for('dentistry.imaging', patient_id=patient.id) }}" class="btn btn-outline-secondary mt-3">
-    <i class="fas fa-arrow-right me-1"></i>Continue to Imaging
-</a>
+<div style="margin-top:var(--sp-4)">
+    <a href="{{ url_for('dentistry.imaging', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
+        <i class="fas fa-arrow-right"></i> {{ 'المتابعة للتصوير' if g.lang == 'ar' else 'Continue to Imaging' }}
+    </a>
+</div>
 {% endblock %}

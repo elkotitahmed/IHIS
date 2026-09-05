@@ -1,12 +1,15 @@
 import os
-from flask import Flask, g, session, request
+from flask import Flask, g, session, request, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import config_map
+from app.i18n import register_i18n
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -14,6 +17,7 @@ login_manager = LoginManager()
 bcrypt = Bcrypt()
 csrf = CSRFProtect()
 cors = CORS()
+limiter = Limiter(key_func=get_remote_address, default_limits=[], storage_uri="memory://")
 
 
 def create_app(config_name=None):
@@ -29,6 +33,12 @@ def create_app(config_name=None):
             raise RuntimeError(
                 'Production requires a strong SECRET_KEY. '
                 'Set the SECRET_KEY environment variable before starting the app.')
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        if not db_uri or db_uri.startswith('sqlite:'):
+            raise RuntimeError(
+                'Production requires an explicit server DATABASE_URL '
+                '(e.g. postgresql+psycopg2://...). Running production on '
+                'SQLite is not supported.')
 
     # Ensure upload folder exists
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'app/static/uploads'), exist_ok=True)
@@ -39,6 +49,11 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     bcrypt.init_app(app)
     csrf.init_app(app)
+
+    # Rate limiting (Phase 15). Flask-Limiter reads RATELIMIT_ENABLED and
+    # RATELIMIT_STORAGE_URI from config at init_app; storage is configured even
+    # when disabled so a dedicated test can enable it later.
+    limiter.init_app(app)
 
     # CORS is restricted to configured origins only. The app is a same-origin
     # server-rendered Flask application; if no CORS_ORIGINS is configured we do
@@ -75,6 +90,9 @@ def create_app(config_name=None):
     from app.routes.billing import billing_bp
     from app.routes.admissions import admissions_bp
     from app.routes.tasks import tasks_bp
+    from app.routes.clinical import clinical_bp
+    from app.routes.search import search_bp
+    from app.routes.fhir import fhir_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -96,6 +114,9 @@ def create_app(config_name=None):
     app.register_blueprint(billing_bp, url_prefix='/billing')
     app.register_blueprint(admissions_bp, url_prefix='/admissions')
     app.register_blueprint(tasks_bp, url_prefix='/tasks')
+    app.register_blueprint(clinical_bp, url_prefix='/clinical')
+    app.register_blueprint(search_bp, url_prefix='/search')
+    app.register_blueprint(fhir_bp, url_prefix='/fhir')
 
     # In production the schema is owned by Alembic migrations (`flask db
     # upgrade`). For local development the convenience of auto-creating missing
@@ -105,79 +126,399 @@ def create_app(config_name=None):
         with app.app_context():
             db.create_all()
 
+    register_i18n(app)
     register_context_processors(app)
+    register_error_handlers(app)
+
+    from app.services.logging import setup_logging
+    setup_logging(app)
+
+    # Block public serving of private medical/AI files that might still reside
+    # under the static tree (legacy `static/uploads/...` records, AI uploads,
+    # results and model inputs). Even though new files are written to the
+    # private UPLOAD_FOLDER, this is a defensive guard so a misconfigured or
+    # legacy layout can never expose PHI at a public `/static/...` URL.
+    @app.before_request
+    def block_private_static():
+        if request.path.startswith('/static/') and (
+            '/static/uploads/' in request.path or '/static/ai_models/' in request.path
+        ):
+            abort(404)
+        return None
+
+    # Production-safe security headers (Phase 16). Applied to every response.
+    # HSTS is only meaningful over HTTPS and is set in production to avoid
+    # sending it during local http dev.
+    @app.after_request
+    def set_security_headers(response):
+        is_prod = config_name == 'production'
+        if is_prod:
+            response.headers.setdefault(
+                'Strict-Transport-Security',
+                'max-age=31536000; includeSubDomains')
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        return response
 
     return app
 
 
 def register_context_processors(app):
-    """Provide role-based sidebar menus to all templates."""
+    """Provide role-based sidebar menus, unread counts, and language to all templates."""
+
+    ROLE_LABELS = {
+        'SuperAdmin': 'Super Administrator',
+        'Admin': 'Administrator',
+        'Doctor': 'Doctor',
+        'Nurse': 'Nurse',
+        'LabTechnician': 'Lab Technician',
+        'Radiologist': 'Radiologist',
+        'Pharmacist': 'Pharmacist',
+        'Receptionist': 'Receptionist',
+        'Dentist': 'Dentist',
+        'Physiotherapist': 'Physiotherapist',
+        'Cashier': 'Cashier',
+        'Patient': 'Patient',
+    }
+
+    def _get_effective_roles(user):
+        """Return the roles to use for navigation. If SuperAdmin is previewing,
+        return the preview role(s) instead of the real roles."""
+        preview = session.get('preview_role')
+        if preview and user.has_role('SuperAdmin'):
+            return [preview]
+        return [r.name for r in user.roles]
 
     def menus():
         from flask_login import current_user
         if not current_user.is_authenticated:
             return []
+        lang = getattr(g, 'lang', session.get('lang', 'en'))
         items = []
-        if current_user.has_any_role('Patient') or current_user.user_type == 'patient':
-            items += [
-                {'label': 'Medical History', 'url': '/patient/medical-history', 'icon': 'fa-history'},
-                {'label': 'Appointments', 'url': '/patient/appointments', 'icon': 'fa-calendar-check'},
-                {'label': 'Prescriptions', 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
-                {'label': 'Lab Results', 'url': '/patient/lab-results', 'icon': 'fa-flask'},
-                {'label': 'Radiology Reports', 'url': '/patient/radiology-reports', 'icon': 'fa-x-ray'},
-                {'label': 'Documents', 'url': '/patient/documents', 'icon': 'fa-folder-open'},
-                {'label': 'Bills', 'url': '/patient/bills', 'icon': 'fa-file-invoice-dollar'},
-                {'label': 'Messages', 'url': '/patient/messages', 'icon': 'fa-envelope'},
-            ]
-        if current_user.has_any_role('Doctor'):
-            items += [
-                {'label': 'Patients', 'url': '/doctor/patients', 'icon': 'fa-user-md'},
-                {'label': 'Appointments', 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
-                {'label': 'Lab Results', 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
-            ]
-        if current_user.has_any_role('LabTechnician'):
-            items += [
-                {'label': 'Lab Orders', 'url': '/lab/orders', 'icon': 'fa-flask'},
-                {'label': 'Test Catalog', 'url': '/lab/catalog', 'icon': 'fa-book'},
-            ]
-        if current_user.has_any_role('Radiologist'):
-            items += [{'label': 'Radiology Orders', 'url': '/radiology/orders', 'icon': 'fa-x-ray'}]
-        if current_user.has_any_role('Pharmacist'):
-            items += [{'label': 'Dashboard', 'url': '/pharmacy/dashboard', 'icon': 'fa-pills'}]
-        if current_user.has_any_role('Nurse'):
-            items += [{'label': 'Dashboard', 'url': '/nursing/dashboard', 'icon': 'fa-stethoscope'}]
-        if current_user.has_any_role('Receptionist'):
-            items += [
-                {'label': 'Dashboard', 'url': '/reception/dashboard', 'icon': 'fa-concierge-bell'},
-                {'label': 'Admissions', 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
-                {'label': 'Billing', 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
-            ]
-        if current_user.has_any_role('Admin', 'SuperAdmin'):
-            items += [
-                {'label': 'Billing', 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
-                {'label': 'Admissions', 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
-            ]
-        if current_user.has_any_role('Dentist'):
-            items += [{'label': 'Dashboard', 'url': '/dentistry/dashboard', 'icon': 'fa-tooth'}]
-        if current_user.has_any_role('Physiotherapist'):
-            items += [{'label': 'Dashboard', 'url': '/physiotherapy/dashboard', 'icon': 'fa-person-walking'}]
-        # Any authenticated staff user gets access to the shared task queue.
-        if current_user.has_any_role('SuperAdmin', 'Admin', 'Doctor', 'Nurse',
-                                     'LabTechnician', 'Radiologist', 'Pharmacist',
-                                     'Receptionist', 'Dentist', 'Physiotherapist'):
-            items += [{'label': 'My Tasks', 'url': '/tasks/my-tasks', 'icon': 'fa-tasks'}]
-        # Admin / SuperAdmin additions are handled by the dashboard main card,
-        # so keep the sidebar portal-focused and merge by endpoint (dedupe).
-        seen = set()
-        merged = []
-        for item in items:
-            if item['url'] in seen:
-                continue
-            seen.add(item['url'])
-            merged.append(item)
-        return merged
 
-    app.context_processor(lambda: {'current_user_menus': menus})
+        def _l(en, ar):
+            return ar if lang == 'ar' else en
+
+        def _ai_tools(role_set):
+            """Zero-argument AI tools the given roles can reach, in display order."""
+            specs = [
+                (_l('AI Command Center', 'مركز أوامر الذكاء'), '/ai/ai-dashboard',
+                 'fa-robot', {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'}),
+                (_l('Fracture Detection', 'كشف الكسور'), '/ai/fracture-detection',
+                 'fa-bone', {'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
+                             'Dentist', 'Admin', 'SuperAdmin'}),
+                (_l('Tooth Segmentation', 'تجزئة الأسنان'), '/ai/tooth-segmentation',
+                 'fa-tooth', {'Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin'}),
+                (_l('Skin Lesion Detection', 'كشف آفات الجلد'), '/ai/skin-lesion-detection',
+                 'fa-person-circle-question', {'Doctor', 'Dentist', 'Nurse',
+                                               'Admin', 'SuperAdmin'}),
+                (_l('Clinical Alerts', 'التنبيهات السريرية'), '/ai/clinical-alerts',
+                 'fa-bell', {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'}),
+                (_l('Health Insights', 'الرؤى الصحية'), '/ai/health-insights',
+                 'fa-brain', {'Patient', 'Admin', 'SuperAdmin'}),
+                (_l('AI Analytics', 'تحليلات الذكاء'), '/ai/analytics',
+                 'fa-chart-line', {'Admin', 'SuperAdmin'}),
+                (_l('Clinical Pharmacist AI', 'الصيدلاني السريري'), '/pharmacy/ai-workbench',
+                 'fa-user-doctor', {'Pharmacist', 'Admin', 'SuperAdmin'}),
+                (_l('Appointment Optimization', 'تحسين المواعيد'), '/admin/ai/appointment-optimization',
+                 'fa-calendar-check', {'Admin', 'SuperAdmin'}),
+                (_l('ICD-10 Coding Assistant', 'مساعد الترميز ICD-10'), '/admin/ai/coding-assistant',
+                 'fa-code-medical', {'Admin', 'SuperAdmin'}),
+            ]
+            return [{'label': label, 'url': url, 'icon': icon}
+                    for label, url, icon, roles in specs if role_set & roles]
+
+        effective_roles = _get_effective_roles(current_user)
+        role_set = set(effective_roles)
+        is_superadmin_real = current_user.has_role('SuperAdmin')
+        is_previewing = bool(session.get('preview_role'))
+
+        def _has_menu_permission(*permission_names):
+            """Use the effective role set when deciding which links to show."""
+            if is_superadmin_real and not is_previewing:
+                return True
+            effective_role_names = role_set or {role.name for role in current_user.roles}
+            return any(
+                permission.name in permission_names
+                for role in current_user.roles
+                if role.name in effective_role_names
+                for permission in role.permissions
+            )
+
+        # SuperAdmin always gets Command Center + full navigation
+        if is_superadmin_real and not is_previewing:
+            items += [
+                {'section': _l('COMMAND CENTER', 'مركز الأوامر'), 'items': [
+                    {'label': _l('Hospital Overview', 'نظرة عامة على المستشفى'), 'url': '/super-admin/dashboard', 'icon': 'fa-gauge-high'},
+                    {'label': _l('Platform Capabilities', 'قدرات المنصة'), 'url': '/super-admin/capabilities', 'icon': 'fa-rocket'},
+                ]},
+                {'section': _l('CLINICAL', 'سريري'), 'items': [
+                    {'label': _l('Patients', 'المرضى'), 'url': '/doctor/patients', 'icon': 'fa-user-injured'},
+                    {'label': _l('Clinical Workbench', 'منصة سريرية'), 'url': '/clinical', 'icon': 'fa-stethoscope'},
+                    {'label': _l('Clinical Alerts', 'التنبيهات السريرية'), 'url': '/clinical/alerts', 'icon': 'fa-bell'},
+                    {'label': _l('Clinical Inbox', 'الصندوق السريري'), 'url': '/clinical/inbox', 'icon': 'fa-inbox'},
+                    {'label': _l('Reminders', 'التذكيرات'), 'url': '/clinical/reminders', 'icon': 'fa-bell'},
+                    {'label': _l('Recall Board', 'لوحة الاستدعاء'), 'url': '/clinical/recall-board', 'icon': 'fa-calendar-check'},
+                    {'label': _l('Order Sets', 'حزم الأوامر'), 'url': '/clinical/order-sets', 'icon': 'fa-layer-group'},
+                    {'label': _l('Clinical Templates', 'القوالب السريرية'), 'url': '/clinical/templates', 'icon': 'fa-clipboard-list'},
+                ]},
+                {'section': _l('OPERATIONS', 'العمليات'), 'items': [
+                    {'label': _l('Appointments', 'المواعيد'), 'url': '/reception/appointments', 'icon': 'fa-calendar-check'},
+                    {'label': _l('Tasks', 'المهام'), 'url': '/tasks/my-tasks', 'icon': 'fa-clipboard-list'},
+                    {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+                    {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
+                ]},
+                {'section': _l('DIAGNOSTICS', 'التشخيص'), 'items': [
+                    {'label': _l('Laboratory', 'المختبر'), 'url': '/lab/orders', 'icon': 'fa-flask'},
+                    {'label': _l('Radiology', 'الأشعة'), 'url': '/radiology/orders', 'icon': 'fa-x-ray'},
+                ]},
+                {'section': _l('MEDICATION', 'الأدوية'), 'items': [
+                    {'label': _l('Pharmacy', 'الصيدلية'), 'url': '/pharmacy/dashboard', 'icon': 'fa-pills'},
+                    {'label': _l('Inventory', 'المخزون'), 'url': '/pharmacy/inventory', 'icon': 'fa-boxes-stacked'},
+                ]},
+                {'section': _l('SPECIALTIES', 'التخصصات'), 'items': [
+                    {'label': _l('Nursing', 'التمريض'), 'url': '/nursing/dashboard', 'icon': 'fa-user-nurse'},
+                    {'label': _l('Physiotherapy', 'العلاج الطبيعي'), 'url': '/physiotherapy/patients', 'icon': 'fa-person-walking'},
+                    {'label': _l('Dentistry', 'الأسنان'), 'url': '/dentistry/patients', 'icon': 'fa-tooth'},
+                ]},
+                {'section': _l('FINANCE', 'المالية'), 'items': [
+                    {'label': _l('Billing', 'الفواتير'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                    {'label': _l('Reports', 'التقارير'), 'url': '/reports/', 'icon': 'fa-chart-pie'},
+                ]},
+                {'section': _l('ADMINISTRATION', 'الإدارة'), 'items': [
+                    {'label': _l('Users', 'المستخدمون'), 'url': '/admin/staff', 'icon': 'fa-users-cog'},
+                    {'label': _l('Roles & Permissions', 'الأدوار والصلاحيات'), 'url': '/super-admin/roles', 'icon': 'fa-shield-halved'},
+                    {'label': _l('Audit Logs', 'سجلات المراجعة'), 'url': '/super-admin/audit-logs', 'icon': 'fa-clock-rotate-left'},
+                    {'label': _l('Settings', 'الإعدادات'), 'url': '/super-admin/settings', 'icon': 'fa-gear'},
+                ]},
+            ]
+        else:
+            # Role-based navigation (for regular users OR preview mode)
+            role_set = set(effective_roles)
+
+            if 'Patient' in role_set or current_user.user_type == 'patient':
+                items += [
+                    {'section': _l('MY HEALTH', 'صحتي'), 'items': [
+                        {'label': _l('Medical History', 'التاريخ الطبي'), 'url': '/patient/medical-history', 'icon': 'fa-history'},
+                        {'label': _l('Appointments', 'المواعيد'), 'url': '/patient/appointments', 'icon': 'fa-calendar-check'},
+                        {'label': _l('Prescriptions', 'الروشتات'), 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
+                        {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/patient/lab-results', 'icon': 'fa-flask'},
+                        {'label': _l('My Radiology', 'أشعتي'), 'url': '/patient/my-radiology', 'icon': 'fa-radiation'},
+                        {'label': _l('Radiology Reports', 'تقارير الأشعة'), 'url': '/patient/radiology-reports', 'icon': 'fa-x-ray'},
+                        {'label': _l('Documents', 'المستندات'), 'url': '/patient/documents', 'icon': 'fa-folder-open'},
+                        {'label': _l('Bills', 'الفواتير'), 'url': '/patient/bills', 'icon': 'fa-file-invoice-dollar'},
+                        {'label': _l('Messages', 'الرسائل'), 'url': '/patient/messages', 'icon': 'fa-envelope'},
+                    ]},
+                ]
+
+            if 'Doctor' in role_set:
+                items += [
+                    {'section': _l('PRACTICE', 'الممارسة'), 'items': [
+                        {'label': _l('Patients', 'المرضى'), 'url': '/doctor/patients', 'icon': 'fa-user-injured'},
+                        {'label': _l('Appointments', 'المواعيد'), 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
+                        {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
+                    ]},
+                ]
+
+            if 'LabTechnician' in role_set:
+                items += [
+                    {'section': _l('LABORATORY', 'المختبر'), 'items': [
+                        {'label': _l('Work Queue', 'قائمة العمل'), 'url': '/lab/orders', 'icon': 'fa-layer-group'},
+                        {'label': _l('Test Catalog', 'دليل الفحوصات'), 'url': '/lab/catalog', 'icon': 'fa-book'},
+                    ]},
+                ]
+
+            if 'Radiologist' in role_set:
+                items += [
+                    {'section': _l('RADIOLOGY', 'الأشعة'), 'items': [
+                        {'label': _l('Worklist', 'قائمة العمل'), 'url': '/radiology/orders', 'icon': 'fa-x-ray'},
+                        {'label': _l('Dose Dashboard', 'لوحة الجرعة'), 'url': '/radiology/dose-dashboard', 'icon': 'fa-radiation'},
+                        {'label': _l('Critical Findings', 'النتائج الحرجة'), 'url': '/radiology/critical-findings', 'icon': 'fa-exclamation-circle'},
+                        {'label': _l('Protocols', 'البروتوكولات'), 'url': '/radiology/protocols', 'icon': 'fa-clipboard-list'},
+                    ]},
+                ]
+
+            if 'Pharmacist' in role_set:
+                items += [
+                    {'section': _l('PHARMACY', 'الصيدلية'), 'items': [
+                        {'label': _l('Prescription Queue', 'صف الصرف'), 'url': '/pharmacy/dashboard', 'icon': 'fa-prescription'},
+                        {'label': _l('Inventory', 'المخزون'), 'url': '/pharmacy/inventory', 'icon': 'fa-boxes-stacked'},
+                        {'label': _l('Reconciliation', 'التوفيق الدوائي'), 'url': '/pharmacy/reconciliations', 'icon': 'fa-list-check'},
+                        {'label': _l('Interventions', 'التدخلات'), 'url': '/pharmacy/interventions', 'icon': 'fa-handshake-angle'},
+                        {'label': _l('Clinical Pharmacist AI', 'الصيدلاني السريري'), 'url': '/pharmacy/ai-workbench', 'icon': 'fa-user-doctor'},
+                        {'label': _l('Interaction Check', 'فحص التفاعلات'), 'url': '/pharmacy/drug-check', 'icon': 'fa-dna'},
+                    ]},
+                ]
+
+            if 'Nurse' in role_set:
+                items += [
+                    {'section': _l('NURSING', 'التمريض'), 'items': [
+                        {'label': _l('My Patients', 'مرضاي'), 'url': '/nursing/dashboard', 'icon': 'fa-user-nurse'},
+                        {'label': _l('Vitals', 'العلامات الحيوية'), 'url': '/nursing/patients', 'icon': 'fa-heartbeat'},
+                    ]},
+                ]
+
+            if 'Receptionist' in role_set:
+                items += [
+                    {'section': _l('RECEPTION', 'الاستقبال'), 'items': [
+                        {'label': _l('Patients', 'المرضى'), 'url': '/reception/dashboard', 'icon': 'fa-users'},
+                        {'label': _l('Appointments', 'المواعيد'), 'url': '/reception/appointments', 'icon': 'fa-calendar-check'},
+                        {'label': _l('Check-in', 'تسجيل الحضور'), 'url': '/reception/queue', 'icon': 'fa-clipboard-check'},
+                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+                        {'label': _l('Billing', 'الفواتير'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                    ]},
+                ]
+
+            if 'Cashier' in role_set:
+                items += [
+                    {'section': _l('FINANCE', 'FINANCE'), 'items': [
+                        {'label': _l('Billing', 'الفوترة'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                        {'label': _l('Invoices', 'الفواتير'), 'url': '/billing/bills', 'icon': 'fa-file-invoice'},
+                        {'label': _l('Payments', 'المدفوعات'), 'url': '/billing/reports', 'icon': 'fa-cash-register'},
+                    ]},
+                ]
+
+            if 'Admin' in role_set and 'SuperAdmin' not in role_set:
+                items += [
+                    {'section': _l('ADMINISTRATION', 'الإدارة'), 'items': [
+                        {'label': _l('Users', 'المستخدمون'), 'url': '/admin/staff', 'icon': 'fa-users-cog'},
+                        {'label': _l('Departments', 'الأقسام'), 'url': '/admin/departments', 'icon': 'fa-building'},
+                        {'label': _l('Doctors', 'الأطباء'), 'url': '/admin/doctors', 'icon': 'fa-user-md'},
+                        {'label': _l('Statistics', 'الإحصائيات'), 'url': '/admin/statistics', 'icon': 'fa-chart-bar'},
+                        {'label': _l('Billing', 'الفواتير'), 'url': '/billing/dashboard', 'icon': 'fa-file-invoice-dollar'},
+                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
+                        {'label': _l('Reports', 'التقارير'), 'url': '/reports/', 'icon': 'fa-chart-pie'},
+                        {'label': _l('Dose Reference Levels', 'عتبات الجرعة المرجعية'), 'url': '/radiology/reference-levels', 'icon': 'fa-ruler'},
+                    ]},
+                ]
+
+            if 'Dentist' in role_set:
+                items += [
+                    {'section': _l('DENTISTRY', 'الأسنان'), 'items': [
+                        {'label': _l('Patients', 'المرضى'), 'url': '/dentistry/patients', 'icon': 'fa-tooth'},
+                    ]},
+                ]
+
+            if 'Physiotherapist' in role_set:
+                items += [
+                    {'section': _l('PHYSIOTHERAPY', 'العلاج الطبيعي'), 'items': [
+                        {'label': _l('Patients', 'المرضى'), 'url': '/physiotherapy/patients', 'icon': 'fa-person-walking'},
+                    ]},
+                ]
+
+            # Shared items for clinical staff are filtered by the same
+            # permissions that protect their destinations.
+            if role_set & {'Doctor', 'Nurse', 'LabTechnician', 'Radiologist', 'Pharmacist', 'Dentist', 'Physiotherapist'}:
+                work_items = [
+                    {'label': _l('My Tasks', 'مهامي'), 'url': '/tasks/my-tasks', 'icon': 'fa-clipboard-list'},
+                ]
+                permissioned_links = [
+                    ('TIMELINE_VIEW', 'Clinical Workbench',
+                     'منصة سريرية', '/clinical', 'fa-stethoscope'),
+                    ('ALERT_VIEW', 'Clinical Alerts',
+                     'التنبيهات السريرية', '/clinical/alerts', 'fa-bell'),
+                    ('INBOX_VIEW', 'Clinical Inbox',
+                     'الصندوق السريري', '/clinical/inbox', 'fa-inbox'),
+                    ('REMINDER_VIEW', 'Reminders',
+                     'التذكيرات', '/clinical/reminders', 'fa-bell'),
+                    ('REMINDER_VIEW', 'Recall Board',
+                     'لوحة الاستدعاء', '/clinical/recall-board', 'fa-calendar-check'),
+                    ('ORDER_SET_VIEW', 'Order Sets',
+                     'حزم الأوامر', '/clinical/order-sets', 'fa-layer-group'),
+                    ('TEMPLATE_VIEW', 'Clinical Templates',
+                     'القوالب السريرية', '/clinical/templates', 'fa-clipboard-list'),
+                ]
+                for permission, label, label_ar, url, icon in permissioned_links:
+                    if _has_menu_permission(permission):
+                        work_items.append({
+                            'label': _l(label, label_ar),
+                            'url': url,
+                            'icon': icon,
+                        })
+                items.append({'section': _l('WORK', 'العمل'), 'items': work_items})
+
+        # AI TOOLS — every tool the effective roles can reach (zero-argument routes).
+        ai_roles = role_set
+        if is_superadmin_real and not is_previewing:
+            ai_roles = set(ROLE_LABELS)
+        ai_items = _ai_tools(ai_roles)
+        if ai_items:
+            items.append({'section': _l('AI TOOLS', 'أدوات الذكاء'), 'items': ai_items})
+
+        # Merge role-specific groups into a small, stable set of categories.
+        # This keeps multi-role users from seeing the same workflow under
+        # several headings while preserving every distinct AI application.
+        category_map = {
+            'COMMAND CENTER': ('command', 'COMMAND CENTER', 'مركز الأوامر'),
+            'CLINICAL': ('clinical', 'CLINICAL', 'سريري'),
+            'PRACTICE': ('clinical', 'CLINICAL', 'سريري'),
+            'WORK': ('clinical', 'CLINICAL', 'سريري'),
+            'OPERATIONS': ('operations', 'OPERATIONS', 'العمليات'),
+            'RECEPTION': ('operations', 'OPERATIONS', 'العمليات'),
+            'DIAGNOSTICS': ('diagnostics', 'DIAGNOSTICS', 'التشخيص'),
+            'LABORATORY': ('diagnostics', 'DIAGNOSTICS', 'التشخيص'),
+            'RADIOLOGY': ('diagnostics', 'DIAGNOSTICS', 'التشخيص'),
+            'MEDICATION': ('medications', 'MEDICATIONS', 'الأدوية'),
+            'PHARMACY': ('medications', 'MEDICATIONS', 'الأدوية'),
+            'SPECIALTIES': ('specialties', 'SPECIALTIES', 'التخصصات'),
+            'NURSING': ('specialties', 'SPECIALTIES', 'التخصصات'),
+            'DENTISTRY': ('specialties', 'SPECIALTIES', 'التخصصات'),
+            'PHYSIOTHERAPY': ('specialties', 'SPECIALTIES', 'التخصصات'),
+            'FINANCE': ('finance', 'FINANCE', 'المالية'),
+            'ADMINISTRATION': ('administration', 'ADMINISTRATION', 'الإدارة'),
+            'MY HEALTH': ('health', 'MY HEALTH', 'صحتي'),
+            'AI TOOLS': ('ai', 'AI TOOLS', 'أدوات الذكاء'),
+        }
+        category_order = [
+            'command', 'health', 'clinical', 'operations', 'diagnostics',
+            'medications', 'specialties', 'finance', 'administration', 'ai',
+        ]
+        seen_urls = set()
+        grouped = {}
+        for group in items:
+            if not group.get('items'):
+                continue
+            section = str(group.get('section', ''))
+            category = category_map.get(section)
+            if category is None:
+                category = (section, section, section)
+            key, en_label, ar_label = category
+            target = grouped.setdefault(key, {
+                'section': _l(en_label, ar_label), 'items': []})
+            for item in group['items']:
+                identity = item['url']
+                if identity in seen_urls:
+                    continue
+                seen_urls.add(identity)
+                target['items'].append(item)
+        compact_items = [grouped[key] for key in category_order if key in grouped]
+        compact_items.extend(
+            group for key, group in grouped.items() if key not in category_order)
+        return compact_items
+
+    def _is_superadmin():
+        from flask_login import current_user
+        return current_user.is_authenticated and current_user.has_role('SuperAdmin')
+
+    def _is_previewing():
+        return bool(session.get('preview_role'))
+
+    def _effective_role_name():
+        from flask_login import current_user
+        if session.get('preview_role'):
+            return ROLE_LABELS.get(session.get('preview_role'), '')
+        if current_user.is_authenticated and current_user.roles:
+            return ROLE_LABELS.get(current_user.roles[0].name, current_user.roles[0].name)
+        return ''
+
+    app.context_processor(lambda: {
+        'current_user_menus': menus,
+        'is_superadmin_real': _is_superadmin,
+        'is_previewing': _is_previewing,
+        'preview_role': lambda: session.get('preview_role'),
+        'effective_role_name': _effective_role_name,
+    })
 
     def unread_count():
         from flask_login import current_user
@@ -189,11 +530,90 @@ def register_context_processors(app):
 
     app.context_processor(lambda: {'unread_notifications': unread_count()})
 
+    def pending_task_count():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return 0
+        from app.models import Task
+        return Task.query.filter(
+            Task.assigned_to == current_user.id,
+            Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS'])
+        ).count()
+
+    app.context_processor(lambda: {'pending_tasks': pending_task_count()})
+
     @app.before_request
     def set_language():
         lang = request.args.get('lang')
         if lang in ('en', 'ar'):
             session['lang'] = lang
         g.lang = session.get('lang', 'en')
+        g.theme = session.get('theme', 'light')
 
     app.context_processor(lambda: {'g': g})
+
+
+def register_error_handlers(app):
+    """Production-safe error handlers. Never expose stack traces, SQL, or secrets."""
+
+    from flask import render_template, request, jsonify
+
+    def _wants_json():
+        return request.path.startswith('/api/') or request.accept_mimetypes.best == 'application/json'
+
+    @app.errorhandler(400)
+    def bad_request(e):
+        if _wants_json():
+            return jsonify({'error': 'Bad request'}), 400
+        return render_template('errors/400.html'), 400
+
+    @app.errorhandler(401)
+    def unauthorized(e):
+        if _wants_json():
+            return jsonify({'error': 'Unauthorized'}), 401
+        return render_template('errors/401.html'), 401
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        if _wants_json():
+            return jsonify({'error': 'Forbidden'}), 403
+        return render_template('errors/403.html'), 403
+
+    @app.errorhandler(404)
+    def not_found(e):
+        if _wants_json():
+            return jsonify({'error': 'Not found'}), 404
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(409)
+    def conflict(e):
+        if _wants_json():
+            return jsonify({'error': 'Conflict'}), 409
+        return render_template('errors/400.html'), 409
+
+    @app.errorhandler(429)
+    def rate_limited(e):
+        if _wants_json():
+            return jsonify({'error': 'Too many requests'}), 429
+        return render_template('errors/400.html'), 429
+
+    @app.errorhandler(422)
+    def unprocessable(e):
+        if _wants_json():
+            return jsonify({'error': 'Unprocessable entity'}), 422
+        return render_template('errors/422.html'), 422
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        # Roll back any broken session to keep the connection healthy.
+        from app import db
+        db.session.rollback()
+        if _wants_json():
+            return jsonify({'error': 'Internal server error'}), 500
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(503)
+    def service_unavailable(e):
+        if _wants_json():
+            return jsonify({'error': 'Service unavailable'}), 503
+        return render_template('errors/500.html'), 503

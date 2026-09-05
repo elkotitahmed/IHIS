@@ -1,45 +1,59 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-calendar-alt text-primary"></i> My Appointments</h4>
-    <a href="{{ url_for('patient.book_appointment') }}" class="btn btn-primary">
-        <i class="fas fa-calendar-plus"></i> Book Appointment
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'مواعيدي' if g.lang == 'ar' else 'My Appointments' }}</h1>
+        <p class="page-subtitle">{{ 'جدولة وإدارة مواعيدك الطبية' if g.lang == 'ar' else 'Schedule and manage your medical appointments' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('patient.book_appointment') }}" class="btn-ihs btn-ihs-primary">
+            <i class="fas fa-calendar-plus"></i> {{ 'حجز موعد' if g.lang == 'ar' else 'Book Appointment' }}
+        </a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-calendar-alt" style="color:var(--ihis-primary)"></i> {{ 'جميع المواعيد' if g.lang == 'ar' else 'All Appointments' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
                 <thead>
                     <tr>
-                        <th>Scheduled At</th>
-                        <th>Doctor</th>
-                        <th>Reason</th>
-                        <th>Priority</th>
-                        <th>Status</th>
+                        <th>{{ 'التاريخ والوقت' if g.lang == 'ar' else 'Scheduled At' }}</th>
+                        <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                        <th>{{ 'السبب' if g.lang == 'ar' else 'Reason' }}</th>
+                        <th>{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr>
-                        <td>{{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') if item.scheduled_at else 'N/A' }}</td>
-                        <td>{{ item.doctor.user.full_name if item.doctor and item.doctor.user else 'N/A' }}</td>
-                        <td>{{ item.reason or 'N/A' }}</td>
+                        <td class="cell-mono">{{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') if item.scheduled_at else 'N/A' }}</td>
+                        <td class="cell-primary">{{ item.doctor.user.full_name if item.doctor and item.doctor.user else 'N/A' }}</td>
+                        <td class="cell-secondary">{{ item.reason or 'N/A' }}</td>
                         <td>
-                            <span class="badge {{ 'bg-danger' if item.priority == 'High' else 'bg-warning' if item.priority == 'Medium' else 'bg-info' }}">
+                            <span class="status-badge {{ 's-rejected' if item.priority == 'High' else 's-pending' if item.priority == 'Medium' else 's-active' }}">
                                 {{ item.priority }}
                             </span>
                         </td>
                         <td>
-                            <span class="badge {{ 'bg-success' if item.status in ['Completed','CheckedIn'] else 'bg-primary' if item.status == 'Scheduled' else 'bg-secondary' }}">
+                            <span class="status-badge s-{{ item.status|lower|replace(' ','-') }}">
                                 {{ item.status }}
                             </span>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted">No appointments found.</td>
+                        <td colspan="5">
+                            <div class="empty-state" style="padding:2rem">
+                                <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+                                <div class="empty-title">{{ 'لا توجد مواعيد' if g.lang == 'ar' else 'No appointments found' }}</div>
+                                <div class="empty-desc">{{ 'قم بحجز موعدك الأول' if g.lang == 'ar' else 'Book your first appointment to get started' }}</div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

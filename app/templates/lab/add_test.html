@@ -1,51 +1,95 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Lab Test</h4>
-    <a href="{{ url_for('lab.catalog') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Catalog</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-plus-circle" style="color:var(--ihis-primary);margin-inline-end:var(--sp-2)"></i>{{ 'إضافة فحص مختبر' if g.lang == 'ar' else 'Add Lab Test' }}</h1>
+        <p class="page-subtitle">{{ 'تسجيل فحص مخبري جديد في الكتالوج' if g.lang == 'ar' else 'Register a new test in the catalog' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('lab.catalog') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'العودة للكتالوج' if g.lang == 'ar' else 'Back to Catalog' }}</a>
+    </div>
 </div>
 
-<div class="row">
+<div class="row g-4">
     <div class="col-lg-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fas fa-flask text-info me-2"></i>Test Details</h6>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-flask" style="color:var(--ihis-info)"></i> {{ 'بيانات الفحص' if g.lang == 'ar' else 'Test Details' }}</div>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('lab.add_test') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <div class="mb-3">
-                        <label for="test_name" class="form-label">Test Name</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="test_name">{{ 'اسم الفحص' if g.lang == 'ar' else 'Test Name' }} <span class="required">*</span></label>
                         <input type="text" class="form-control" id="test_name" name="test_name"
-                               placeholder="e.g. Complete Blood Count" required>
+                               placeholder="{{ 'مثال: تعداد دم كامل' if g.lang == 'ar' else 'e.g. Complete Blood Count' }}" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Category</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="category">{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</label>
                         <input type="text" class="form-control" id="category" name="category"
-                               placeholder="e.g. Hematology">
+                               placeholder="{{ 'مثال: علم الدم' if g.lang == 'ar' else 'e.g. Hematology' }}">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="normal_range" class="form-label">Normal Range</label>
-                        <input type="text" class="form-control" id="normal_range" name="normal_range"
-                               placeholder="e.g. 4.0 - 11.0">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="normal_range">{{ 'المجال الطبيعي' if g.lang == 'ar' else 'Normal Range' }}</label>
+                                <input type="text" class="form-control" id="normal_range" name="normal_range"
+                                       placeholder="{{ 'مثال: 4.0 - 11.0' if g.lang == 'ar' else 'e.g. 4.0 - 11.0' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="unit">{{ 'الوحدة' if g.lang == 'ar' else 'Unit' }}</label>
+                                <input type="text" class="form-control" id="unit" name="unit"
+                                       placeholder="{{ 'مثال: x10^9/L' if g.lang == 'ar' else 'e.g. x10^9/L' }}">
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="unit" class="form-label">Unit</label>
-                        <input type="text" class="form-control" id="unit" name="unit"
-                               placeholder="e.g. x10^9/L">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="price" class="form-label">Price</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="price">{{ 'السعر' if g.lang == 'ar' else 'Price' }}</label>
                         <input type="number" class="form-control" id="price" name="price" step="0.01" min="0"
-                               placeholder="e.g. 25.00">
+                               placeholder="{{ 'مثال: 25.00' if g.lang == 'ar' else 'e.g. 25.00' }}">
                     </div>
 
-                    <button type="submit" class="btn btn-info text-white"><i class="fas fa-save me-1"></i>Add Test</button>
+                    <div class="card-premium" style="border-color:rgba(192,57,43,.25);box-shadow:none">
+                        <div class="card-header" style="border-bottom-color:rgba(192,57,43,.15)">
+                            <div class="card-title" style="color:var(--ihis-danger)"><i class="fas fa-exclamation-triangle"></i> {{ 'عتبات القيمة الحرجة (قيمة الذعر)' if g.lang == 'ar' else 'Critical (Panic) Value Thresholds' }}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label-ihs" for="critical_low">{{ 'الحد الأدنى الحرج' if g.lang == 'ar' else 'Critical Low' }}</label>
+                                        <input type="number" step="any" class="form-control" id="critical_low" name="critical_low"
+                                               placeholder="{{ 'مثال: 0.5' if g.lang == 'ar' else 'e.g. 0.5' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label-ihs" for="critical_high">{{ 'الحد الأعلى الحرج' if g.lang == 'ar' else 'Critical High' }}</label>
+                                        <input type="number" step="any" class="form-control" id="critical_high" name="critical_high"
+                                               placeholder="{{ 'مثال: 50' if g.lang == 'ar' else 'e.g. 50' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label-ihs" for="critical_notes">{{ 'ملاحظات القيمة الحرجة' if g.lang == 'ar' else 'Critical Notes' }}</label>
+                                <input type="text" class="form-control" id="critical_notes" name="critical_notes"
+                                       placeholder="{{ 'مثال: تستدعي اتصالًا فوريًا بالطبيب المعالج' if g.lang == 'ar' else 'e.g. requires immediate call to the treating physician' }}">
+                            </div>
+                            <div class="form-hint">
+                                {{ 'تُعلَّم النتيجة تلقائيًا كقيمة حرجة وتُصعَّد للأطباء فورًا إذا تجاوزت هذه الحدود.' if g.lang == 'ar' else 'A numeric result breaching these bounds is auto-flagged critical and escalated to doctors immediately.' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top:1px solid var(--ihis-border-light);padding-top:var(--sp-5);margin-top:var(--sp-2)">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'إضافة الفحص' if g.lang == 'ar' else 'Add Test' }}</button>
+                    </div>
                 </form>
             </div>
         </div>

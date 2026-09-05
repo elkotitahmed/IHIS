@@ -1,69 +1,79 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-user-check text-success me-2"></i>Discharge Patient</h4>
-    <a href="{{ url_for('admissions.dashboard') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left me-1"></i>Back
-    </a>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ 'خروج مريض' if g.lang == 'ar' else 'Discharge Patient' }}</h1>
+    <p class="page-subtitle">{{ 'تسجيل الخروج وملخص الحالة' if g.lang == 'ar' else 'Record discharge and clinical summary' }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn-ihs btn-ihs-outline" href="{{ url_for('admissions.dashboard') }}"><i class="fas fa-arrow-left"></i> {{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
+  </div>
 </div>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-white">
-        <h6 class="mb-0"><i class="fas fa-info-circle text-primary me-2"></i>Admission Summary</h6>
-    </div>
-    <div class="card-body">
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card-premium">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-info-circle" style="color:var(--ihis-primary)"></i> {{ 'ملخص الدخول' if g.lang == 'ar' else 'Admission Summary' }}</div>
+      </div>
+      <div class="card-body">
         <dl class="row mb-0">
-            <dt class="col-sm-3 text-muted">Patient</dt>
-            <dd class="col-sm-9">{{ admission.patient.user.full_name if admission.patient and admission.patient.user else 'Unknown' }}</dd>
-            <dt class="col-sm-3 text-muted">Admission #</dt>
-            <dd class="col-sm-9">{{ admission.admission_no }}</dd>
-            <dt class="col-sm-3 text-muted">Ward / Bed</dt>
-            <dd class="col-sm-9">{{ admission.ward.name if admission.ward else '-' }} / {{ admission.bed.bed_no if admission.bed else '-' }}</dd>
-            <dt class="col-sm-3 text-muted">Admitted</dt>
-            <dd class="col-sm-9">{{ admission.admitted_at.strftime('%d %b %Y') if admission.admitted_at else '-' }} ({{ admission.days_stayed() }} day(s))</dd>
-            <dt class="col-sm-3 text-muted">Reason for Admission</dt>
-            <dd class="col-sm-9">{{ admission.reason or '-' }}</dd>
+          <dt class="col-sm-4 cell-muted">{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</dt>
+          <dd class="col-sm-8">{{ admission.patient.user.full_name if admission.patient and admission.patient.user else 'Unknown' }}</dd>
+          <dt class="col-sm-4 cell-muted">{{ 'رقم الدخول' if g.lang == 'ar' else 'Admission #' }}</dt>
+          <dd class="col-sm-8"><span class="cell-primary">{{ admission.admission_no }}</span></dd>
+          <dt class="col-sm-4 cell-muted">{{ 'الجناح / السرير' if g.lang == 'ar' else 'Ward / Bed' }}</dt>
+          <dd class="col-sm-8">{{ admission.ward.name if admission.ward else '-' }} / {{ admission.bed.bed_no if admission.bed else '-' }}</dd>
+          <dt class="col-sm-4 cell-muted">{{ 'تاريخ الدخول' if g.lang == 'ar' else 'Admitted' }}</dt>
+          <dd class="col-sm-8">{{ admission.admitted_at.strftime('%d %b %Y') if admission.admitted_at else '-' }} ({{ admission.days_stayed() }} {{ 'يوم/أيام' if g.lang == 'ar' else 'day(s)' }})</dd>
+          <dt class="col-sm-4 cell-muted">{{ 'سبب الدخول' if g.lang == 'ar' else 'Reason' }}</dt>
+          <dd class="col-sm-8">{{ admission.reason or '-' }}</dd>
         </dl>
+      </div>
     </div>
-</div>
+  </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-white">
-        <h6 class="mb-0"><i class="fas fa-file-medical text-success me-2"></i>Discharge Summary</h6>
-    </div>
-    <div class="card-body">
+  <div class="col-lg-7">
+    <div class="card-premium">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-success)"></i> {{ 'ملخص الخروج' if g.lang == 'ar' else 'Discharge Summary' }}</div>
+      </div>
+      <div class="card-body">
         <form method="POST" action="{{ url_for('admissions.discharge', id=admission.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-3">
-                <label for="discharge_diagnosis" class="form-label">Discharge Diagnosis</label>
-                <input type="text" class="form-control" id="discharge_diagnosis" name="discharge_diagnosis"
-                       placeholder="e.g. Community-acquired pneumonia, resolved">
-            </div>
-            <div class="mb-3">
-                <label for="discharge_summary" class="form-label">Clinical Summary</label>
-                <textarea class="form-control" id="discharge_summary" name="discharge_summary" rows="4"
-                          placeholder="Summary of the admission, treatments given, and response..."></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="discharge_medications" class="form-label">Medications on Discharge</label>
-                <textarea class="form-control" id="discharge_medications" name="discharge_medications" rows="2"
-                          placeholder="e.g. Amoxicillin 500mg TID x 7 days; Paracetamol 1g PRN"></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="follow_up_instructions" class="form-label">Follow-Up Instructions</label>
-                <textarea class="form-control" id="follow_up_instructions" name="follow_up_instructions" rows="2"
-                          placeholder="Clinic follow-up date, warning signs, lifestyle advice..."></textarea>
-            </div>
-            <div class="mb-4">
-                <label for="discharge_notes" class="form-label">Nursing / Discharge Notes</label>
-                <textarea class="form-control" id="discharge_notes" name="discharge_notes" rows="3"
-                          placeholder="Additional notes for the discharge record..."></textarea>
-            </div>
-            <button type="submit" class="btn btn-success"
-                    onclick="return confirm('Confirm discharge? The summary will be recorded and the bed released.')">
-                <i class="fas fa-check me-1"></i>Confirm Discharge
-            </button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label class="form-label-ihs" for="discharge_diagnosis">{{ 'تشخيص الخروج' if g.lang == 'ar' else 'Discharge Diagnosis' }} <span class="required">*</span></label>
+            <input type="text" class="form-control" id="discharge_diagnosis" name="discharge_diagnosis"
+                   placeholder="{{ 'مثال: التهاب رئوي مجتمعي النمط، تم علاجه' if g.lang == 'ar' else 'e.g. Community-acquired pneumonia, resolved' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label-ihs" for="discharge_summary">{{ 'الملخص السريري' if g.lang == 'ar' else 'Clinical Summary' }} <span class="required">*</span></label>
+            <textarea class="form-control" id="discharge_summary" name="discharge_summary" rows="4"
+                      placeholder="{{ 'ملخص الدخول والعلاجات المعطاة والاستجابة...' if g.lang == 'ar' else 'Summary of the admission, treatments given, and response...' }}"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label-ihs" for="discharge_medications">{{ 'الأدوية عند الخروج' if g.lang == 'ar' else 'Medications on Discharge' }}</label>
+            <textarea class="form-control" id="discharge_medications" name="discharge_medications" rows="2"
+                      placeholder="{{ 'مثال: أموكسيسيلين 500 ملغ 3 مرات يومياً لمدة 7 أيام...' if g.lang == 'ar' else 'e.g. Amoxicillin 500mg TID x 7 days; Paracetamol 1g PRN' }}"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label-ihs" for="follow_up_instructions">{{ 'تعليمات المتابعة' if g.lang == 'ar' else 'Follow-Up Instructions' }}</label>
+            <textarea class="form-control" id="follow_up_instructions" name="follow_up_instructions" rows="2"
+                      placeholder="{{ 'موعد العيادة، علامات التحذير، نصائح نمط الحياة...' if g.lang == 'ar' else 'Clinic follow-up date, warning signs, lifestyle advice...' }}"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label-ihs" for="discharge_notes">{{ 'ملاحظات التمريض / الخروج' if g.lang == 'ar' else 'Nursing / Discharge Notes' }}</label>
+            <textarea class="form-control" id="discharge_notes" name="discharge_notes" rows="3"
+                      placeholder="{{ 'ملاحظات إضافية لسجل الخروج...' if g.lang == 'ar' else 'Additional notes for the discharge record...' }}"></textarea>
+          </div>
+          <button type="submit" class="btn-ihs btn-ihs-success"
+                  onclick="return confirm('Confirm discharge? The summary will be recorded and the bed released.')"
+                  style="margin-top:var(--sp-2)">
+            <i class="fas fa-check"></i> {{ 'تأكيد الخروج' if g.lang == 'ar' else 'Confirm Discharge' }}
+          </button>
         </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

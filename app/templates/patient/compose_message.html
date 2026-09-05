@@ -1,41 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> Compose Message</h4>
-    <a href="{{ url_for('patient.messages') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left"></i> Back
-    </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'إرسال رسالة' if g.lang == 'ar' else 'Compose Message' }}</h1>
+        <p class="page-subtitle">{{ 'إرسال رسالة جديدة لطبيبك' if g.lang == 'ar' else 'Send a new message to your doctor' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('patient.messages') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
+        </a>
+    </div>
 </div>
 
 <div class="row">
     <div class="col-md-8">
-        <div class="card card-shadow">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--ihis-primary)"></i> {{ 'رسالة جديدة' if g.lang == 'ar' else 'New Message' }}</div>
+            </div>
             <div class="card-body">
                 <form method="post" action="{{ url_for('patient.compose_message') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label">To</label>
-                            <select name="doctor_id" class="form-select" required>
-                                <option value="">-- Select Doctor --</option>
-                                {% if doctor %}
-                                <option value="{{ doctor.id }}" selected>
-                                    {{ doctor.user.full_name if doctor.user else 'Doctor #' + doctor.id|string }}
-                                </option>
-                                {% endif %}
-                            </select>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'إلى' if g.lang == 'ar' else 'To' }} [<span class="required">*</span>]</label>
+                                <select name="doctor_id" class="form-control" required>
+                                    <option value="">{{ '-- اختر الطبيب --' if g.lang == 'ar' else '-- Select Doctor --' }}</option>
+                                    {% if doctor %}
+                                    <option value="{{ doctor.id }}" selected>
+                                        {{ doctor.user.full_name if doctor.user else 'Doctor #' + doctor.id|string }}
+                                    </option>
+                                    {% endif %}
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Subject</label>
-                            <input type="text" name="subject" class="form-control" required>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الموضوع' if g.lang == 'ar' else 'Subject' }} [<span class="required">*</span>]</label>
+                                <input type="text" name="subject" class="form-control" required>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Body</label>
-                            <textarea name="body" class="form-control" rows="5" required></textarea>
+                            <div class="form-group">
+                                <label class="form-label-ihs">{{ 'الرسالة' if g.lang == 'ar' else 'Body' }} [<span class="required">*</span>]</label>
+                                <textarea name="body" class="form-control" rows="5" required></textarea>
+                            </div>
                         </div>
                         <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Send Message
+                            <button type="submit" class="btn-ihs btn-ihs-primary">
+                                <i class="fas fa-paper-plane"></i> {{ 'إرسال الرسالة' if g.lang == 'ar' else 'Send Message' }}
                             </button>
                         </div>
                     </div>

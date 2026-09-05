@@ -1,113 +1,139 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-braces text-primary"></i> Orthodontic Cases</h4>
-
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-plus-circle"></i> New Orthodontic Case</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('dentistry.ortho') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Patient <span class="text-danger">*</span></label>
-                    <select class="form-select" name="patient_id" required>
-                        <option value="">Select patient...</option>
-                        {% for patient in patients %}
-                        <option value="{{ patient.id }}">{{ patient.user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Case Type</label>
-                    <input type="text" class="form-control" name="case_type"
-                           placeholder="E.g. Class II malocclusion">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Appliance</label>
-                    <input type="text" class="form-control" name="appliance"
-                           placeholder="E.g. Fixed braces, Invisalign, Retainer">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control" name="start_date">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Estimated End Date</label>
-                    <input type="date" class="form-control" name="estimated_end_date">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="status">
-                        <option value="Active">Active</option>
-                        <option value="Planning">Planning</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Discontinued">Discontinued</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Progress (%)</label>
-                    <input type="number" class="form-control" name="progress" min="0" max="100" value="0">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <textarea class="form-control" name="notes" rows="3"
-                              placeholder="Optional clinical notes"></textarea>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-plus me-1"></i>Create Case</button>
-        </form>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'حالات التقويم' if g.lang == 'ar' else 'Orthodontic Cases' }}</h1>
+        <p class="page-subtitle">{{ 'إدارة وتتبع حالات تقويم الأسنان' if g.lang == 'ar' else 'Manage and track orthodontic cases' }}</p>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5><i class="fas fa-list"></i> Case List</h5>
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'حالة تقويم جديدة' if g.lang == 'ar' else 'New Orthodontic Case' }}</div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dentistry.ortho') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'المرضى' if g.lang == 'ar' else 'Patient' }} <span class="required">*</span></label>
+                        <select class="form-control" name="patient_id" required>
+                            <option value="">{{ 'اختر مريض...' if g.lang == 'ar' else 'Select patient...' }}</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.user.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نوع الحالة' if g.lang == 'ar' else 'Case Type' }}</label>
+                        <input type="text" class="form-control" name="case_type"
+                               placeholder="{{ 'مثال: خلل اصطفاف في الوجه الثاني' if g.lang == 'ar' else 'E.g. Class II malocclusion' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الجهاز' if g.lang == 'ar' else 'Appliance' }}</label>
+                        <input type="text" class="form-control" name="appliance"
+                               placeholder="{{ 'مثال: تقويم ثابت، إنفيسلاين، حفاظ' if g.lang == 'ar' else 'E.g. Fixed braces, Invisalign, Retainer' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'تاريخ البداية' if g.lang == 'ar' else 'Start Date' }}</label>
+                        <input type="date" class="form-control" name="start_date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التاريخ المقدر للنهاية' if g.lang == 'ar' else 'Estimated End Date' }}</label>
+                        <input type="date" class="form-control" name="estimated_end_date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</label>
+                        <select class="form-control" name="status">
+                            <option value="Active">{{ 'نشط' if g.lang == 'ar' else 'Active' }}</option>
+                            <option value="Planning">{{ 'قيد التخطيط' if g.lang == 'ar' else 'Planning' }}</option>
+                            <option value="Completed">{{ 'مكتمل' if g.lang == 'ar' else 'Completed' }}</option>
+                            <option value="Discontinued">{{ 'متوقف' if g.lang == 'ar' else 'Discontinued' }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'التقدم (%)' if g.lang == 'ar' else 'Progress (%)' }}</label>
+                        <input type="number" class="form-control" name="progress" min="0" max="100" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</label>
+                        <textarea class="form-control" name="notes" rows="3"
+                                  placeholder="{{ 'ملاحظات سريرية اختيارية' if g.lang == 'ar' else 'Optional clinical notes' }}"></textarea>
+                    </div>
+                    <div style="margin-top:var(--sp-4)">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-plus"></i> {{ 'إنشاء حالة' if g.lang == 'ar' else 'Create Case' }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Patient</th>
-                        <th>Case Type</th>
-                        <th>Appliance</th>
-                        <th>Start</th>
-                        <th>Est. End</th>
-                        <th>Status</th>
-                        <th>Progress</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for case in cases %}
-                    <tr>
-                        <td>{{ case.id }}</td>
-                        <td>{{ case.patient.user.full_name }}</td>
-                        <td>{{ case.case_type or 'N/A' }}</td>
-                        <td>{{ case.appliance or 'N/A' }}</td>
-                        <td>{{ case.start_date.strftime('%Y-%m-%d') if case.start_date else 'N/A' }}</td>
-                        <td>{{ case.estimated_end_date.strftime('%Y-%m-%d') if case.estimated_end_date else 'N/A' }}</td>
-                        <td>
-                            <span class="badge {{ 'bg-success' if case.status == 'Active' else 'bg-secondary' }}">
-                                {{ case.status }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="progress" style="min-width: 120px;">
-                                <div class="progress-bar" role="progressbar"
-                                     style="width: {{ case.progress or 0 }}%">{{ case.progress or 0 }}%</div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8" class="text-center">No orthodontic cases yet.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+    <div class="col-lg-7">
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-info)"></i> {{ 'قائمة الحالات' if g.lang == 'ar' else 'Case List' }}</div>
+            </div>
+            <div class="card-body flush">
+                <div class="table-wrapper">
+                    <table class="table-ihs">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>{{ 'المرضى' if g.lang == 'ar' else 'Patient' }}</th>
+                                <th>{{ 'نوع الحالة' if g.lang == 'ar' else 'Case Type' }}</th>
+                                <th>{{ 'الجهاز' if g.lang == 'ar' else 'Appliance' }}</th>
+                                <th>{{ 'البداية' if g.lang == 'ar' else 'Start' }}</th>
+                                <th>{{ 'النهاية المقدرة' if g.lang == 'ar' else 'Est. End' }}</th>
+                                <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                                <th>{{ 'التقدم' if g.lang == 'ar' else 'Progress' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in cases %}
+                            <tr>
+                                <td><span class="t-num">{{ case.id }}</span></td>
+                                <td><span class="cell-primary">{{ case.patient.user.full_name }}</span></td>
+                                <td><span class="cell-secondary">{{ case.case_type or 'N/A' }}</span></td>
+                                <td><span class="tag-ihs">{{ case.appliance or 'N/A' }}</span></td>
+                                <td><span class="cell-muted">{{ case.start_date.strftime('%Y-%m-%d') if case.start_date else 'N/A' }}</span></td>
+                                <td><span class="cell-muted">{{ case.estimated_end_date.strftime('%Y-%m-%d') if case.estimated_end_date else 'N/A' }}</span></td>
+                                <td>
+                                    {% if case.status == 'Active' %}
+                                    <span class="status-badge s-active">{{ case.status }}</span>
+                                    {% elif case.status == 'Completed' %}
+                                    <span class="status-badge s-completed">{{ case.status }}</span>
+                                    {% elif case.status == 'Planning' %}
+                                    <span class="status-badge s-pending">{{ case.status }}</span>
+                                    {% else %}
+                                    <span class="status-badge s-cancelled">{{ case.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="min-width:120px">
+                                        <div style="display:flex;align-items:center;gap:var(--sp-2)">
+                                            <div style="flex:1;height:6px;border-radius:3px;background:var(--ihis-surface-inset);overflow:hidden">
+                                                <div style="height:100%;width:{{ case.progress or 0 }}%;border-radius:3px;background:var(--ihis-primary);transition:width 0.3s"></div>
+                                            </div>
+                                            <span class="t-num" style="font-size:0.75rem;white-space:nowrap">{{ case.progress or 0 }}%</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8">
+                                    <div class="empty-state">
+                                        <div class="empty-icon"><i class="fas fa-braces"></i></div>
+                                        <div class="empty-title">{{ 'لا توجد حالات تقويم بعد' if g.lang == 'ar' else 'No orthodontic cases yet' }}</div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -1,25 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-x-ray me-2 text-primary"></i>AI Radiology Summary</h4>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('radiology.orders') }}">
-        <i class="fas fa-arrow-left me-1"></i>Back</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'ملخص الأشعة بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Radiology Summary' }}</h1>
+        <p class="page-subtitle">{{ result.imaging_type }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.orders') }}">
+            <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-white fw-bold">{{ result.imaging_type }}</div>
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-x-ray" style="color:var(--ihis-info)"></i> {{ result.imaging_type }} <span class="tag-ihs">AI</span></div>
+    </div>
     <div class="card-body">
-        <p class="mb-1"><strong>Patient:</strong>
+        <p class="mb-1"><strong>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}:</strong>
             {{ order.patient.user.full_name if order.patient else '-' }}
-            &nbsp; <span class="badge bg-secondary">{{ order.status }}</span>
-        <p class="small text-muted mb-0"><strong>Order date:</strong>
+            &nbsp; <span class="status-badge s-completed">{{ order.status }}</span>
+        <p class="small cell-muted mb-0"><strong>{{ 'تاريخ الطلب' if g.lang == 'ar' else 'Order date' }}:</strong>
             {{ order.order_date.strftime('%Y-%m-%d') if order.order_date else '-' }}</p>
         <hr>
-        <h6 class="fw-bold">Findings</h6>
+        <div class="t-h3" style="margin-bottom:0.25rem">{{ 'النتائج' if g.lang == 'ar' else 'Findings' }}</div>
         <p>{{ result.findings }}</p>
-        <h6 class="fw-bold">Impression</h6>
+        <div class="t-h3" style="margin-bottom:0.25rem">{{ 'الانطباع' if g.lang == 'ar' else 'Impression' }}</div>
         <p>{{ result.impression }}</p>
-        <h6 class="fw-bold">Recommendation</h6>
+        <div class="t-h3" style="margin-bottom:0.25rem">{{ 'التوصية' if g.lang == 'ar' else 'Recommendation' }}</div>
         <p>{{ result.recommendation }}</p>
     </div>
 </div>

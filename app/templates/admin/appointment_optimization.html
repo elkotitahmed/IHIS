@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-calendar-check" style="color:var(--ihis-primary)"></i>
+            {{ 'تحسين المواعيد (AI)' if g.lang == 'ar' else 'Appointment Optimization (AI)' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'توصيات إنتاجية لكل طبيب استناداً إلى عدد المواعيد المحجوزة.' if g.lang == 'ar' else 'Per-doctor capacity recommendation based on booked appointments.' }}
+        </p>
+    </div>
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-doctor" style="color:var(--ihis-primary)"></i> {{ 'الأطباء' if g.lang == 'ar' else 'Doctors' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" style="font-size:0.8125rem">
+                <thead style="color:var(--ihis-text-muted);font-size:0.75rem">
+                    <tr>
+                        <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                        <th>{{ 'التخصص' if g.lang == 'ar' else 'Specialty' }}</th>
+                        <th>{{ 'المواعيد المحجوزة' if g.lang == 'ar' else 'Booked' }}</th>
+                        <th>{{ 'التوصية' if g.lang == 'ar' else 'Recommendation' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td style="font-weight:500">{{ row.doctor.user.full_name if row.doctor.user else '-' }}</td>
+                        <td>{{ row.doctor.specialty.name if row.doctor.specialty else '-' }}</td>
+                        <td>
+                            <span class="status-badge {{ 's-cancelled' if row.booked_appointments and row.booked_appointments >= 20 else 's-completed' }}" style="font-size:0.6875rem">{{ row.booked_appointments }}</span>
+                        </td>
+                        <td style="color:{{ 'var(--ihis-danger)' if row.booked_appointments and row.booked_appointments >= 20 else 'var(--ihis-success)' }}">{{ row.recommendation }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--ihis-text-muted)">{{ 'لا يوجد أطباء.' if g.lang == 'ar' else 'No doctors.' }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

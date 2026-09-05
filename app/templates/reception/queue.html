@@ -1,55 +1,65 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4"><i class="fas fa-people-arrows text-primary"></i> Waiting Queue</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'قائمة الانتظار' if g.lang == 'ar' else 'Waiting Queue' }}</h1>
+        <p class="page-subtitle">{{ 'المريضون المنتظرون للفحص' if g.lang == 'ar' else 'Patients waiting to be seen' }}</p>
+    </div>
+</div>
 
-<div class="card card-shadow">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-people-arrows" style="color:var(--ihis-primary)"></i> {{ 'قائمة الانتظار' if g.lang == 'ar' else 'Waiting Queue' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Patient</th>
-                        <th>Doctor</th>
-                        <th>Scheduled At</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                        <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                        <th>{{ 'الموعد' if g.lang == 'ar' else 'Scheduled At' }}</th>
+                        <th>{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'الإجراءات' if g.lang == 'ar' else 'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr>
-                        <td>{{ item.id }}</td>
-                        <td>{{ item.patient.user.full_name if item.patient else 'N/A' }}</td>
-                        <td>{{ item.doctor.user.full_name if item.doctor else 'N/A' }}</td>
-                        <td>{{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') if item.scheduled_at else 'N/A' }}</td>
+                        <td><span class="t-num">{{ item.id }}</span></td>
+                        <td><span class="cell-primary">{{ item.patient.user.full_name if item.patient else 'N/A' }}</span></td>
+                        <td><span class="cell-secondary">{{ item.doctor.user.full_name if item.doctor else 'N/A' }}</span></td>
+                        <td><span class="cell-mono">{{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') if item.scheduled_at else 'N/A' }}</span></td>
                         <td>
-                            <span class="badge {{ 'bg-danger' if item.priority == 'High' else 'bg-warning' if item.priority == 'Medium' else 'bg-info' }}">
-                                {{ item.priority }}
-                            </span>
+                            <span class="status-badge {{ 's-rejected' if item.priority == 'High' else 's-warning' if item.priority == 'Medium' else 's-info' }}">{{ item.priority }}</span>
                         </td>
                         <td>
-                            <span class="badge {{ 'bg-success' if item.status == 'CheckedIn' else 'bg-primary' }}">
-                                {{ item.status }}
-                            </span>
+                            <span class="status-badge {{ 's-active' if item.status == 'CheckedIn' else 's-scheduled' }}">{{ item.status }}</span>
                         </td>
                         <td>
                             {% if item.status == 'Scheduled' %}
                             <form action="{{ url_for('reception.checkin', id=item.id) }}" method="post" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="fas fa-user-check"></i> Check In
+                                <button type="submit" class="btn-ihs btn-ihs-sm btn-ihs-success">
+                                    <i class="fas fa-user-check"></i> {{ 'تسجيل الحضور' if g.lang == 'ar' else 'Check In' }}
                                 </button>
                             </form>
                             {% else %}
-                            <span class="text-muted">Called / In session</span>
+                            <span class="cell-muted">{{ 'تم الاستدعاء' if g.lang == 'ar' else 'Called / In session' }}</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">The waiting queue is empty.</td>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-clock"></i></div>
+                                <div class="empty-title">{{ 'قائمة الانتظار فارغة' if g.lang == 'ar' else 'The waiting queue is empty.' }}</div>
+                                <div class="empty-desc">{{ 'لا يوجد مريضون في قائمة الانتظار حالياً' if g.lang == 'ar' else 'No patients are currently waiting.' }}</div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

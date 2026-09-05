@@ -62,20 +62,65 @@ def evaluate_lab_abnormality(result_value, normal_range):
     return None
 
 
-def apply_lab_abnormality(result, order):
+def evaluate_lab_criticality(result_value, critical_low, critical_high):
+    """Decide whether a numeric lab result breaches a critical (panic) bound.
+
+    Returns ``True`` when the value is below ``critical_low`` or above
+    ``critical_high``, ``False`` when both bounds are configured and the value
+    sits inside them, and ``None`` when no bound is configured or the value is
+    non-numeric (cannot be evaluated)."""
+    if not result_value or (critical_low is None and critical_high is None):
+        return None
+    try:
+        value = float(str(result_value).strip())
+    except (TypeError, ValueError):
+        return None
+    if critical_low is not None and value < float(critical_low):
+        return True
+    if critical_high is not None and value > float(critical_high):
+        return True
+    if critical_low is not None or critical_high is not None:
+        return False
+    return None
+
+
+def apply_lab_abnormality(result, order, manual_abnormal=False):
     """Set ``result.is_abnormal`` from the order's test reference range.
 
-    Respects the explicit manual checkbox when available, otherwise derives the
-    flag automatically. Returns the flag actually stored."""
+    Derives the flag automatically when a numeric range is available; an
+    explicit operator choice is always respected (manual wins). Returns the
+    flag actually stored."""
     test = order.test if order is not None else None
     auto = evaluate_lab_abnormality(result.result_value,
                                     test.normal_range if test else None)
     if auto is True:
         result.is_abnormal = True
-    elif auto is False:
+    elif auto is False and not manual_abnormal:
         result.is_abnormal = False
-    # auto is None -> leave whatever the operator chose.
+    # auto not evaluable -> leave whatever the operator chose.
+    if manual_abnormal:
+        result.is_abnormal = True
     return result.is_abnormal
+
+
+def apply_lab_criticality(result, order, manual_critical=False):
+    """Set ``result.is_critical`` from the test's panic thresholds.
+
+    Auto-flags ``True`` when the numeric value crosses ``critical_low`` /
+    ``critical_high``; auto-clears when thresholds exist and the value is safe
+    unless the operator explicitly overrides. Returns the flag stored."""
+    test = order.test if order is not None else None
+    auto = evaluate_lab_criticality(result.result_value,
+                                    test.critical_low if test else None,
+                                    test.critical_high if test else None)
+    if auto is True:
+        result.is_critical = True
+    elif auto is False and not manual_critical:
+        result.is_critical = False
+    # auto not evaluable -> leave whatever the operator chose.
+    if manual_critical:
+        result.is_critical = True
+    return result.is_critical
 
 
 def has_appointment_conflict(doctor_id, scheduled_at, duration_minutes,

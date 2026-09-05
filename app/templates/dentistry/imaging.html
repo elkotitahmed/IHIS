@@ -2,71 +2,91 @@
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">Patients</a></li>
-        <li class="breadcrumb-item active">Dental Imaging</li>
+        <li class="breadcrumb-item"><a href="{{ url_for('dentistry.patients') }}">{{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</a></li>
+        <li class="breadcrumb-item active">{{ 'التصوير السني' if g.lang == 'ar' else 'Dental Imaging' }}</li>
     </ol>
 </nav>
 
-<div class="card card-shadow mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-x-ray"></i> Upload Dental Images - {{ patient.user.full_name }}</h5>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'تصوير الأسنان' if g.lang == 'ar' else 'Dental Imaging' }} ? {{ patient.user.full_name }}</h1>
+        <p class="page-subtitle">{{ 'رفع وعرض صور الأسنان للمريض' if g.lang == 'ar' else 'Upload and view dental images for the patient' }}</p>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium mb-4">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-upload" style="color:var(--ihis-success)"></i> {{ 'رفع صور جديدة' if g.lang == 'ar' else 'Upload New Images' }}</div>
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('dentistry.imaging', patient_id=patient.id) }}"
               enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="row g-3">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <label class="form-label">Image Type</label>
-                    <select class="form-select" name="image_type">
-                        <option value="Periapical">Periapical</option>
-                        <option value="Bitewing">Bitewing</option>
-                        <option value="Panoramic">Panoramic</option>
-                        <option value="CBCT">CBCT</option>
-                        <option value="Intraoral">Intraoral</option>
-                        <option value="Extraoral">Extraoral</option>
-                        <option value="3D">3D</option>
-                    </select>
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'نوع الصورة' if g.lang == 'ar' else 'Image Type' }}</label>
+                        <select class="form-control" name="image_type">
+                            <option value="Periapical">{{ 'ذروية' if g.lang == 'ar' else 'Periapical' }}</option>
+                            <option value="Bitewing">{{ 'جناحية' if g.lang == 'ar' else 'Bitewing' }}</option>
+                            <option value="Panoramic">{{ 'شاملة' if g.lang == 'ar' else 'Panoramic' }}</option>
+                            <option value="CBCT">CBCT</option>
+                            <option value="Intraoral">{{ 'داخل الفم' if g.lang == 'ar' else 'Intraoral' }}</option>
+                            <option value="Extraoral">{{ 'خارج الفم' if g.lang == 'ar' else 'Extraoral' }}</option>
+                            <option value="3D">3D</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="col-md-8">
-                    <label class="form-label">Images (PNG / JPG / JPEG)</label>
-                    <input type="file" class="form-control" name="images" multiple accept=".png,.jpg,.jpeg">
+                    <div class="form-group">
+                        <label class="form-label-ihs">{{ 'الصور (PNG / JPG / JPEG)' if g.lang == 'ar' else 'Images (PNG / JPG / JPEG)' }}</label>
+                        <input type="file" class="form-control" name="images" multiple accept=".png,.jpg,.jpeg">
+                    </div>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-upload me-1"></i>Upload Images</button>
+            <div style="margin-top:var(--sp-4)">
+                <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-upload"></i> {{ 'رفع الصور' if g.lang == 'ar' else 'Upload Images' }}</button>
+            </div>
         </form>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-transparent">
-        <h5><i class="fas fa-images"></i> Uploaded Images</h5>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-images" style="color:var(--ihis-info)"></i> {{ 'الصور المرفوعة' if g.lang == 'ar' else 'Uploaded Images' }}</div>
     </div>
     <div class="card-body">
-        <div class="row g-3">
+        <div class="row g-4">
             {% for image in images %}
             <div class="col-md-3 col-sm-6">
-                <div class="card h-100">
-                    <a href="{{ url_for('dentistry.download_image', image_id=image.id) }}" target="_blank">
-                        <img src="{{ url_for('dentistry.download_image', image_id=image.id) }}" class="card-img-top" style="height:160px; object-fit:cover;"
+                <div class="card-premium" style="overflow:hidden">
+                    <a href="{{ url_for('dentistry.download_image', image_id=image.id) }}" target="_blank" style="display:block">
+                        <img src="{{ url_for('dentistry.download_image', image_id=image.id) }}" style="width:100%;height:160px;object-fit:cover;display:block"
                              alt="Dental image {{ image.id }}">
                     </a>
-                    <div class="card-body p-2">
-                        <span class="badge bg-primary">{{ image.image_type or 'Image' }}</span>
-                        <small class="d-block text-muted mt-1">{{ image.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                    <div style="padding:var(--sp-3);display:flex;align-items:center;justify-content:space-between">
+                        <span class="status-badge s-active">{{ image.image_type or 'Image' }}</span>
+                        <span style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ image.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</span>
                     </div>
                 </div>
             </div>
             {% else %}
             <div class="col-12">
-                <p class="text-muted mb-0">No images uploaded yet.</p>
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-images"></i></div>
+                    <div class="empty-title">{{ 'لم يتم رفع أي صور بعد' if g.lang == 'ar' else 'No images uploaded yet' }}</div>
+                </div>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
-<a href="{{ url_for('dentistry.ortho') }}" class="btn btn-outline-secondary mt-3">
-    <i class="fas fa-arrow-right me-1"></i>Orthodontic Cases
-</a>
+<div style="margin-top:var(--sp-4)">
+    <a href="{{ url_for('dentistry.ortho') }}" class="btn-ihs btn-ihs-outline">
+        <i class="fas fa-arrow-right"></i> {{ 'حالات التقويم' if g.lang == 'ar' else 'Orthodontic Cases' }}
+    </a>
+</div>
 {% endblock %}

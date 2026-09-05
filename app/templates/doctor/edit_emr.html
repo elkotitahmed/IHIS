@@ -1,53 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Medical Record</h3>
-    <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Patient</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'تعديل السجل الطبي' if g.lang == 'ar' else 'Edit Medical Record' }}</h1>
+        <p class="page-subtitle">{{ 'تعديل سجل سريري موجود' if g.lang == 'ar' else 'Amend an existing clinical record' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-arrow-left"></i> {{ 'العودة للمريض' if g.lang == 'ar' else 'Back to Patient' }}
+        </a>
+    </div>
 </div>
 
-<div class="row">
+{% include 'clinical/_patient_header.html' %}
+
+<div class="row g-4">
     <div class="col-lg-8">
-        <div class="card card-shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Record for {{ patient.user.full_name if patient and patient.user else 'Patient' }}</h5>
+        <div class="card-premium">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-file-pen" style="color:var(--ihis-primary)"></i> {{ 'سجل' if g.lang == 'ar' else 'Record for' }} {{ patient.user.full_name if patient and patient.user else 'Patient' }}</div>
                 {% if record.status == 'Signed' %}
-                <span class="badge bg-success">Signed &amp; Locked</span>
+                <span class="status-badge s-signed">Signed &amp; Locked</span>
                 {% else %}
-                <span class="badge bg-warning text-dark">Draft</span>
+                <span class="status-badge s-draft">Draft</span>
                 {% endif %}
             </div>
             <div class="card-body">
                 {% if record.status == 'Signed' %}
-                <div class="alert alert-warning d-flex align-items-center" role="alert">
-                    <i class="fas fa-lock me-2"></i>
-                    <div>This record is <strong>signed and locked</strong>. Your changes require a reason and will reopen the record for re-signing.</div>
+                <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);background:var(--ihis-surface-inset);border-radius:var(--radius-md);border-left:3px solid var(--ihis-warning);margin-bottom:var(--sp-4)">
+                    <i class="fas fa-lock" style="color:var(--ihis-warning);font-size:1.1rem"></i>
+                    <div style="font-size:0.8125rem;color:var(--ihis-text-secondary)">
+                        {{ 'هذا السجل موقّع ومُقفل. تتطلب تغييراتك سبباً وستفتح السجل لإعادة التوقيع.' if g.lang == 'ar' else 'This record is <strong>signed and locked</strong>. Your changes require a reason and will reopen the record for re-signing.' }}
+                    </div>
                 </div>
                 {% endif %}
                 <form method="POST" action="{{ url_for('doctor.edit_emr', record_id=record.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     {% if record.status == 'Signed' %}
-                    <div class="mb-3">
-                        <label for="reason" class="form-label">Amendment Reason <span class="text-danger">*</span></label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="reason">{{ 'سبب التعديل' if g.lang == 'ar' else 'Amendment Reason' }} <span class="required">*</span></label>
                         <textarea class="form-control" id="reason" name="reason" rows="2" required
-                                  placeholder="Why is this amendment being made?"></textarea>
+                                  placeholder="{{ 'لماذا يتم هذا التعديل؟' if g.lang == 'ar' else 'Why is this amendment being made?' }}"></textarea>
                     </div>
                     {% endif %}
-                    <div class="mb-3">
-                        <label for="diagnosis" class="form-label">Diagnosis</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="diagnosis">{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }} <span class="required">*</span></label>
                         <input type="text" class="form-control" id="diagnosis" name="diagnosis"
                                value="{{ record.diagnosis or '' }}" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="treatment_plan" class="form-label">Treatment Plan</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="treatment_plan">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</label>
                         <textarea class="form-control" id="treatment_plan" name="treatment_plan" rows="4">{{ record.treatment_plan or '' }}</textarea>
                     </div>
-                    <div class="mb-3">
-                        <label for="clinical_notes" class="form-label">Clinical Notes</label>
+                    <div class="form-group">
+                        <label class="form-label-ihs" for="clinical_notes">{{ 'ملاحظات سريرية' if g.lang == 'ar' else 'Clinical Notes' }}</label>
                         <textarea class="form-control" id="clinical_notes" name="clinical_notes" rows="4">{{ record.clinical_notes or '' }}</textarea>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Changes</button>
-                        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-4)">
+                        <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'حفظ التغييرات' if g.lang == 'ar' else 'Save Changes' }}</button>
+                        <a href="{{ url_for('doctor.patient_detail', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">{{ 'إلغاء' if g.lang == 'ar' else 'Cancel' }}</a>
                     </div>
                 </form>
             </div>

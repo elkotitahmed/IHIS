@@ -1,0 +1,82 @@
+<!-- Reusable patient header + safety strip (harvest: OpenMRS chart banner /
+     FHIR PatientBanner, native). Backed by PatientSafetyContext. Every page
+     that renders a specific patient for a clinician should include this so
+     allergies / active problems / open alerts are visible before acting. -->
+{% set al_all  = allergies if allergies is defined and allergies else [] %}
+{% set pr_all  = problems if problems is defined and problems else [] %}
+{% set oa_all  = open_alerts if open_alerts is defined and open_alerts else [] %}
+{% set am_all  = active_meds if active_meds is defined and active_meds else [] %}
+{% if patient is defined and patient %}
+<div class="patient-header">
+    <div class="patient-header-main">
+        <div class="patient-avatar-lg">{{ patient.user.full_name[:1] or 'P' }}</div>
+        <div style="min-width:0">
+            <div class="patient-header-name">
+                {{ patient.user.full_name }}
+                {% if patient.blood_type %}
+                <span class="tag-ihs" title="Blood type">{{ patient.blood_type }}</span>
+                {% endif %}
+            </div>
+            <div class="patient-header-meta">
+                <span>MRN {{ patient.mrn or '—' }}</span>
+                {% if patient.gender %}<span>· {{ patient.gender }}</span>{% endif %}
+                {% if patient.date_of_birth %}
+                <span>· {{ patient.date_of_birth.strftime('%d %b %Y') }}
+                    ({{ (today - patient.date_of_birth).days // 365 if today is defined else '' }} y)</span>
+                {% endif %}
+                {% if active_admission is defined and active_admission %}
+                <span class="status-badge s-active">Admitted · {{ active_admission.ward.name if active_admission.ward }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% if latest_vitals is defined and latest_vitals %}
+    <div class="patient-header-vitals">
+        <div style="text-align:center">
+            <div class="t-num" style="font-size:1.15rem">{{ latest_vitals.blood_pressure_systolic or '-' }}/{{ latest_vitals.blood_pressure_diastolic or '-' }}</div>
+            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">BP</div>
+        </div>
+        <div style="text-align:center">
+            <div class="t-num" style="font-size:1.15rem">{{ latest_vitals.heart_rate or '-' }}</div>
+            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">HR</div>
+        </div>
+        <div style="text-align:center">
+            <div class="t-num" style="font-size:1.15rem">{{ latest_vitals.oxygen_saturation or '-' }}%</div>
+            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">SpO₂</div>
+        </div>
+        <div style="text-align:center">
+            <div class="t-num" style="font-size:1.15rem">{{ latest_vitals.temperature or '-' }}°C</div>
+            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">Temp</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if oa_all or al_all or pr_all %}
+    <div class="patient-safety-strip">
+        {% for a in oa_all %}
+        <span class="safety-chip s-alert {{ 's-critical' if a.severity in ('HIGH','CRITICAL') else 's-low' if a.severity in ('INFO','LOW') else '' }}"
+              title="{{ a.title }} · {{ a.message if a.message }}">
+            <i class="fas fa-triangle-exclamation"></i> {{ a.severity }} {{ a.alert_type|replace('_',' ') }}
+        </span>
+        {% endfor %}
+        {% for al in al_all %}
+        <span class="safety-chip s-allergy" title="{{ al.reaction or '' }} {{ al.notes or '' }}">
+            <i class="fas fa-allergies"></i> {{ al.substance }}{% if al.severity %}<span style="opacity:.75"> · {{ al.severity }}</span>{% endif %}
+        </span>
+        {% endfor %}
+        {% for pr in pr_all %}
+        <span class="safety-chip s-problem" title="{{ pr.icd10_code or '' }} {{ pr.notes or '' }}">
+            <i class="fas fa-circle-plus"></i> {{ pr.description }}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if am_all %}
+    <div class="patient-header-meds">
+        <span class="meds-label"><i class="fas fa-pills"></i> Active meds:</span>
+        {% for m in am_all %}
+        <span class="tag-ihs">{{ m.medication.generic_name if m.medication else '—' }}{% if m.dosage %} {{ m.dosage }}{% endif %}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}

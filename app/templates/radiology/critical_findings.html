@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-exclamation-circle" style="color:var(--ihis-danger)"></i> {{ 'النتائج الحرجة' if g.lang == 'ar' else 'Critical Findings' }}</h1>
+        <p class="page-subtitle">{{ 'تتبع النتائج الحرجة وإشعار الأطباء' if g.lang == 'ar' else 'Track critical findings and physician notification' }}</p>
+    </div>
+</div>
+
+{% if findings %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr>
+            <th>{{ 'النتيجة' if g.lang == 'ar' else 'Finding' }}</th>
+            <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+            <th>{{ 'الدراسة' if g.lang == 'ar' else 'Study' }}</th>
+            <th>{{ 'ال investigating' if g.lang == 'ar' else 'Identified By' }}</th>
+            <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+            <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+        </tr></thead>
+        <tbody>
+        {% for f in findings %}
+        <tr>
+            <td><strong>{{ f.finding[:100] }}{{ '...' if f.finding|length > 100 }}</strong></td>
+            <td>{{ f.order.patient.user.full_name if f.order and f.order.patient and f.order.patient.user else '—' }}</td>
+            <td>{{ f.order.imaging_type.name if f.order and f.order.imaging_type else '—' }}</td>
+            <td>{{ f.reporter.full_name if f.reporter else '—' }}</td>
+            <td>
+                {% if f.acknowledged %}
+                <span class="badge bg-success"><i class="fas fa-check"></i> {{ 'تم التأكيد' if g.lang == 'ar' else 'Acknowledged' }}</span>
+                {% else %}
+                <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ 'في الانتظار' if g.lang == 'ar' else 'Pending' }}</span>
+                {% endif %}
+            </td>
+            <td class="cell-muted small">{{ f.identified_at.strftime('%Y-%m-%d %H:%M') if f.identified_at else '—' }}</td>
+            <td>
+                {% if not f.acknowledged and current_user.has_any_role('Doctor', 'Admin', 'SuperAdmin') %}
+                <form method="POST" action="{{ url_for('radiology.acknowledge_finding', finding_id=f.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'تأكيد' if g.lang == 'ar' else 'Acknowledge' }}</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card-premium">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-shield-alt fa-3x mb-3" style="color:var(--ihis-success)"></i>
+        <h5>{{ 'لا توجد نتائج حرجة' if g.lang == 'ar' else 'No Critical Findings' }}</h5>
+        <p class="cell-muted">{{ 'لا توجد نتائج حرجة معلقة حالياً.' if g.lang == 'ar' else 'No pending critical findings at this time.' }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

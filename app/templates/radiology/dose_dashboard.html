@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-radiation" style="color:var(--ihis-warning)"></i> {{ 'لوحة تعرض الإشعاع' if g.lang == 'ar' else 'Radiation Dose Dashboard' }}</h1>
+        <p class="page-subtitle">{{ 'تتبع التعرض الإشعاعي ومقارنة عتبات المؤسسة' if g.lang == 'ar' else 'Track radiation exposure and compare institutional thresholds' }}</p>
+    </div>
+</div>
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header"><div class="card-title"><i class="fas fa-user" style="color:var(--ihis-primary)"></i> {{ 'اختيار المريض' if g.lang == 'ar' else 'Select Patient' }}</div></div>
+    <div class="card-body">
+        <form method="GET" class="row g-2">
+            <div class="col-md-8">
+                <select class="form-select" name="patient_id" onchange="this.form.submit()">
+                    <option value="">{{ 'اختر مريضاً...' if g.lang == 'ar' else 'Select a patient...' }}</option>
+                    {% for p in patients %}
+                    <option value="{{ p.id }}" {% if selected_pid == p.id %}selected{% endif %}>
+                        {{ p.user.full_name }} ({{ p.mrn or 'N/A' }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if patient and annual %}
+<!-- Safety Alerts -->
+{% if alerts %}
+<div class="mb-4">
+    {% for alert in alerts %}
+    <div class="alert alert-{% if alert.severity == 'Critical' %}danger{% elif alert.severity in ['Important', 'Review Required'] %}warning{% else %}info{% endif %} d-flex align-items-center mb-2">
+        <i class="fas {% if alert.category == 'radiation' %}fa-radiation{% elif alert.category == 'contrast' %}fa-flask{% elif alert.category == 'renal' %}fa-kidneys{% else %}fa-info-circle{% endif %} me-2"></i>
+        <div><strong>{{ alert.title }}</strong><br><span class="small">{{ alert.message }}</span></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Annual Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-warning)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-warning)">{{ annual.total_studies }}</div>
+                <div class="cell-muted small">{{ 'إجمالي الدراسات' if g.lang == 'ar' else 'Total Studies' }} ({{ annual.year }})</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-danger)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-danger)">{{ annual.radiation_studies }}</div>
+                <div class="cell-muted small">{{ 'دراسات مُشعة' if g.lang == 'ar' else 'Radiation Studies' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-success)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-success)">{{ annual.non_radiation_studies }}</div>
+                <div class="cell-muted small">{{ 'غير مُشعة (MRI/US)' if g.lang == 'ar' else 'Non-Radiation (MRI/US)' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card-premium text-center" style="border-top:3px solid var(--ihis-info)">
+            <div class="card-body">
+                <div class="h2 fw-bold mb-0" style="color:var(--ihis-info)">{{ annual.total_effective_dose or '—' }}</div>
+                <div class="cell-muted small">{{ 'جرعة فعالة مقدرة (mSv)' if g.lang == 'ar' else 'Est. Effective Dose (mSv)' }}</div>
+                <div class="cell-muted" style="font-size:0.65rem">{{ annual.total_effective_dose_type }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Per-Modality Breakdown -->
+{% if annual.modalities %}
+<h5 class="fw-bold mb-3"><i class="fas fa-chart-bar"></i> {{ 'تفصيل حسب نوع الفحص' if g.lang == 'ar' else 'Breakdown by Modality' }}</h5>
+<div class="row g-3 mb-4">
+    {% for mod, data in annual.modalities.items() %}
+    <div class="col-lg-4 col-md-6">
+        <div class="card-premium h-100" style="border-left:4px solid {% if mod == 'CT' %}var(--ihis-danger){% elif mod == 'X-ray' %}var(--ihis-warning){% elif mod == 'Fluoroscopy' %}var(--ihis-info){% else %}var(--ihis-primary){% endif %}">
+            <div class="card-header">
+                <div class="card-title">{{ mod }}</div>
+                <span class="badge bg-primary">{{ data.count }} {{ 'دراسة' if g.lang == 'ar' else 'studies' }}</span>
+            </div>
+            <div class="card-body small">
+                {% if data.total_dlp > 0 %}
+                <div><strong>DLP:</strong> {{ data.total_dlp|int }} mGy·cm</div>
+                {% endif %}
+                {% if data.total_ctdi > 0 %}
+                <div><strong>CTDIvol:</strong> {{ data.total_ctdi|round(2) }} mGy</div>
+                {% endif %}
+                {% if data.total_dap > 0 %}
+                <div><strong>DAP:</strong> {{ data.total_dap|round(2) }} Gy·cm²</div>
+                {% endif %}
+                {% if data.total_effective > 0 %}
+                <div><strong>{{ 'الجرعة الفعالة' if g.lang == 'ar' else 'Effective Dose' }}:</strong> {{ data.total_effective|round(2) }} mSv
+                    <span class="badge {% if data.has_measured_dose %}bg-success{% else %}bg-warning text-dark{% endif %}" style="font-size:0.6rem">
+                        {{ 'مقاسة' if g.lang == 'ar' else 'Measured' if data.has_measured_dose else 'مقدرة' if g.lang == 'ar' else 'Estimated' }}
+                    </span>
+                </div>
+                {% endif %}
+                {% if data.missing_dose_count > 0 %}
+                <div class="text-warning"><i class="fas fa-exclamation-triangle"></i> {{ data.missing_dose_count }} {{ 'دراسة بدون بيانات جرعة' if g.lang == 'ar' else 'studies missing dose info' }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Cumulative -->
+{% if cumulative and cumulative.dose_available %}
+<h5 class="fw-bold mb-3"><i class="fas fa-history"></i> {{ 'التعرض التراكمي' if g.lang == 'ar' else 'Cumulative Exposure' }}</h5>
+<div class="card-premium mb-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="h4 fw-bold" style="color:var(--ihis-danger)">{{ cumulative.cumulative_effective_dose }} mSv</div>
+                <div class="cell-muted small">{{ 'الجرعة الفعالة التراكمية' if g.lang == 'ar' else 'Cumulative Effective Dose' }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="h4 fw-bold">{{ cumulative.total_records }}</div>
+                <div class="cell-muted small">{{ 'إجمالي دراسات الإشعاع' if g.lang == 'ar' else 'Total Radiation Studies' }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="cell-muted small text-start">
+                    {% for year, ydata in cumulative.by_year.items()|sort(reverse=True) %}
+                    <div>{{ year }}: {{ ydata.count }} {{ 'دراسة' if g.lang == 'ar' else 'studies' }} — {{ ydata.total_effective|round(2) }} mSv</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<p class="cell-muted small"><i class="fas fa-info-circle"></i> {{ 'MRI والتصوير بالصوت لا تستخدم إشعاعاً مؤينولاً EH/she/include في إجمالي الجرعة.' if g.lang == 'ar' else 'MRI and ultrasound do not use ionizing radiation and are not included in the dose total.' }}</p>
+
+{% elif patient %}
+<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>{{ 'لا توجد سجلات تعرض إشعاعي لهذا المريض.' if g.lang == 'ar' else 'No radiation exposure records found for this patient.' }}</div>
+{% endif %}
+{% endblock %}

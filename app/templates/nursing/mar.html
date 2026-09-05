@@ -1,24 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0"><i class="fas fa-pills me-2 text-primary"></i>Medication Administration Record</h4>
-    <a href="{{ url_for('nursing.patients') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Patients</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-pills" style="color:var(--ihis-primary)"></i> {{ 'سجل إعطاء الأدوية' if g.lang == 'ar' else 'Medication Administration Record' }}</h1>
+        <p class="page-subtitle"><span class="cell-primary">{{ patient.user.full_name }}</span> <span class="cell-muted ms-2">#<span class="t-num">{{ patient.id }}</span></span></p>
+    </div>
+<div class="page-actions">
+        <a href="{{ url_for('nursing.patients') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Patients' }}</a>
+    </div>
 </div>
 
-<div class="card card-shadow mb-3">
-    <div class="card-header bg-white">
-        <span class="fw-bold">{{ patient.user.full_name }}</span>
-        <span class="text-muted ms-2">#{{ patient.id }}</span>
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--ihis-success)"></i> {{ 'جدولة جرعة' if g.lang == 'ar' else 'Schedule a dose' }}</div>
     </div>
     <div class="card-body">
-        <details>
-            <summary class="fw-semibold"><i class="fas fa-plus-circle me-1 text-primary"></i>Schedule a dose</summary>
-            {% if active_rx and active_rx|length > 0 %}
-            <form method="POST" class="row g-2 mt-2">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="col-md-4">
-                    <select name="prescription_item_id" class="form-select" required>
-                        <option value="">-- Prescription item --</option>
+        {% if active_rx and active_rx|length > 0 %}
+        <form method="POST" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'عنصر الوصفة' if g.lang == 'ar' else 'Prescription item' }} [<span class="required">*</span>]</label>
+                    <select name="prescription_item_id" class="form-control" required>
+                        <option value="">-- {{ 'عنصر الوصفة' if g.lang == 'ar' else 'Prescription item' }} --</option>
                         {% for rx in active_rx %}
                             {% for item in rx.items %}
                                 {% if item.status != 'Cancelled' %}
@@ -28,95 +34,144 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'الوقت المجدول' if g.lang == 'ar' else 'Scheduled time' }}</label>
                     <input type="datetime-local" name="scheduled_time" class="form-control">
                 </div>
-                <div class="col-md-2">
-                    <input type="text" name="dose_given" class="form-control" placeholder="Dose (e.g. 500mg)">
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'الجرعة' if g.lang == 'ar' else 'Dose' }}</label>
+                    <input type="text" name="dose_given" class="form-control" placeholder="{{ 'مثال: 500mg' if g.lang == 'ar' else 'e.g. 500mg' }}">
                 </div>
-                <div class="col-md-2">
-                    <select name="route" class="form-select">
-                        <option value="">Route</option>
-                        <option>Oral</option><option>IV</option><option>IM</option>
-                        <option>SC</option><option>Topical</option><option>Inhalation</option>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label class="form-label-ihs">{{ 'المسار' if g.lang == 'ar' else 'Route' }}</label>
+                    <select name="route" class="form-control">
+                        <option value="">{{ 'المسار' if g.lang == 'ar' else 'Route' }}</option>
+                        <option>{{ 'فموي' if g.lang == 'ar' else 'Oral' }}</option>
+                        <option>IV</option>
+                        <option>IM</option>
+                        <option>SC</option>
+                        <option>{{ 'موضعي' if g.lang == 'ar' else 'Topical' }}</option>
+                        <option>{{ 'استنشاقي' if g.lang == 'ar' else 'Inhalation' }}</option>
                     </select>
                 </div>
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i></button>
-                </div>
-            </form>
-            {% else %}
-            <p class="text-muted small mt-2 mb-0">No active prescriptions to schedule.</p>
-            {% endif %}
-        </details>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn-ihs btn-ihs-primary w-100"><i class="fas fa-plus"></i></button>
+            </div>
+        </form>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-pills"></i></div>
+            <div class="empty-title">{{ 'لا توجد وصفات نشطة' if g.lang == 'ar' else 'No active prescriptions' }}</div>
+            <div class="empty-desc">{{ 'لا توجد وصفات نشطة للجدولة' if g.lang == 'ar' else 'No active prescriptions to schedule' }}</div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<div class="card card-shadow mb-3">
-    <div class="card-header bg-white fw-bold"><i class="fas fa-hourglass-half me-2 text-warning"></i>Pending / Due Doses</div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr><th>Medication</th><th>Dose</th><th>Route</th><th>Due</th><th>Action</th></tr>
-            </thead>
-            <tbody>
-            {% for a in pending %}
-                <tr>
-                    <td>{{ a.medication.generic_name if a.medication else '-' }}</td>
-                    <td>{{ a.dose_given or '-' }}</td>
-                    <td>{{ a.route or '-' }}</td>
-                    <td>
-                        {{ a.scheduled_time.strftime('%Y-%m-%d %H:%M') if a.scheduled_time else '-' }}
-                        {% if a.scheduled_time and a.scheduled_time < now %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
-                    </td>
-                    <td>
-                        <form method="POST" action="{{ url_for('nursing.administration_outcome', admin_id=a.id) }}" class="d-flex align-items-start gap-1 flex-wrap">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="text" name="reason" class="form-control form-control-sm" style="width:150px" placeholder="Reason if not given">
-                            <button type="submit" name="status" value="Administered" class="btn btn-sm btn-success" onclick="return confirm('Administer?')"><i class="fas fa-check me-1"></i>Give</button>
-                            <button type="submit" name="status" value="Held" class="btn btn-sm btn-warning">Hold</button>
-                            <button type="submit" name="status" value="Refused" class="btn btn-sm btn-outline-danger">Refuse</button>
-                            <button type="submit" name="status" value="Missed" class="btn btn-sm btn-outline-secondary">Miss</button>
-                        </form>
-                    </td>
-                </tr>
-            {% else %}
-                <tr><td colspan="5" class="text-center text-muted py-3">No pending scheduled doses</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-hourglass-half" style="color:var(--ihis-warning)"></i> {{ 'الجرعات المعلقة / المستحقة' if g.lang == 'ar' else 'Pending / Due Doses' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th>
+                        <th>{{ 'الجرعة' if g.lang == 'ar' else 'Dose' }}</th>
+                        <th>{{ 'المسار' if g.lang == 'ar' else 'Route' }}</th>
+                        <th>{{ 'الموعد' if g.lang == 'ar' else 'Due' }}</th>
+                        <th>{{ 'الإجراء' if g.lang == 'ar' else 'Action' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for a in pending %}
+                    <tr>
+                        <td><span class="cell-primary">{{ a.medication.generic_name if a.medication else '-' }}</span></td>
+                        <td class="cell-secondary">{{ a.dose_given or '-' }}</td>
+                        <td><span class="tag-ihs">{{ a.route or '-' }}</span></td>
+                        <td class="cell-mono">
+                            {{ a.scheduled_time.strftime('%Y-%m-%d %H:%M') if a.scheduled_time else '-' }}
+                            {% if a.scheduled_time and a.scheduled_time < now %}<span class="status-badge s-missed" style="margin-left:4px">Overdue</span>{% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('nursing.administration_outcome', admin_id=a.id) }}" class="d-flex align-items-start gap-1 flex-wrap">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="text" name="reason" class="form-control" style="width:150px;font-size:0.8rem;padding:0.25rem 0.5rem;border:1px solid var(--ihis-border);border-radius:var(--radius-sm)" placeholder="{{ 'السبب' if g.lang == 'ar' else 'Reason if not given' }}">
+                                <button type="submit" name="status" value="Administered" class="btn-ihs btn-ihs-sm btn-ihs-success" onclick="return confirm('{{ 'إعطاء؟' if g.lang == 'ar' else 'Administer?' }}')"><i class="fas fa-check"></i> {{ 'إعطاء' if g.lang == 'ar' else 'Give' }}</button>
+                                <button type="submit" name="status" value="Held" class="btn-ihs btn-ihs-sm btn-ihs-warning">{{ 'إيقاف' if g.lang == 'ar' else 'Hold' }}</button>
+                                <button type="submit" name="status" value="Refused" class="btn-ihs btn-ihs-sm btn-ihs-danger">{{ 'رفض' if g.lang == 'ar' else 'Refuse' }}</button>
+                                <button type="submit" name="status" value="Missed" class="btn-ihs btn-ihs-sm btn-ihs-ghost">{{ 'فوات' if g.lang == 'ar' else 'Miss' }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="empty-title">{{ 'لا توجد جرعات معلقة' if g.lang == 'ar' else 'No pending scheduled doses' }}</div>
+                        </div>
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-header bg-white fw-bold"><i class="fas fa-history me-2 text-muted"></i>Administration History</div>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead class="table-light">
-                <tr><th>Medication</th><th>Dose</th><th>Scheduled</th><th>Administered</th><th>Status</th><th>Reason</th><th>Notes</th></tr>
-            </thead>
-            <tbody>
-            {% for a in history %}
-                <tr>
-                    <td>{{ a.medication.generic_name if a.medication else '-' }}</td>
-                    <td>{{ a.dose_given or '-' }}</td>
-                    <td>{{ a.scheduled_time.strftime('%Y-%m-%d %H:%M') if a.scheduled_time else '-' }}</td>
-                    <td>{{ a.administered_at.strftime('%Y-%m-%d %H:%M') if a.administered_at else '-' }}</td>
-                    <td>
-                        {% if a.status == 'Administered' %}<span class="badge bg-success">Administered</span>
-                        {% elif a.status == 'Held' %}<span class="badge bg-warning">Held</span>
-                        {% elif a.status == 'Refused' %}<span class="badge bg-danger">Refused</span>
-                        {% elif a.status == 'Missed' %}<span class="badge bg-secondary">Missed</span>
-                        {% else %}<span class="badge bg-info">{{ a.status }}</span>{% endif %}
-                    </td>
-                    <td>{{ a.reason or '-' }}</td>
-                    <td>{{ (a.notes or '-')[:40] }}</td>
-                </tr>
-            {% else %}
-                <tr><td colspan="7" class="text-center text-muted py-3">No administration history</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-history" style="color:var(--ihis-text-muted)"></i> {{ 'سجل الإعطاء السابق' if g.lang == 'ar' else 'Administration History' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th>
+                        <th>{{ 'الجرعة' if g.lang == 'ar' else 'Dose' }}</th>
+                        <th>{{ 'المجدول' if g.lang == 'ar' else 'Scheduled' }}</th>
+                        <th>{{ 'تم الإعطاء' if g.lang == 'ar' else 'Administered' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'السبب' if g.lang == 'ar' else 'Reason' }}</th>
+                        <th>{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for a in history %}
+                    <tr>
+                        <td><span class="cell-primary">{{ a.medication.generic_name if a.medication else '-' }}</span></td>
+                        <td class="cell-secondary">{{ a.dose_given or '-' }}</td>
+                        <td class="cell-mono">{{ a.scheduled_time.strftime('%Y-%m-%d %H:%M') if a.scheduled_time else '-' }}</td>
+                        <td class="cell-mono">{{ a.administered_at.strftime('%Y-%m-%d %H:%M') if a.administered_at else '-' }}</td>
+                        <td>
+                            {% if a.status == 'Administered' %}<span class="status-badge s-completed">Administered</span>
+                            {% elif a.status == 'Held' %}<span class="status-badge s-hold">Held</span>
+                            {% elif a.status == 'Refused' %}<span class="status-badge s-cancelled">Refused</span>
+                            {% elif a.status == 'Missed' %}<span class="status-badge s-missed">Missed</span>
+                            {% else %}<span class="status-badge s-in-progress">{{ a.status }}</span>{% endif %}
+                        </td>
+                        <td class="cell-secondary">{{ a.reason or '-' }}</td>
+                        <td class="cell-secondary">{{ (a.notes or '-')[:40] }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-history"></i></div>
+                            <div class="empty-title">{{ 'لا يوجد سجل إعطاء' if g.lang == 'ar' else 'No administration history' }}</div>
+                        </div>
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

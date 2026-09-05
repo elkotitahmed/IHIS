@@ -1,55 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
-<h4 class="mb-4">
-    <i class="fas fa-dumbbell me-2"></i>Exercise Library
-    <a class="btn btn-primary btn-sm ms-2" href="{{ url_for('physiotherapy.add_exercise') }}">
-        <i class="fas fa-plus me-1"></i>Add Exercise
-    </a>
-</h4>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'مكتبة التمارين' if g.lang == 'ar' else 'Exercise Library' }}</h1>
+        <p class="page-subtitle">{{ 'تصنيف وإدارة تمارين العلاج الطبيعي' if g.lang == 'ar' else 'Categorized physiotherapy exercise library' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-primary btn-ihs-sm" href="{{ url_for('physiotherapy.add_exercise') }}">
+            <i class="fas fa-plus"></i>{{ 'إضافة تمرين' if g.lang == 'ar' else 'Add Exercise' }}
+        </a>
+    </div>
+</div>
 
 <form class="row g-2 mb-3" method="get" action="{{ url_for('physiotherapy.exercise_library') }}">
     <div class="col-md-4">
         <select class="form-select" name="category">
-            <option value="">All Categories</option>
+            <option value="">{{ 'كل التصنيفات' if g.lang == 'ar' else 'All Categories' }}</option>
             {% for c in categories %}
             <option value="{{ c }}" {{ 'selected' if current_category == c }}>{{ c }}</option>
             {% endfor %}
         </select>
     </div>
     <div class="col-auto">
-        <button class="btn btn-outline-primary" type="submit"><i class="fas fa-filter me-1"></i>Filter</button>
+        <button class="btn-ihs btn-ihs-outline" type="submit"><i class="fas fa-filter"></i>{{ 'تصفية' if g.lang == 'ar' else 'Filter' }}</button>
     </div>
 </form>
 
 <div class="row g-3">
     {% for item in items %}
     <div class="col-md-6 col-lg-4">
-        <div class="card card-shadow h-100">
+        <div class="card-premium h-100" style="display:flex;flex-direction:column;overflow:hidden">
             {% if item.image_url %}
-            <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}" style="height:160px; object-fit:cover;">
+            <img src="{{ item.image_url }}" alt="{{ item.name }}" style="height:160px; object-fit:cover; width:100%;">
             {% endif %}
-            <div class="card-body">
-                <h6 class="card-title">
-                    {{ item.name }}
-                    <span class="badge bg-info float-end">{{ item.category or 'General' }}</span>
-                </h6>
+            <div class="card-body" style="flex:1;display:flex;flex-direction:column">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.25rem">
+                    <div class="t-h3" style="margin:0">{{ item.name }}</div>
+                    <span class="tag-ihs">{{ item.category or 'General' }}</span>
+                </div>
                 <p class="card-text small text-muted">{{ item.description or '' }}</p>
-                <p class="small mb-1">
-                    <i class="fas fa-redo me-1"></i>{{ item.repetitions or 0 }} reps
-                    <i class="fas fa-clock ms-3 me-1"></i>{{ item.duration_seconds or 0 }} sec
+                <p class="small mb-1 cell-muted">
+                    <i class="fas fa-redo"></i> <span class="t-num">{{ item.repetitions or 0 }}</span> reps
+                    <i class="fas fa-clock" style="margin-left:0.75rem"></i> <span class="t-num">{{ item.duration_seconds or 0 }}</span> sec
                 </p>
                 {% if item.video_url %}
-                <a class="btn btn-sm btn-outline-primary" href="{{ item.video_url }}" target="_blank">
-                    <i class="fas fa-play me-1"></i>Video
-                </a>
+                <div style="margin-top:auto">
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ item.video_url }}" target="_blank">
+                        <i class="fas fa-play"></i>{{ 'فيديو' if g.lang == 'ar' else 'Video' }}
+                    </a>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
     {% else %}
     <div class="col-12">
-        <div class="card card-shadow">
-            <div class="card-body text-center text-muted py-4">No exercises found</div>
+        <div class="card-premium">
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-dumbbell"></i></div>
+                <div class="empty-title">{{ 'لا توجد تمارين' if g.lang == 'ar' else 'No exercises found' }}</div>
+                <div class="empty-desc">{{ 'أضف تمريناً إلى المكتبة للبدء.' if g.lang == 'ar' else 'Add an exercise to the library to get started.' }}</div>
+            </div>
         </div>
     </div>
     {% endfor %}

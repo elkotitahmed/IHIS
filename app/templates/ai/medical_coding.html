@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-code-medical" style="color:var(--ihis-primary)"></i> {{ 'الترميز الطبي بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Medical Coding (ICD-10)' }}</h1>
+        <p class="page-subtitle">{{ patient.user.full_name }} — {{ 'اقتراح أكواد ICD-10 من النص السريري' if g.lang == 'ar' else 'ICD-10 code suggestions from clinical text' }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.ai_dashboard') }}">
+            <i class="fas fa-arrow-left"></i> {{ 'لوحة AI' if g.lang == 'ar' else 'AI Dashboard' }}</a>
+    </div>
+</div>
+
+{% include 'clinical/_patient_header.html' %}
+
+<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user" style="color:var(--ihis-primary)"></i> {{ patient.user.full_name }} <span class="tag-ihs">ICD-10</span></div>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">{{ 'النص السريري' if g.lang == 'ar' else 'Clinical Text' }}</label>
+                    <textarea class="form-control" name="clinical_text" rows="3"
+                        placeholder="{{ 'أدخل النص السريري مثل: مريض يعاني من ألم صدر وضيق تنفس و Sparingly...' if g.lang == 'ar' else 'Enter clinical text, e.g.: 55yo male with chest pain, shortness of breath, history of hypertension and diabetes...' }}"></textarea>
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <input type="hidden" name="mode" value="text" id="coding-mode">
+                    <button class="btn-ihs btn-ihs-primary" type="submit" onclick="document.getElementById('coding-mode').value='text'" {% if not available %}disabled{% endif %}>
+                        <i class="fas fa-brain"></i> {{ 'ترميز' if g.lang == 'ar' else 'Code from Text' }}
+                    </button>
+                    <button class="btn-ihs btn-ihs-outline" type="submit" onclick="document.getElementById('coding-mode').value='diagnoses'" {% if not available %}disabled{% endif %}>
+                        <i class="fas fa-list"></i> {{ 'من التشخيصات' if g.lang == 'ar' else 'From Diagnoses' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not available %}
+<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i>
+    {{ 'يتطلب الترميز الطبي بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI medical coding requires' }} <strong>GEMINI_API_KEY</strong>.
+</div>
+{% endif %}
+
+{% if result and result.get('available') %}
+<div class="card-premium" style="border-top:3px solid var(--ihis-success)">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-check-circle" style="color:var(--ihis-success)"></i> {{ 'أكواد ICD-10 المقترحة' if g.lang == 'ar' else 'Suggested ICD-10 Codes' }} <span class="tag-ihs">AI</span></div>
+    </div>
+    <div class="card-body">
+        {% if result.get('codes') %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>{{ 'الكود' if g.lang == 'ar' else 'Code' }}</th>
+                    <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
+                    <th>{{ 'التبرير' if g.lang == 'ar' else 'Reasoning' }}</th>
+                    <th>{{ 'الثقة' if g.lang == 'ar' else 'Confidence' }}</th>
+                </tr></thead>
+                <tbody>
+                {% for code in result.codes %}
+                <tr>
+                    <td><span class="badge bg-primary" style="font-size:0.8rem">{{ code.code }}</span></td>
+                    <td class="small">{{ code.description }}</td>
+                    <td class="cell-muted small">{{ code.reasoning }}</td>
+                    <td>
+                        <span class="badge {% if code.confidence == 'High' %}bg-success{% elif code.confidence == 'Moderate' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ code.confidence }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% elif result.get('matches') %}
+        <div class="row g-2">
+            {% for keyword, code in result.matches.items() %}
+            <div class="col-auto">
+                <span class="badge bg-primary p-2"><strong>{{ code }}</strong> — {{ keyword }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if result.get('missing_specificity') %}
+        <div class="alert alert-info mt-3 mb-0 small">
+            <i class="fas fa-info-circle me-1"></i> <strong>{{ 'تavourite يحتاج تفصيل' if g.lang == 'ar' else 'Codes Needing Specificity' }}:</strong>
+            {{ result.missing_specificity|join(', ') }}
+        </div>
+        {% endif %}
+
+        {% if result.get('coding_notes') %}
+        <hr><p class="small mb-0">{{ result.coding_notes }}</p>
+        {% endif %}
+        <hr>
+        <p class="cell-muted small mb-0"><i class="fas fa-exclamation-triangle" style="color:var(--ihis-warning)"></i> {{ result.disclaimer|default('Verify code specificity on chart review.') }}</p>
+    </div>
+</div>
+{% elif result and result.get('raw') %}
+<div class="card-premium" style="border-top:3px solid var(--ihis-info)">
+    <div class="card-header"><div class="card-title"><i class="fas fa-robot" style="color:var(--ihis-info)"></i> {{ 'نتيجة AI' if g.lang == 'ar' else 'AI Result' }}</div></div>
+    <div class="card-body"><pre class="small text-wrap mb-0">{{ result.raw }}</pre></div>
+</div>
+{% endif %}
+{% endblock %}

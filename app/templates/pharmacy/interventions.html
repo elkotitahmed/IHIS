@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-handshake-angle" style="color:var(--ihis-primary)"></i>
+            {{ 'التدخلات الصيدلانية' if g.lang == 'ar' else 'Pharmacist Interventions' }}</h1>
+        <p class="text-muted" style="font-size:0.85rem">
+            {{ 'ملاحظات سريرية يرفعها الصيدلي بشأن الوصفات وتُعرض على الطبيب للاستجابة.' if g.lang == 'ar' else 'Clinical notes raised by pharmacy on prescriptions, surfaced to the prescriber.' }}
+        </p>
+    </div>
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-bell" style="color:var(--ihis-primary)"></i>
+            {{ 'قائمة التدخلات' if g.lang == 'ar' else 'Intervention List' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="list-compact">
+            {% for i in items %}
+            <div class="list-item" style="align-items:flex-start">
+                <div style="flex:1">
+                    <div style="font-size:0.8125rem;font-weight:500">
+                        <span class="status-badge {{ 's-cancelled' if i.severity in ('HIGH','CRITICAL') else 's-pending' }}" style="font-size:0.625rem">{{ i.severity }}</span>
+                        <span class="status-badge {{ 's-completed' if i.status == 'RESOLVED' else ('s-draft' if i.status == 'OPEN' else 's-cancelled') }}" style="font-size:0.625rem">{{ i.status }}</span>
+                        {{ i.category|replace('_',' ') }}
+                    </div>
+                    <div style="font-size:0.8125rem">{{ i.issue }}</div>
+                    {% if i.recommendation %}
+                    <div style="font-size:0.75rem;color:var(--ihis-primary)"><i class="fas fa-lightbulb me-1"></i>{{ i.recommendation }}</div>
+                    {% endif %}
+                    <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">
+                        {{ i.patient.user.full_name if i.patient and i.patient.user else 'Patient' }}
+                        {% if i.prescription %} · Rx #{{ i.prescription.id }} · {{ i.prescription.medications|length }} item(s) {% if i.prescription.doctor %}→ Dr. {{ i.prescription.doctor.user.full_name if i.prescription.doctor.user else '' }}{% endif %}{% endif %}
+                        · {{ i.created_at.strftime('%d %b %Y %H:%M') }}
+                    </div>
+                    {% if i.response %}
+                    <div style="font-size:0.75rem;color:var(--ihis-success);margin-top:4px"><i class="fas fa-reply me-1"></i>{{ i.response }}</div>
+                    {% endif %}
+                </div>
+                <div style="text-align:right;white-space:nowrap">
+                    {% if i.prescription %}
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescription_detail', rx_id=i.prescription.id) }}">{{ 'وصفة' if g.lang == 'ar' else 'Rx' }}</a>
+                    {% endif %}
+                    {% if i.status == 'OPEN' and current_user.has_permission('INTERVENTION_RESPOND') %}
+                    <a href="#respond-{{ i.id }}" data-bs-toggle="collapse" class="btn-ihs btn-ihs-primary btn-ihs-sm">{{ 'رد' if g.lang == 'ar' else 'Respond' }}</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% if i.status == 'OPEN' and current_user.has_permission('INTERVENTION_RESPOND') %}
+            <div class="collapse" id="respond-{{ i.id }}">
+                <form method="post" action="{{ url_for('pharmacy.respond_intervention', i_id=i.id) }}" style="padding:var(--sp-2) var(--sp-3);border-top:1px solid var(--ihis-border);display:flex;gap:var(--sp-2);flex-wrap:wrap">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="status" class="form-select form-select-sm" style="width:auto">
+                        <option value="ACCEPTED">{{ 'قبلت' if g.lang == 'ar' else 'Accept' }}</option>
+                        <option value="REJECTED">{{ 'رفضت' if g.lang == 'ar' else 'Reject' }}</option>
+                        <option value="RESOLVED">{{ 'حُلّت' if g.lang == 'ar' else 'Resolved' }}</option>
+                    </select>
+                    <input type="text" name="response" class="form-control form-control-sm" style="flex:1;min-width:14rem" placeholder="{{ 'تعليقك' if g.lang == 'ar' else 'Your response' }}">
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:2rem">
+                {{ 'لا توجد تدخلات.' if g.lang == 'ar' else 'No interventions.' }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

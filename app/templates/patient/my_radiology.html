@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-x-ray" style="color:var(--ihis-info)"></i> {{ 'أشعتي' if g.lang == 'ar' else 'My Radiology' }}</h1>
+        <p class="page-subtitle">{{ 'ملف سلامتك الإشعاعي وسجلات التصوير' if g.lang == 'ar' else 'Your imaging safety profile and study history' }}</p>
+    </div>
+</div>
+
+<!-- Safety Alerts -->
+{% if ct_eval.warnings or mri_eval.warnings %}
+<div class="mb-4">
+    {% for w in ct_eval.warnings + mri_eval.warnings %}
+    {% if w.severity in ['Critical', 'Important'] %}
+    <div class="alert alert-{% if w.severity == 'Critical' %}danger{% else %}warning{% endif %} d-flex align-items-center mb-2">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <div><strong>{{ w.title }}</strong><br><span class="small">{{ w.message }}</span></div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Safety Profile Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card-premium h-100" style="border-top:3px solid var(--ihis-info)">
+            <div class="card-header"><div class="card-title"><i class="fas fa-magnet" style="color:var(--ihis-info)"></i> {{ 'سلامة MRI' if g.lang == 'ar' else 'MRI Safety' }}</div></div>
+            <div class="card-body">
+                {% if profile %}
+                <div class="mb-2">
+                    <span class="badge {% if profile.mri_screening_status == 'Cleared' %}bg-success{% elif profile.mri_screening_status == 'Additional Verification Required' %}bg-warning text-dark{% elif profile.mri_screening_status == 'Safety Concern' %}bg-danger{% else %}bg-secondary{% endif %} p-2" style="font-size:0.85rem">
+                        {% if profile.mri_screening_status == 'Cleared' %}✅ {{ 'معتمد' if g.lang == 'ar' else 'Cleared' }}
+                        {% elif profile.mri_screening_status == 'Additional Verification Required' %}⚠️ {{ 'التحقق الإضافي مطلوب' if g.lang == 'ar' else 'Additional Verification' }}
+                        {% elif profile.mri_screening_status == 'Safety Concern' %}🔴 {{ 'есть مخاوف' if g.lang == 'ar' else 'Safety Concern' }}
+                        {% else %}⚪ {{ 'لم يتم بعد' if g.lang == 'ar' else 'Not Yet Screened' }}{% endif %}
+                    </span>
+                </div>
+                {% if implants %}
+                <div class="small">
+                    <strong>{{ 'الغرسات النشطة' if g.lang == 'ar' else 'Active Implants' }}:</strong>
+                    {% for imp in implants %}
+                    <div class="mt-1">
+                        <span class="badge {% if imp.mr_safety_class == 'MR Safe' %}bg-success{% elif imp.mr_safety_class == 'MR Conditional' %}bg-warning text-dark{% elif imp.mr_safety_class == 'MR Unsafe' %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size:0.65rem">{{ imp.mr_safety_class }}</span>
+                        {{ imp.device_name }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="cell-muted small mb-0">{{ 'لم يتم بعد تكوين ملف السلامة الخاص بك.' if g.lang == 'ar' else 'Your safety profile has not been set up yet.' }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card-premium h-100" style="border-top:3px solid var(--ihis-warning)">
+            <div class="card-header"><div class="card-title"><i class="fas fa-flask" style="color:var(--ihis-warning)"></i> {{ 'سجل التعقيد' if g.lang == 'ar' else 'Contrast History' }}</div></div>
+            <div class="card-body">
+                {% if profile and profile.previous_contrast_reaction %}
+                <div class="alert alert-warning py-2 mb-2 small">
+                    <i class="fas fa-exclamation-circle"></i> {{ 'تفاعل سابق مع مادة تعقيد' if g.lang == 'ar' else 'Previous contrast reaction recorded' }}
+                    {% if profile.contrast_reaction_details %}<br>{{ profile.contrast_reaction_details }}{% endif %}
+                </div>
+                {% endif %}
+                {% for c in contrast_history %}
+                <div class="small mb-1">
+                    <span class="badge {% if c.reaction_occurred %}bg-danger{% else %}bg-success{% endif %}" style="font-size:0.65rem">{{ c.contrast_type }}</span>
+                    {{ c.contrast_agent }}
+                    {% if c.reaction_occurred %}<span class="text-danger">⚠</span>{% endif %}
+                </div>
+                {% else %}
+                <p class="cell-muted small mb-0">{{ 'لا توجد سجلات تعقيد.' if g.lang == 'ar' else 'No contrast records.' }}</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card-premium h-100" style="border-top:3px solid var(--ihis-danger)">
+            <div class="card-header"><div class="card-title"><i class="fas fa-radiation" style="color:var(--ihis-danger)"></i> {{ 'ملخص الإشعاع' if g.lang == 'ar' else 'Radiation Summary' }}</div></div>
+            <div class="card-body">
+                {% if annual and annual.total_studies > 0 %}
+                <div class="row text-center mb-2">
+                    <div class="col-4">
+                        <div class="h4 fw-bold">{{ annual.radiation_studies }}</div>
+                        <div class="cell-muted" style="font-size:0.7rem">{{ 'مُشعة' if g.lang == 'ar' else 'Radiation' }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 fw-bold">{{ annual.non_radiation_studies }}</div>
+                        <div class="cell-muted" style="font-size:0.7rem">{{ 'غير مُشعة' if g.lang == 'ar' else 'Non-Rad' }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 fw-bold" style="color:var(--ihis-info)">{{ annual.total_effective_dose or '—' }}</div>
+                        <div class="cell-muted" style="font-size:0.7rem">mSv</div>
+                    </div>
+                </div>
+                <p class="cell-muted small mb-0"><i class="fas fa-info-circle"></i> {{ 'MRI والتصوير بالصوت لا تستخدم إشعاعاً مؤينولاً.' if g.lang == 'ar' else 'MRI and ultrasound do not use ionizing radiation.' }}</p>
+                {% else %}
+                <p class="cell-muted small mb-0">{{ 'لا توجد دراسات مُشعة مسجلة.' if g.lang == 'ar' else 'No radiation studies on record.' }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Study History -->
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'سجل الدراسات' if g.lang == 'ar' else 'Study History' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
+                    <tr>
+                        <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                        <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                        <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                        <th>{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</th>
+                        <th>{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in orders %}
+                    <tr>
+                        <td class="cell-primary">{{ o.imaging_type.name if o.imaging_type else '—' }}</td>
+                        <td><span class="status-badge s-{{ o.status|lower|replace(' ','-') }}">{{ o.status }}</span></td>
+                        <td class="cell-mono">{{ o.order_date.strftime('%Y-%m-%d') if o.order_date else '—' }}</td>
+                        <td>
+                            <span class="status-badge {{ 's-rejected' if o.priority == 'High' else 's-pending' if o.priority == 'Medium' else 's-active' }}">{{ o.priority }}</span>
+                        </td>
+                        <td class="cell-secondary">{{ (o.notes or '')[:60] }}{{ '...' if o.notes and o.notes|length > 60 }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state" style="padding:2rem">
+                                <div class="empty-icon"><i class="fas fa-x-ray"></i></div>
+                                <div class="empty-title">{{ 'لا توجد دراسات تصوير' if g.lang == 'ar' else 'No imaging studies found' }}</div>
+                                <div class="empty-desc">{{ 'لم يتم طلب أي دراسات تصوير لك بعد.' if g.lang == 'ar' else 'No imaging studies have been ordered for you yet.' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

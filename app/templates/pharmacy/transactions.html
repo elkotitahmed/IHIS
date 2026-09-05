@@ -1,40 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Stock Transactions</h4>
-    <a href="{{ url_for('pharmacy.inventory') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-boxes me-1"></i>Inventory</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-exchange-alt" style="color:var(--ihis-primary)"></i> {{ 'المعاملات' if g.lang == 'ar' else 'Stock Transactions' }}</h1>
+        <p class="page-subtitle">{{ 'سجل حركة المخزون' if g.lang == 'ar' else 'Inventory movement history' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('pharmacy.inventory') }}" class="btn-ihs btn-ihs-outline">
+            <i class="fas fa-boxes"></i> {{ 'المخزون' if g.lang == 'ar' else 'Inventory' }}
+        </a>
+    </div>
 </div>
 
-<div class="card card-shadow">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-exchange-alt" style="color:var(--ihis-primary)"></i> {{ 'سجل المعاملات' if g.lang == 'ar' else 'Transaction Log' }}</div>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead>
                     <tr>
-                        <th>#</th><th>Medication</th><th>Type</th><th>Qty Change</th>
-                        <th>Balance After</th><th>Reference</th><th>User</th><th>At</th>
+                        <th>#</th>
+                        <th>{{ 'الدواء' if g.lang == 'ar' else 'Medication' }}</th>
+                        <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
+                        <th>{{ 'تغير الكمية' if g.lang == 'ar' else 'Qty Change' }}</th>
+                        <th>{{ 'الرصيد بعد' if g.lang == 'ar' else 'Balance After' }}</th>
+                        <th>{{ 'المرجع' if g.lang == 'ar' else 'Reference' }}</th>
+                        <th>{{ 'المستخدم' if g.lang == 'ar' else 'User' }}</th>
+                        <th>{{ 'التاريخ' if g.lang == 'ar' else 'At' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for t in txs %}
                     <tr>
-                        <td>{{ t.id }}</td>
-                        <td>{{ t.medication.generic_name if t.medication else '#' ~ (t.medication_id or '-') }}</td>
+                        <td class="cell-mono">{{ t.id }}</td>
+                        <td class="cell-primary">{{ t.medication.generic_name if t.medication else '#' ~ (t.medication_id or '-') }}</td>
                         <td>
-                            <span class="badge bg-{{ 'success' if t.tx_type in ('RECEIVE','PURCHASE','RETURN') else ('info' if t.tx_type=='TRANSFER' else ('warning' if t.tx_type in ('ADJUSTMENT','EXPIRED','DAMAGED') else 'danger')) }}">
-                                {{ t.tx_type }}
-                            </span>
+                            {% if t.tx_type in ('RECEIVE','PURCHASE','RETURN') %}
+                                <span class="status-badge s-active">{{ t.tx_type }}</span>
+                            {% elif t.tx_type == 'TRANSFER' %}
+                                <span class="status-badge s-in-progress">{{ t.tx_type }}</span>
+                            {% elif t.tx_type in ('ADJUSTMENT','EXPIRED','DAMAGED') %}
+                                <span class="status-badge s-pending">{{ t.tx_type }}</span>
+                            {% else %}
+                                <span class="status-badge s-cancelled">{{ t.tx_type }}</span>
+                            {% endif %}
                         </td>
-                        <td class="{{ 'text-success' if t.quantity_change > 0 else '' }}">
-                            {{ '+' if t.quantity_change > 0 }}{{ t.quantity_change }}
+                        <td class="t-num">
+                            {% if t.quantity_change > 0 %}
+                                <span style="color:var(--ihis-success)">+{{ t.quantity_change }}</span>
+                            {% else %}
+                                {{ t.quantity_change }}
+                            {% endif %}
                         </td>
-                        <td>{{ t.quantity_after if t.quantity_after is not none else '-' }}</td>
-                        <td>{{ t.reference or '-' }}</td>
+                        <td class="t-num">{{ t.quantity_after if t.quantity_after is not none else '-' }}</td>
+                        <td class="cell-secondary">{{ t.reference or '-' }}</td>
                         <td>{{ t.user.full_name if t.user else '-' }}</td>
-                        <td>{{ t.created_at.strftime('%d %b %Y %H:%M') if t.created_at else '-' }}</td>
+                        <td class="cell-secondary">{{ t.created_at.strftime('%d %b %Y %H:%M') if t.created_at else '-' }}</td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="8" class="text-center text-muted py-4">No stock transactions recorded</td></tr>
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state" style="padding:2rem">
+                                <div class="empty-icon"><i class="fas fa-exchange-alt"></i></div>
+                                <div class="empty-title">{{ 'لا توجد معاملات مسجلة' if g.lang == 'ar' else 'No stock transactions recorded' }}</div>
+                            </div>
+                        </td>
+                    </tr>
                 {% endfor %}
                 </tbody>
             </table>
