@@ -74,9 +74,53 @@ class AIResilienceTest(unittest.TestCase):
                         side_effect=Exception('provider exploded')):
             result = ph.review(self.patient)
         self.assertIn('error', result)
-        self.assertIn('provider exploded', result['error'])
+        # Provider internals are never echoed to the page; the route gets a
+        # friendly, non-leaking message and the detail stays server-side.
+        self.assertNotIn('provider exploded', result['error'])
+        self.assertIn('AI service error', result['error'])
+        self.assertEqual(ph.last_error, 'Exception')
         # returns (does not raise), so the route can render a friendly error.
         self.assertTrue(result.get('available'))
+
+    def test_provider_http_error_never_leaks_api_key(self):
+        """A 429/5xx from Gemini must not surface the request URL (which
+        historically carried the API key) in any user-facing message."""
+        import requests
+        from app.services.ai.clinical_pharmacist import AIClinicalPharmacist
+        from app.services.ai.gemini_base import GeminiBase, AIServiceError
+        secret = 'AIzaSECRET-KEY-VALUE'
+        resp = requests.Response()
+        resp.status_code = 429
+        resp.url = f'https://generativelanguage.googleapis.com/x?key={secret}'
+        err = requests.HTTPError(f'429 Client Error for url: {resp.url}', response=resp)
+        with mock.patch('requests.post', side_effect=err):
+            ph = AIClinicalPharmacist(api_key=secret)
+            result = ph.review(self.patient)
+            self.assertNotIn(secret, result['error'])
+            self.assertIn('rate-limiting', result['error'])
+            base = GeminiBase(system_prompt='x')
+            base.api_key = secret
+            with self.assertRaises(AIServiceError) as ctx:
+                base._call_gemini('hello')
+            self.assertNotIn(secret, str(ctx.exception))
+
+    def test_api_key_travels_in_header_not_url(self):
+        from app.services.ai.gemini_base import GeminiBase
+        base = GeminiBase(system_prompt='x')
+        base.api_key = 'k-123'
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured['url'] = url
+            captured['headers'] = headers
+            r = mock.Mock()
+            r.raise_for_status = lambda: None
+            r.json = lambda: {'candidates': [{'content': {'parts': [{'text': 'ok'}]}}]}
+            return r
+        with mock.patch('requests.post', side_effect=fake_post):
+            self.assertEqual(base._call_gemini('hello'), 'ok')
+        self.assertNotIn('k-123', captured['url'])
+        self.assertEqual(captured['headers'].get('x-goog-api-key'), 'k-123')
 
     def test_review_prompt_has_no_phi_identifiers(self):
         from app.services.ai.clinical_pharmacist import AIClinicalPharmacist

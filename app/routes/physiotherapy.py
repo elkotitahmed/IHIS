@@ -77,8 +77,7 @@ def patients():
             )
         )
     patients_list = query.order_by(User.full_name).all()
-    return render_template(
-        'physiotherapy/patients.html',
+    return render_template('physiotherapy/patients.html', title='Physiotherapy Patients',
         patients=patients_list,
         search=search,
     )
@@ -299,8 +298,7 @@ def exercise_library():
             ExerciseLibraryItem.category
         ).distinct().all() if c[0]
     ]
-    return render_template(
-        'physiotherapy/exercise_library.html',
+    return render_template('physiotherapy/exercise_library.html', title='Exercise Library',
         items=items,
         categories=categories,
         current_category=category,
@@ -332,7 +330,7 @@ def add_exercise():
         flash('Exercise added to library successfully.', 'success')
         return redirect(url_for('physiotherapy.exercise_library'))
 
-    return render_template('physiotherapy/add_exercise.html')
+    return render_template('physiotherapy/add_exercise.html', title='Add Exercise')
 
 
 @physiotherapy_bp.route('/sessions/<int:session_id>/start', methods=['POST'])

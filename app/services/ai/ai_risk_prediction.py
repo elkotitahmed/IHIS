@@ -89,11 +89,33 @@ class AIPatientRiskPrediction(GeminiBase):
                         'source': 'gemini', 'available': True}
             result['available'] = True
             result['source'] = 'gemini'
+            # Normalise onto the keys every template/consumer relies on.
+            level = str(result.get('overall_risk') or result.get('level') or base_risk['level'])
+            level = level.strip().title()
+            if level not in ('Low', 'Moderate', 'High'):
+                level = {'Medium': 'Moderate', 'Critical': 'High', 'Severe': 'High'}.get(level, base_risk['level'])
+            result['level'] = level
+            try:
+                result['score'] = int(float(result.get('risk_score', base_risk['score'])))
+            except (TypeError, ValueError):
+                result['score'] = base_risk['score']
+            factors = result.get('risk_factors') or []
+            reasons = []
+            for f in factors:
+                if isinstance(f, dict):
+                    reasons.append(str(f.get('factor') or f.get('detail') or ''))
+                else:
+                    reasons.append(str(f))
+            result['reasons'] = [r for r in reasons if r] or base_risk['reasons']
+            result.setdefault('patient', base_risk['patient'])
+            result.setdefault('disclaimer', base_risk['disclaimer'])
             self._log_risk(patient_id, result)
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            from app.services.ai.gemini_base import AIServiceError
             return {**base_risk, 'source': 'heuristic',
-                    'ai_error': str(e), 'available': True}
+                    'ai_error': str(e) if isinstance(e, AIServiceError) else 'provider error',
+                    'available': True}
 
     def _basic_risk(self, patient_id):
         """Basic heuristic risk calculation as fallback."""

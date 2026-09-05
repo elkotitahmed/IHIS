@@ -30,8 +30,8 @@ SYSTEM_PROMPT = (
     "pharmacist/physician has final authority on all clinical decisions."
 )
 
-BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_MODEL = "gemini-3.6-flash"  # overridable via AI_MODEL env var
+from app.services.ai.gemini_base import (BASE_URL, DEFAULT_MODEL, REQUEST_TIMEOUT,
+                                         AIServiceError, _safe_provider_error)
 
 _SECTION_HEADERS = [
     'Drug-Drug Interactions', 'Drug-Disease Contraindications', 'Duplicate Therapy',
@@ -50,7 +50,7 @@ def gemini_available():
 class AIClinicalPharmacist:
     """Real LLM-backed medication review assistant (Gemini)."""
 
-    def __init__(self, api_key=None, model_name=DEFAULT_MODEL):
+    def __init__(self, api_key=None, model_name=None):
         self.api_key = api_key or os.getenv('GEMINI_API_KEY')
         self.model_name = model_name or os.getenv('AI_MODEL', DEFAULT_MODEL)
         self.last_error = None
@@ -146,13 +146,20 @@ Format each section clearly with actionable recommendations. Prioritize serious 
             "generationConfig": {"temperature": temperature,
                                  "maxOutputTokens": max_tokens},
         }
-        url = f"{BASE_URL}/{self.model_name}:generateContent?key={self.api_key}"
-        resp = requests.post(url, headers={"Content-Type": "application/json"},
-                             json=payload, timeout=90)
-        resp.raise_for_status()
-        result = resp.json()
-        candidate = result["candidates"][0]
-        parts = candidate["content"]["parts"]
+        url = f"{BASE_URL}/{self.model_name}:generateContent"
+        try:
+            resp = requests.post(url, headers={"Content-Type": "application/json",
+                                               "x-goog-api-key": self.api_key},
+                                 json=payload, timeout=REQUEST_TIMEOUT)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            raise AIServiceError(_safe_provider_error(exc)) from None
+        try:
+            result = resp.json()
+            candidate = result["candidates"][0]
+            parts = candidate["content"]["parts"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise AIServiceError('The AI provider returned a malformed response.') from None
         return "".join(part.get("text", "") for part in parts)
 
     def _parse_sections(self, content):
@@ -202,7 +209,12 @@ Format each section clearly with actionable recommendations. Prioritize serious 
                 'order': keys,
                 'duration_ms': int((time.time() - start) * 1000),
             }
-        except Exception as e:
+        except AIServiceError as e:
             self.last_error = str(e)
             return {'available': True, 'error': f'AI service error: {e}',
+                    'sections': {}, 'content': '', 'order': []}
+        except Exception as e:  # noqa: BLE001 - never leak internals to the page
+            self.last_error = type(e).__name__
+            return {'available': True,
+                    'error': 'AI service error: the review could not be completed.',
                     'sections': {}, 'content': '', 'order': []}

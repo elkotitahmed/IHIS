@@ -65,10 +65,15 @@ def _upcoming_follow_ups(now, window=REMINDER_UPCOMING_WINDOW):
             .all())
 
 
+# A visit is only "missed" once its slot has clearly passed (the patient may
+# still be in the waiting room right at the scheduled time).
+MISSED_APPOINTMENT_GRACE = timedelta(hours=2)
+
+
 def _missed_appointments(now):
     return (Appointment.query
             .filter(Appointment.status.in_(('Scheduled', 'Confirmed')),
-                    Appointment.scheduled_at <= now)
+                    Appointment.scheduled_at <= now - MISSED_APPOINTMENT_GRACE)
             .all())
 
 

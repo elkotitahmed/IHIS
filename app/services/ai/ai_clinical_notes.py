@@ -62,7 +62,7 @@ class AIClinicalNotes(GeminiBase):
             MedicalRecord.visit_date.desc()).limit(3).all()
         records_text = '\n'.join(
             f"  - {r.visit_date.strftime('%Y-%m-%d') if r.visit_date else 'N/A'}: "
-            f"{r.chief_complaint or ''} | {r.assessment or ''}"
+            f"{r.diagnosis or ''} | {(r.clinical_notes or '')[:200]}"
             for r in records) if records else '  - No prior records'
 
         prompt = (
@@ -85,8 +85,10 @@ class AIClinicalNotes(GeminiBase):
             result['patient_name'] = patient.user.full_name if patient.user else 'Patient'
             self._log_note(patient_id)
             return result
-        except Exception as e:
-            return {'available': True, 'error': str(e), 'note': None}
+        except Exception as e:  # noqa: BLE001
+            from app.services.ai.gemini_base import AIServiceError
+            msg = str(e) if isinstance(e, AIServiceError) else 'The AI service could not complete the request.'
+            return {'available': True, 'error': msg, 'note': None}
 
     def _log_note(self, patient_id):
         try:

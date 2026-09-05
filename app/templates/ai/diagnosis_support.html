@@ -39,12 +39,37 @@
                 <div class="card-title"><i class="fas fa-lightbulb" style="color:var(--ihis-warning)"></i> {{ 'اعتبارات مقترحة' if g.lang == 'ar' else 'Suggested Considerations' }} <span class="tag-ihs">AI</span></div>
             </div>
             <div class="card-body">
-                {% for s in result.suggestions %}
-                <span class="tag-ihs d-inline-block mb-1 me-1" style="padding:0.4rem 0.75rem;font-size:0.75rem">
-                    <i class="fas fa-lightbulb" style="color:var(--ihis-warning)"></i> {{ s }}</span>
+                {% set _diffs = result.differentials if result.differentials is defined and result.differentials else [] %}
+                {% for d in _diffs %}
+                <div class="list-item" style="align-items:flex-start;border-bottom:1px solid var(--ihis-border-light);padding:0.5rem 0">
+                    <div style="flex:1">
+                        <div style="font-weight:600;font-size:0.875rem">
+                            <i class="fas fa-lightbulb" style="color:var(--ihis-warning)"></i>
+                            {{ d.diagnosis if d.diagnosis is defined else d }}
+                            {% if d.icd10 is defined and d.icd10 %}<span class="tag-ihs">{{ d.icd10 }}</span>{% endif %}
+                            {% if d.urgency is defined and d.urgency and d.urgency != 'Routine' %}<span class="status-badge s-cancelled" style="font-size:0.625rem">{{ d.urgency }}</span>{% endif %}
+                        </div>
+                        {% if d.reasoning is defined and d.reasoning %}<div class="cell-muted" style="font-size:0.75rem">{{ d.reasoning }}</div>{% endif %}
+                        {% if d.next_steps is defined and d.next_steps %}<div style="font-size:0.75rem"><strong>{{ 'الخطوات التالية' if g.lang == 'ar' else 'Next steps' }}:</strong> {{ d.next_steps|join('; ') }}</div>{% endif %}
+                    </div>
+                    {% if d.confidence is defined and d.confidence %}<span class="status-badge {{ 's-completed' if d.confidence == 'High' else 's-pending' }}" style="font-size:0.625rem">{{ d.confidence }}</span>{% endif %}
+                </div>
+                {% else %}
+                {% for s in (result.suggestions if result.suggestions is defined else []) %}
+                <span class="tag-ihs d-inline-block mb-1 me-1" style="padding:0.4rem 0.75rem;font-size:0.75rem"><i class="fas fa-lightbulb" style="color:var(--ihis-warning)"></i> {{ s }}</span>
                 {% else %}
                 <p class="cell-muted mb-0">{{ 'أدخل الأعراض للحصول على اقتراحات.' if g.lang == 'ar' else 'Enter symptoms to get suggestions.' }}</p>
                 {% endfor %}
+                {% endfor %}
+                {% if result.red_flags is defined and result.red_flags %}
+                <div class="mt-2" style="font-size:0.75rem;color:var(--ihis-danger)"><i class="fas fa-triangle-exclamation"></i> <strong>{{ 'علامات خطر' if g.lang == 'ar' else 'Red flags' }}:</strong> {{ result.red_flags|join('; ') }}</div>
+                {% endif %}
+                {% if result.clinical_reasoning is defined and result.clinical_reasoning %}
+                <p class="cell-muted small mt-2 mb-0">{{ result.clinical_reasoning }}</p>
+                {% endif %}
+                {% if result.error is defined and result.error %}
+                <p class="small mt-2 mb-0" style="color:var(--ihis-warning)"><i class="fas fa-circle-info"></i> {{ result.error }}</p>
+                {% endif %}
                 <hr>
                 <p class="cell-muted small mb-0"><i class="fas fa-info-circle" style="color:var(--ihis-info)"></i> {{ result.disclaimer }}</p>
             </div>
@@ -57,7 +82,7 @@
             </div>
             <div class="card-body">
                 <ul class="mb-0 ps-3">
-                {% for d in result.prior_diagnoses %}
+                {% for d in (result.prior_diagnoses if result.prior_diagnoses is defined else []) %}
                     <li>{{ d }}</li>
                 {% else %}
                     <li class="cell-muted">{{ 'لا توجد تشخيصات سابقة.' if g.lang == 'ar' else 'No prior diagnoses.' }}</li>

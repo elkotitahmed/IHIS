@@ -9,7 +9,8 @@ Design principles:
 - Maintains calculation provenance
 """
 from datetime import datetime, date
-from sqlalchemy import func, and_
+from sqlalchemy import func
+from sqlalchemy import extract as sa_extract, and_
 
 from app import db
 from app.models import (ImagingDoseRecord, ImagingReferenceLevel,
@@ -47,8 +48,7 @@ class RadiationDoseService:
         """Return dose records for a patient, optionally filtered by year."""
         q = ImagingDoseRecord.query.filter_by(patient_id=patient_id)
         if year:
-            q = q.filter(
-                func.strftime('%Y', ImagingDoseRecord.study_date) == str(year))
+            q = q.filter(sa_extract('year', ImagingDoseRecord.study_date) == int(year))
         return q.order_by(ImagingDoseRecord.study_date.desc()).all()
 
     def get_patient_annual_summary(self, patient_id, year=None):
@@ -132,7 +132,9 @@ class RadiationDoseService:
                 m['missing_dose_count'] += 1
                 studies_missing += 1
 
-            total_effective += m['total_effective']
+        # Sum once per modality (summing inside the loop re-added the running
+        # total on every record and inflated the annual dose).
+        total_effective = sum(m['total_effective'] for m in by_modality.values())
 
         # Determine overall dose status
         if total_effective_is_measured and not total_effective_is_estimated:
@@ -147,7 +149,7 @@ class RadiationDoseService:
         return {
             'year': year,
             'modalities': by_modality,
-            'total_effective_dose': round(total_effective, 2) if total_effective else None,
+            'total_effective_dose': round(total_effective, 2) if dose_type != 'Unavailable' else None,
             'total_effective_dose_type': dose_type,
             'total_studies': len(records),
             'radiation_studies': radiation_count,

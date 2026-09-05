@@ -132,10 +132,10 @@
                             {% for v in vitals %}
                             <tr>
                                 <td><span class="t-num">{{ v.temperature or 'N/A' }}</span></td>
-                                <td><span class="t-num">{{ v.blood_pressure or v.bp or 'N/A' }}</span></td>
+                                <td><span class="t-num">{% if v.blood_pressure_systolic or v.blood_pressure_diastolic %}{{ v.blood_pressure_systolic or '-' }}/{{ v.blood_pressure_diastolic or '-' }}{% else %}N/A{% endif %}</span></td>
                                 <td><span class="t-num">{{ v.heart_rate or 'N/A' }}</span></td>
                                 <td><span class="t-num">{{ v.respiratory_rate or 'N/A' }}</span></td>
-                                <td><span class="t-num">{{ v.oxygen_saturation or v.spo2 or 'N/A' }}</span></td>
+                                <td><span class="t-num">{{ v.oxygen_saturation if v.oxygen_saturation is not none else 'N/A' }}</span></td>
                                 <td class="cell-mono">{{ v.recorded_at.strftime('%Y-%m-%d %H:%M') if v.recorded_at else 'N/A' }}</td>
                             </tr>
                             {% else %}

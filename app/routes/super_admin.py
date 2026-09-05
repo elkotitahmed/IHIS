@@ -1,7 +1,7 @@
 """Super Admin portal - Executive command center with global visibility."""
 import os
 import shutil
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from flask import (
     Blueprint, request, redirect, url_for, flash, render_template,
@@ -743,41 +743,73 @@ def settings():
     return render_template('super_admin/settings.html', title='System Settings', settings=settings)
 
 
+def _backup_dir():
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.environ.get('BACKUP_DIR') or os.path.join(root, 'backup', 'backups')
+
+
 @super_admin_bp.route('/backup', methods=['GET', 'POST'])
 @login_required
 @roles_required('SuperAdmin')
 def backup():
-    if request.method == 'POST':
-        db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
-        db_path = db_uri.replace('sqlite:///', '', 1)
-        db_path = os.path.normpath(db_path)
-
-        backups_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'backups'
-        )
-        os.makedirs(backups_dir, exist_ok=True)
-
-        timestamp = utcnow().strftime('%Y%m%d_%H%M%S')
-        base, ext = os.path.splitext(os.path.basename(db_path))
-        dest_path = os.path.join(backups_dir, f'{base}_{timestamp}{ext}')
-
-        shutil.copy2(db_path, dest_path)
-        log_activity('BACKUP_DATABASE', 'Database', None, f'Backup -> {dest_path}')
-        db.session.commit()
-        flash(f'Database backup created successfully at {os.path.basename(dest_path)}.', 'success')
-        return redirect(url_for('super_admin.backup'))
+    """Create and list database backups (SQLite file copy or pg_dump) via
+    the shared backup utility. Connection strings are never rendered."""
+    import sys
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from pathlib import Path
+    from backup import backup as backup_util
 
     db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
-    db_path = db_uri.replace('sqlite:///', '', 1)
-    db_name = os.path.basename(db_path)
-    backup_folder = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'backups'
-    )
+    backend = 'PostgreSQL' if db_uri.startswith('postgresql') else (
+        'SQLite' if db_uri.startswith('sqlite') else 'Database')
+    backups_dir = Path(_backup_dir())
+
+    if request.method == 'POST':
+        backups_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            if db_uri.startswith('postgresql'):
+                dest = backup_util.backup_postgres(db_uri, backups_dir)
+            elif db_uri.startswith('sqlite'):
+                dest = backup_util.backup_sqlite(db_uri, backups_dir)
+            else:
+                raise RuntimeError('Unsupported database backend for in-app backup')
+            ok = backup_util.verify_backup(Path(dest), db_uri)
+        except SystemExit as exc:  # the utility exits on tool errors (pg_dump missing, ...)
+            db.session.rollback()
+            log_activity('BACKUP_DATABASE_FAILED', 'Database', None, f'exit={exc.code}')
+            db.session.commit()
+            flash('Backup failed: the backup tool reported an error (check that pg_dump is '
+                  'installed and the database is reachable).', 'danger')
+            return redirect(url_for('super_admin.backup'))
+        except Exception as exc:  # noqa: BLE001
+            db.session.rollback()
+            log_activity('BACKUP_DATABASE_FAILED', 'Database', None, type(exc).__name__)
+            db.session.commit()
+            flash('Backup failed: ' + type(exc).__name__, 'danger')
+            return redirect(url_for('super_admin.backup'))
+        log_activity('BACKUP_DATABASE', 'Database', None,
+                     f'{os.path.basename(str(dest))} checksum_ok={ok}')
+        db.session.commit()
+        flash(f'Backup created: {os.path.basename(str(dest))}'
+              + ('' if ok else ' (checksum verification FAILED)'),
+              'success' if ok else 'danger')
+        return redirect(url_for('super_admin.backup'))
+
+    backups = []
+    if backups_dir.is_dir():
+        for f in sorted(backups_dir.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True):
+            if f.is_file() and not f.name.endswith('.sha256'):
+                backups.append({'name': f.name, 'size_mb': round(f.stat().st_size / (1024 * 1024), 2),
+                                'at': datetime.fromtimestamp(f.stat().st_mtime),
+                                'checksum': (backups_dir / (f.name + '.sha256')).exists()})
     return render_template(
         'super_admin/backup.html',
         title='Database Backup',
-        db_name=db_name,
-        backup_folder=backup_folder,
+        db_name=backend,
+        backup_folder=str(backups_dir),
+        backups=backups[:20],
     )
 
 

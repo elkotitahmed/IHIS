@@ -167,12 +167,6 @@ def segment_tooth(upload_file):
     if not tooth_model_available():
         return {'error': 'Tooth segmentation model is not installed on this server.'}
 
-    try:
-        with open(upload_file.stream, 'rb') as f:
-            pass  # stream already consumed; leave placeholder
-    except Exception:
-        pass
-
     # Read bytes safely (re-seek)
     stream = upload_file.stream
     if hasattr(stream, 'seek'):
@@ -186,14 +180,17 @@ def segment_tooth(upload_file):
     with open(upload_path, 'wb') as f:
         f.write(img_bytes)
 
-    model = _get_model()
-    input_img = preprocess(img_bytes)
-    prediction = model.predict(input_img, verbose=0)
-    mask = postprocess(prediction)
-
-    mask_name = f'mask_{base}.png'
-    mask_path = os.path.join(_upload_dir(), mask_name)
-    Image.fromarray(mask).save(mask_path)
+    try:
+        model = _get_model()
+        input_img = preprocess(img_bytes)
+        prediction = model.predict(input_img, verbose=0)
+        mask = postprocess(prediction)
+        mask_name = f'mask_{base}.png'
+        mask_path = os.path.join(_upload_dir(), mask_name)
+        Image.fromarray(mask).save(mask_path)
+    except (ImportError, OSError, RuntimeError, ValueError, TypeError) as exc:
+        return {'error': f'Tooth segmentation could not run: {type(exc).__name__}. '
+                         'Check that the model runtime is installed and the image is a valid radiograph.'}
 
     coverage = int(np.mean(mask > 0) * 100)
 

@@ -13,6 +13,33 @@ import requests as _requests
 
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 DEFAULT_MODEL = "gemini-2.5-flash"
+# (connect, read) timeouts: fail fast on an unreachable provider, allow a
+# long generation once connected.
+REQUEST_TIMEOUT = (10, 90)
+
+
+class AIServiceError(RuntimeError):
+    """Provider failure with a message that is safe to show to a clinician
+    (never contains the request URL, the API key, or provider internals)."""
+
+
+def _safe_provider_error(exc):
+    """Map transport / HTTP errors to a short, key-free description."""
+    status = getattr(getattr(exc, 'response', None), 'status_code', None)
+    if status == 429:
+        return 'The AI provider is rate-limiting requests; try again shortly.'
+    if status is not None and status >= 500:
+        return 'The AI provider is temporarily unavailable.'
+    if status in (401, 403):
+        return 'The AI provider rejected the configured credentials.'
+    if status == 404:
+        return 'The configured AI model was not found.'
+    name = type(exc).__name__
+    if 'Timeout' in name:
+        return 'The AI provider did not respond in time.'
+    if 'Connection' in name:
+        return 'The AI provider could not be reached.'
+    return 'The AI provider returned an unexpected response.'
 
 
 def gemini_available():
@@ -116,15 +143,23 @@ class GeminiBase:
                 "maxOutputTokens": self.max_tokens,
             },
         }
-        url = (f"{BASE_URL}/{self.model_name}:generateContent"
-               f"?key={self.api_key}")
-        resp = _requests.post(
-            url,
-            headers={"Content-Type": "application/json"},
-            json=payload, timeout=120)
-        resp.raise_for_status()
-        data = resp.json()
-        parts = data["candidates"][0]["content"]["parts"]
+        # The key travels in a header, never in the URL, so it can never be
+        # echoed back through an exception message, a proxy log or a referrer.
+        url = f"{BASE_URL}/{self.model_name}:generateContent"
+        try:
+            resp = _requests.post(
+                url,
+                headers={"Content-Type": "application/json",
+                         "x-goog-api-key": self.api_key},
+                json=payload, timeout=REQUEST_TIMEOUT)
+            resp.raise_for_status()
+        except _requests.RequestException as exc:
+            raise AIServiceError(_safe_provider_error(exc)) from None
+        try:
+            data = resp.json()
+            parts = data["candidates"][0]["content"]["parts"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise AIServiceError('The AI provider returned a malformed response.') from None
         return "".join(p.get("text", "") for p in parts)
 
     def _call_gemini_json(self, user_message, temperature=0.2):

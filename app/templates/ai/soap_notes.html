@@ -21,7 +21,7 @@
         <div class="row cell-muted small mb-3">
             <div class="col-md-3"><strong>MRN:</strong> {{ patient.mrn or 'N/A' }}</div>
             <div class="col-md-3"><strong>{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}:</strong> {{ patient.gender or 'N/A' }}</div>
-            <div class="col-md-3"><strong>{{ 'العمر' if g.lang == 'ar' else 'Age' }}:</strong> {{ patient.age or 'N/A' }}</div>
+            <div class="col-md-3"><strong>{{ 'العمر' if g.lang == 'ar' else 'Age' }}:</strong> {{ ((today - patient.date_of_birth).days // 365) if patient.date_of_birth and today is defined else 'N/A' }}</div>
             <div class="col-md-3"><strong>{{ 'الدم' if g.lang == 'ar' else 'Blood' }}:</strong> {{ patient.blood_type or 'N/A' }}</div>
         </div>
         <form method="POST">

@@ -36,8 +36,7 @@ def dashboard():
         PharmacyInventory.quantity > 0,
     ).order_by(PharmacyInventory.expiry_date.asc()).all()
     expiring_count = len(expiring_soon)
-    return render_template(
-        'pharmacy/dashboard.html',
+    return render_template('pharmacy/dashboard.html', title='Pharmacy Dashboard',
         total_medications=total_medications,
         low_stock_count=low_stock_count,
         recent_dispensed_count=DispensingRecord.query.count(),
@@ -74,7 +73,7 @@ def inventory():
 
     if f in ('expired', 'low', 'expiring', 'ok'):
         items = [i for i in items if classify(i) == f]
-    return render_template('pharmacy/inventory.html', items=items,
+    return render_template('pharmacy/inventory.html', title='Pharmacy Inventory', items=items,
                            today=today, f=f)
 
 
@@ -115,7 +114,7 @@ def add_inventory():
         return redirect(url_for('pharmacy.inventory'))
 
     medications = Medication.query.filter_by(is_active=True).all()
-    return render_template('pharmacy/add_inventory.html', medications=medications)
+    return render_template('pharmacy/add_inventory.html', title='Add Inventory', medications=medications)
 
 
 @pharmacy_bp.route('/prescriptions')
@@ -134,7 +133,7 @@ def prescriptions():
         return (0 if partial else 1, -(rx.id or 0))
 
     pending = sorted(pending, key=partial_key)
-    return render_template('pharmacy/prescriptions.html', prescriptions=pending)
+    return render_template('pharmacy/prescriptions.html', title='Prescription Queue', prescriptions=pending)
 
 
 @pharmacy_bp.route('/prescriptions/<int:id>/dispense', methods=['POST'])
@@ -337,7 +336,7 @@ def reject(rx_id):
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def prescription_detail(rx_id):
     rx = Prescription.query.get_or_404(rx_id)
-    return render_template('pharmacy/prescription_detail.html', rx=rx)
+    return render_template('pharmacy/prescription_detail.html', title='Prescription Detail', rx=rx)
 
 
 @pharmacy_bp.route('/inventory/<int:inv_id>/adjust', methods=['POST'])
@@ -384,7 +383,7 @@ def adjust_stock(inv_id):
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def transactions():
     txs = StockTransaction.query.order_by(StockTransaction.created_at.desc()).limit(200).all()
-    return render_template('pharmacy/transactions.html', txs=txs)
+    return render_template('pharmacy/transactions.html', title='Stock Transactions', txs=txs)
 
 
 @pharmacy_bp.route('/medications', methods=['GET', 'POST'])
@@ -415,7 +414,7 @@ def medications():
             Medication.brand_name.ilike(f'%{search}%')
         )
     meds = query.order_by(Medication.generic_name).all()
-    return render_template('pharmacy/medications.html', medications=meds, search=search)
+    return render_template('pharmacy/medications.html', title='Medication Catalog', medications=meds, search=search)
 
 
 @pharmacy_bp.route('/ai-workbench')
@@ -445,7 +444,7 @@ def ai_workbench():
             'latest_rx': rx,
         })
     total_active = Prescription.query.filter(Prescription.status != 'Dispensed').count()
-    return render_template('pharmacy/ai_workbench.html', cases=cases,
+    return render_template('pharmacy/ai_workbench.html', title='Clinical Pharmacist AI', cases=cases,
                            total_active=total_active)
 
 
@@ -457,7 +456,7 @@ def reconciliations():
     from app.models import MedicationReconciliation
     items = MedicationReconciliation.query.order_by(
         MedicationReconciliation.created_at.desc()).limit(100).all()
-    return render_template('pharmacy/reconciliations.html', items=items)
+    return render_template('pharmacy/reconciliations.html', title='Medication Reconciliations', items=items)
 
 
 @pharmacy_bp.route('/patient/<int:patient_id>/reconcile', methods=['GET', 'POST'])
@@ -507,7 +506,7 @@ def reconcile(patient_id):
         db.session.commit()
         flash(f'Reconciliation created with {len(discrepancies)} finding(s).', 'success')
         return redirect(url_for('pharmacy.reconciliation_detail', rec_id=rec.id))
-    return render_template('pharmacy/reconcile.html', patient=patient,
+    return render_template('pharmacy/reconcile.html', title='New Reconciliation', patient=patient,
                            existing=existing,
                            **patient_safety_context(patient.id),
                            today=utcnow().date())
@@ -520,7 +519,7 @@ def reconcile(patient_id):
 def reconciliation_detail(rec_id):
     from app.models import MedicationReconciliation
     rec = MedicationReconciliation.query.get_or_404(rec_id)
-    return render_template('pharmacy/reconciliation_detail.html', rec=rec)
+    return render_template('pharmacy/reconciliation_detail.html', title='Reconciliation Detail', rec=rec)
 
 
 @pharmacy_bp.route('/reconciliations/<int:rec_id>/complete', methods=['POST'])
@@ -562,7 +561,7 @@ def interventions():
     from app.models import PharmacyIntervention
     items = PharmacyIntervention.query.order_by(
         PharmacyIntervention.created_at.desc()).limit(100).all()
-    return render_template('pharmacy/interventions.html', items=items)
+    return render_template('pharmacy/interventions.html', title='Pharmacy Interventions', items=items)
 
 
 @pharmacy_bp.route('/prescriptions/<int:rx_id>/intervene', methods=['POST'])
@@ -673,4 +672,4 @@ def drug_check():
             log_activity('DRUG_INTERACTION_CHECK', 'medication', None,
                          f'{len(ids)} medications checked, {result.get("count", 0)} interactions')
             db.session.commit()
-    return render_template('pharmacy/drug_check.html', medications=meds, result=result)
+    return render_template('pharmacy/drug_check.html', title='Drug Interaction Check', medications=meds, result=result)

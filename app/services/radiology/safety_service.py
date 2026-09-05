@@ -168,14 +168,28 @@ class RadiologySafetyService:
                                 f'before proceeding. Verification: {implant.verification_status}.'),
                 })
             elif implant.mr_safety_class == 'Unknown':
-                has_unknown = True
-                warnings.append({
-                    'severity': 'Review Required',
-                    'category': 'implant',
-                    'title': f'Unknown MRI Safety Status: {implant.device_name}',
-                    'message': (f'{implant.device_name} — MRI safety classification is unknown. '
-                                f'Additional verification required.'),
-                })
+                category = (implant.device_category or '').lower()
+                if any(k.lower() in category for k in MR_UNSAFE_CATEGORIES):
+                    # An active device of a category that is unsafe by default
+                    # must block until proven otherwise.
+                    has_unsafe = True
+                    warnings.append({
+                        'severity': 'Critical',
+                        'category': 'implant',
+                        'title': f'Unverified {implant.device_category}: {implant.device_name}',
+                        'message': (f'{implant.device_name} is a {implant.device_category} with no '
+                                    f'verified MR safety classification. Treat as MR Unsafe until '
+                                    f'the manufacturer conditions are verified.'),
+                    })
+                else:
+                    has_unknown = True
+                    warnings.append({
+                        'severity': 'Review Required',
+                        'category': 'implant',
+                        'title': f'Unknown MRI Safety Status: {implant.device_name}',
+                        'message': (f'{implant.device_name} — MRI safety classification is unknown. '
+                                    f'Additional verification required.'),
+                    })
 
         # Check for known unsafe categories without specific device records
         if not implants:
@@ -243,15 +257,18 @@ class RadiologySafetyService:
         warnings = []
 
         if profile.previous_contrast_reaction:
-            if contrast_type.lower() in (profile.previous_contrast_type or '').lower():
-                warnings.append({
-                    'severity': 'Important',
-                    'category': 'contrast',
-                    'title': f'Previous {contrast_type} Contrast Reaction',
-                    'message': (f'Patient has a documented reaction to {contrast_type} contrast: '
-                                f'{profile.contrast_reaction_details or "Details not recorded"}. '
-                                f'Consider pre-medication or alternative contrast.'),
-                })
+            prev_type = (profile.previous_contrast_type or '').strip()
+            same_agent = contrast_type.lower() in prev_type.lower() if prev_type else False
+            warnings.append({
+                'severity': 'Critical' if same_agent else 'Important',
+                'category': 'contrast',
+                'title': (f'Previous {contrast_type} Contrast Reaction' if same_agent
+                          else 'Previous Contrast Reaction (agent '
+                               + (prev_type or 'not recorded') + ')'),
+                'message': (f'Patient has a documented contrast reaction: '
+                            f'{profile.contrast_reaction_details or "Details not recorded"}. '
+                            f'Consider pre-medication or alternative contrast and confirm the agent involved.'),
+            })
 
         if profile.last_egfr is not None:
             threshold = 30 if contrast_type == 'Gadolinium' else 45

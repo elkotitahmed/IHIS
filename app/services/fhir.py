@@ -59,10 +59,12 @@ def fhir_patient(patient):
     gender = patient.gender or None
     if isinstance(gender, str):
         gender = gender.lower()
-        if gender.startswith('م'):
-            gender = 'female'
-        elif gender.startswith('ذ') or gender.startswith('مذكر'):
+        if gender.startswith('مذكر') or gender.startswith('ذ') or gender in ('male', 'm'):
             gender = 'male'
+        elif gender.startswith('م') or gender.startswith('أنث') or gender in ('female', 'f'):
+            gender = 'female'
+        elif gender not in ('other', 'unknown'):
+            gender = 'unknown'
     resource = {
         'resourceType': 'Patient',
         'id': str(patient.id),
@@ -97,7 +99,7 @@ def fhir_patient(patient):
 
 
 def _observation_status(order, result):
-    if order.status == 'FINALIZED':
+    if order.status in ('Finalized', 'FINALIZED'):
         return 'final'
     if result and result.status == 'Locked':
         return 'final'
@@ -110,14 +112,16 @@ def _observation_status(order, result):
 
 def fhir_observation(order, result=None):
     test = order.test
-    coding = _code_ref('urn:oid:1.3.6.1.4.1.99999.iHIS.lab-test', str(test.id), test.test_name)
+    test_name = test.test_name if test else 'Laboratory test'
+    coding = _code_ref('urn:oid:1.3.6.1.4.1.99999.iHIS.lab-test',
+                       str(test.id) if test else '0', test_name)
     status = _observation_status(order, result)
     obs = {
         'resourceType': 'Observation',
         'id': str(order.id),
         'meta': {'profile': ['http://hl7.org/fhir/StructureDefinition/Observation']},
         'status': status,
-        'code': {'text': test.test_name, 'coding': [coding]},
+        'code': {'text': test_name, 'coding': [coding]},
         'subject': _patient_ref(order.patient),
         'effectiveDateTime': _iso(result.result_date if result else order.order_date),
         'issued': _iso(result.result_date if result else order.order_date),
@@ -127,15 +131,19 @@ def fhir_observation(order, result=None):
             obs['valueString'] = result.qualitative
         elif result.result_value:
             value = {'value': result.result_value}
-            unit = result.result_unit or test.unit
+            unit = result.result_unit or (test.unit if test else None)
             if unit:
                 value['unit'] = unit
             if _is_numeric(result.result_value):
-                value['value'] = float(result.result_value) if '.' in result.result_value else int(result.result_value)
+                try:
+                    numeric = float(result.result_value)
+                    value['value'] = int(numeric) if numeric.is_integer() and '.' not in result.result_value else numeric
+                except (TypeError, ValueError, OverflowError):
+                    value['value'] = result.result_value
             obs['valueQuantity'] = value
         interpretation = []
         if result.is_critical:
-            interpretation.append({'coding': [_code_ref('http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation', 'A', 'Abnormal')]})
+            interpretation.append({'coding': [_code_ref('http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation', 'AA', 'Critical abnormal')]})
         elif result.is_abnormal:
             interpretation.append({'coding': [_code_ref('http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation', 'A', 'Abnormal')]})
         if interpretation:
@@ -323,9 +331,11 @@ def fhir_diagnostic_report(order, result=None):
         'resourceType': 'DiagnosticReport',
         'id': str(order.id),
         'meta': {'profile': ['http://hl7.org/fhir/StructureDefinition/DiagnosticReport']},
-        'status': 'final' if (result and result.status in ('Verified', 'Locked')) or order.status == 'FINALIZED' else 'preliminary',
-        'code': {'text': order.test.test_name,
-                 'coding': [_code_ref('urn:oid:1.3.6.1.4.1.99999.iHIS.lab-test', str(order.test.id), order.test.test_name)]},
+        'status': 'final' if (result and result.status in ('Verified', 'Locked')) or order.status in ('Finalized', 'FINALIZED') else 'preliminary',
+        'code': {'text': order.test.test_name if order.test else 'Laboratory test',
+                 'coding': [_code_ref('urn:oid:1.3.6.1.4.1.99999.iHIS.lab-test',
+                                      str(order.test.id) if order.test else '0',
+                                      order.test.test_name if order.test else 'Laboratory test')]},
         'subject': _patient_ref(order.patient),
         'effectiveDateTime': _iso(result.result_date if result else order.order_date),
         'issued': _iso(result.result_date if result else order.order_date),

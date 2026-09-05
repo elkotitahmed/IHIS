@@ -33,7 +33,7 @@ from app.permissions import (ALERT_ACK, ALERT_VIEW, ALLERGY_CREATE,
 from app.routes.decorators import log_activity, permissions_required
 from app.services import alerts as alert_svc
 from app.services.patient_safety import patient_safety_context
-from app.services.timeline import record_event
+from app.services.timeline import record_event, merged_timeline
 from app.utils import utcnow
 
 clinical_bp = Blueprint('clinical', __name__)
@@ -126,8 +126,7 @@ def patient_360(patient_id):
     if patient is None:
         flash('Patient not found.', 'warning')
         return redirect(url_for('clinical.workbench'))
-    timeline = (TimelineEvent.query.filter_by(patient_id=patient_id)
-                .order_by(TimelineEvent.occurred_at.desc()).limit(80).all())
+    timeline = merged_timeline(patient_id, limit=120)
     safety = patient_safety_context(patient_id)
     allergies = safety['allergies']
     problems = safety['problems']

@@ -78,8 +78,10 @@ class AISmartOrders(GeminiBase):
             result['source'] = 'gemini'
             self._log_order_set(patient_id, diagnosis_text)
             return result
-        except Exception as e:
-            return {'available': True, 'error': str(e), 'order_set': None}
+        except Exception as e:  # noqa: BLE001
+            from app.services.ai.gemini_base import AIServiceError
+            _msg = str(e) if isinstance(e, AIServiceError) else 'The AI service could not complete the request.'
+            return {'available': True, 'error': _msg, 'order_set': None}
 
     def _log_order_set(self, patient_id, diagnosis):
         try:

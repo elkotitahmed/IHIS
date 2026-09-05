@@ -51,7 +51,7 @@
                                 <span class="status-badge s-pending">{{ item.record.status }}</span>
                             {% endif %}
                         </td>
-                        <td class="cell-mono">{{ item.record.administered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="cell-mono">{{ item.record.administered_at.strftime('%Y-%m-%d %H:%M') if item.record.administered_at else ('—' if not item.record.scheduled_time else ('due ' ~ item.record.scheduled_time.strftime('%Y-%m-%d %H:%M'))) }}</td>
                         <td class="cell-secondary">{{ item.nurse_name }}</td>
                         <td class="cell-secondary">{{ (item.record.notes or '')[:40] }}</td>
                     </tr>

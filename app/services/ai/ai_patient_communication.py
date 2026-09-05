@@ -7,7 +7,7 @@ from datetime import date
 from app import db
 from app.models import (Patient, Diagnosis, Prescription, LabOrder, LabResult,
                         VitalSign, Admission)
-from app.services.ai.gemini_base import GeminiBase, _collect_patient_context
+from app.services.ai.gemini_base import AIServiceError, GeminiBase, _collect_patient_context
 
 SYSTEM_PROMPT = (
     "You are a patient education specialist. Create clear, compassionate, "
@@ -58,18 +58,21 @@ class AIPatientCommunication(GeminiBase):
             else "Provide the response in clear English."
         )
 
-        topic_prompt = {
+        topic_prompts = {
             'full_summary': 'Generate a complete summary of the patient\'s current health status, conditions, and treatment plan.',
             'medications': 'Focus on explaining each current medication — what it does, how to take it, and what side effects to watch for.',
             'post_visit': 'Create post-visit instructions based on today\'s encounter.',
             'diagnosis_explanation': 'Explain the patient\'s diagnoses in simple, understandable language.',
-        }.get(topic, topic_prompt)
+        }
+        topic_prompt = topic_prompts.get(topic, topic_prompts['full_summary'])
 
+        # No direct identifiers leave the system: the clinical context is
+        # de-identified and the patient is addressed generically.
         prompt = (
             f"{ctx}\n\n"
             f"{lang_instruction}\n\n"
             f"Task: {topic_prompt}\n\n"
-            f"Patient name: {patient.user.full_name if patient.user else 'Patient'}\n"
+            f"Address the patient directly and respectfully without using a name.\n"
             f"Preferred language: {'Arabic' if language == 'ar' else 'English'}\n\n"
             f"{OUTPUT_FORMAT}"
         )
@@ -84,8 +87,8 @@ class AIPatientCommunication(GeminiBase):
             result['language'] = language
             self._log_communication(patient_id, topic)
             return result
-        except Exception as e:
-            return {'available': True, 'error': str(e)}
+        except Exception as e:  # noqa: BLE001
+            return {'available': True, 'error': _public_error(e)}
 
     def _log_communication(self, patient_id, topic):
         try:
@@ -99,3 +102,7 @@ class AIPatientCommunication(GeminiBase):
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+
+def _public_error(exc):
+    return str(exc) if isinstance(exc, AIServiceError) else 'The AI service could not complete the request.'

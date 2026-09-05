@@ -33,6 +33,19 @@ APPOINTMENT_COLUMNS = [
 ]
 
 
+def _columns(doctor_nullable):
+    """Fresh Column objects on every call: SQLAlchemy binds a Column to the
+    first Table it is attached to, so a module-level list cannot be reused by
+    both upgrade() and downgrade() in one process."""
+    cols = []
+    for col in APPOINTMENT_COLUMNS:
+        if col.name == 'doctor_id':
+            cols.append(sa.Column('doctor_id', sa.Integer(), nullable=doctor_nullable))
+        else:
+            cols.append(col.copy())
+    return cols
+
+
 def upgrade():
     # Preserve encounter history: an Appointment is a clinical/audit record.
     # Previously deleting a Doctor cascade-deleted all their appointments.
@@ -40,10 +53,22 @@ def upgrade():
     # appointment row (and its history) survives. Use a NAMED FK so later
     # batch operations can address it deterministically on SQLite.
     conn = op.get_bind()
+    if conn.dialect.name != 'sqlite':
+        # PostgreSQL & friends support in-place ALTER; a rename/rebuild would
+        # collide with the auto-named primary-key constraint.
+        with op.batch_alter_table('appointments') as batch_op:
+            batch_op.alter_column('doctor_id', existing_type=sa.Integer(), nullable=True)
+        fk_names = [fk['name'] for fk in sa.inspect(conn).get_foreign_keys('appointments')
+                    if fk.get('constrained_columns') == ['doctor_id'] and fk.get('name')]
+        for name in fk_names:
+            op.drop_constraint(name, 'appointments', type_='foreignkey')
+        op.create_foreign_key('fk_appointments_doctor_id', 'appointments', 'doctors',
+                              ['doctor_id'], ['id'], ondelete='SET NULL')
+        return
     op.rename_table('appointments', 'appointments_old')
     op.create_table(
         'appointments',
-        *APPOINTMENT_COLUMNS,
+        *_columns(doctor_nullable=True),
         sa.ForeignKeyConstraint(['patient_id'], ['patients.id'],
                                 ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['doctor_id'], ['doctors.id'],
@@ -68,17 +93,23 @@ def upgrade():
 def downgrade():
     # Revert to the original schema: doctor_id NOT NULL with CASCADE delete.
     conn = op.get_bind()
+    # Rows orphaned by a deleted doctor cannot satisfy NOT NULL; the original
+    # schema cascade-deleted them, so drop them explicitly here as well.
+    conn.execute(sa.text('DELETE FROM appointments WHERE doctor_id IS NULL'))
+    if conn.dialect.name != 'sqlite':
+        fk_names = [fk['name'] for fk in sa.inspect(conn).get_foreign_keys('appointments')
+                    if fk.get('constrained_columns') == ['doctor_id'] and fk.get('name')]
+        for name in fk_names:
+            op.drop_constraint(name, 'appointments', type_='foreignkey')
+        with op.batch_alter_table('appointments') as batch_op:
+            batch_op.alter_column('doctor_id', existing_type=sa.Integer(), nullable=False)
+        op.create_foreign_key('fk_appointments_doctor_id', 'appointments', 'doctors',
+                              ['doctor_id'], ['id'], ondelete='CASCADE')
+        return
     op.rename_table('appointments', 'appointments_old')
-    cols = list(APPOINTMENT_COLUMNS)
-    # restore the original NOT NULL constraint on doctor_id
-    cols = []
-    for col in APPOINTMENT_COLUMNS:
-        if col.name == 'doctor_id':
-            col = sa.Column('doctor_id', sa.Integer(), nullable=False)
-        cols.append(col)
     op.create_table(
         'appointments',
-        *cols,
+        *_columns(doctor_nullable=False),
         sa.ForeignKeyConstraint(['patient_id'], ['patients.id'],
                                 ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['doctor_id'], ['doctors.id'],

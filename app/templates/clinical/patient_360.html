@@ -429,7 +429,8 @@
                 <div class="timeline-ihs">
                     {% for ev in timeline %}
                     <div class="timeline-entry">
-                        <div class="tl-dot dot-{{ 'danger' if ev.event_type == 'LAB' else 'primary' }}"></div>
+                        {% set _c = {'LAB':'warning','RADIOLOGY':'secondary','PRESCRIPTION':'success','DISPENSE':'success','VITALS':'info','NURSING':'info','ADMISSION':'danger','DISCHARGE':'danger','BILLING':'danger','PAYMENT':'success','REFERRAL':'primary','DIAGNOSIS':'primary','VISIT':'primary','APPOINTMENT':'info','ALLERGY':'danger','FOLLOW_UP':'primary','IMMUNIZATION':'info','PHYSIOTHERAPY':'secondary','DENTISTRY':'secondary','DOCUMENT':'warning'} %}
+                        <div class="tl-dot dot-{{ _c.get(ev.event_type, 'primary') }}"></div>
                         <div class="tl-time">{{ ev.occurred_at.strftime('%d %b %Y, %H:%M') }}</div>
                         <div class="tl-label">{{ ev.title }}</div>
                         {% if ev.description %}<div class="tl-detail">{{ ev.description }}</div>{% endif %}

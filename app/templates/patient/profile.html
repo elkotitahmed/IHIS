@@ -20,13 +20,13 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label-ihs">{{ 'الاسم الكامل' if g.lang == 'ar' else 'Full Name' }}</label>
-                                <input type="text" name="full_name" class="form-control" value="{{ patient.full_name or '' }}">
+                                <input type="text" name="full_name" class="form-control" value="{{ patient.user.full_name if patient.user else '' }}">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label-ihs">{{ 'الهاتف' if g.lang == 'ar' else 'Phone' }}</label>
-                                <input type="text" name="phone" class="form-control" value="{{ patient.phone or '' }}">
+                                <input type="text" name="phone" class="form-control" value="{{ patient.phone or (patient.user.phone if patient.user else '') or '' }}">
                             </div>
                         </div>
                         <div class="col-md-6">

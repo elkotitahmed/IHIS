@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block content %}{% endblock %}
-{% block auth_content %}
+{% set _error_body %}
 <div style="max-width:600px;margin:4rem auto;text-align:center;padding:2rem">
-    <h1 style="font-size:3rem;color:var(--color-danger);margin-bottom:1rem">403</h1>
+    <h1 style="font-size:3rem;color:var(--ihis-danger);margin-bottom:1rem">403</h1>
     <h2>Access Denied</h2>
-    <p style="color:var(--color-muted);margin:1rem 0">You do not have permission to access this resource.</p>
-    <a href="/" class="btn btn-primary">Go Home</a>
+    <p style="color:var(--ihis-text-muted);margin:1rem 0">You do not have permission to access this resource.</p>
+    <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.home') }}" class="btn-ihs btn-ihs-primary">{{ 'العودة' if g.lang == 'ar' else 'Go Back Home' }}</a>
 </div>
-{% endblock %}
+{% endset %}
+{% block content %}{{ _error_body }}{% endblock %}
+{% block auth_content %}{{ _error_body }}{% endblock %}

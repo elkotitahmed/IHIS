@@ -250,7 +250,7 @@ def classify_skin_lesion(upload_file):
                 'confidence': round(float(p.max()), 4),
             }
             per_model.append(entry)
-            if best is None or p.max() > best[3].max():
+            if best is None or p.max() > best[4].cpu().numpy().max():
                 best = (ckpt, model, device, output, probs)
 
         ensemble = prob_sum / len(models)

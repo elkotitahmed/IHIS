@@ -340,8 +340,9 @@ def enter_report(order_id):
                 findings=findings,
                 impression=impression,
                 study_type=order.imaging_type.name if order.imaging_type else '')
-        except (FileNotFoundError, ImportError, OSError, ValueError) as exc:
-            current_app.logger.warning('Radiology critical AI unavailable: %s', exc)
+        except Exception as exc:  # noqa: BLE001 - the report must never be lost to an AI failure
+            current_app.logger.warning('Radiology critical AI unavailable: %s: %s',
+                                       type(exc).__name__, exc)
 
         manual_critical = bool(request.form.get('critical_finding'))
         if (ai_result and ai_result.get('critical_finding')) or manual_critical:

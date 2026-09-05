@@ -27,6 +27,9 @@ _ALERT_TYPE_COLORS = {
     'MISSED_APPOINTMENT': 'info',
     'AI_FRACTURE_DETECTED': 'danger',
     'AI_MELANOMA_SUSPECTED': 'danger',
+    'READMISSION_RISK': 'warning',
+    'VACCINE_DUE': 'info',
+    'UPCOMING_FOLLOWUP': 'info',
 }
 
 

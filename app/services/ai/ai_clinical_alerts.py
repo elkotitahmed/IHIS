@@ -13,6 +13,14 @@ from app.models import (Patient, ClinicalAlert, VitalSign, LabResult, LabOrder,
                         Prescription, Medication, DrugInteraction, Admission,
                         Diagnosis)
 from app.services.ai.gemini_base import GeminiBase, _collect_patient_context
+from app.services import alerts as alert_svc
+from app.utils import utcnow
+
+# Canonical alert vocabulary (app/services/alerts.py) so dashboards, colours
+# and filters recognise engine-generated alerts.
+_SEVERITY = {'Critical': 'CRITICAL', 'High': 'HIGH', 'Moderate': 'MODERATE', 'Low': 'LOW'}
+_CATEGORY = {'lab_value': 'CRITICAL_LAB', 'vital_signs': 'ABNORMAL_VITALS',
+             'drug_interaction': 'DRUG_INTERACTION', 'readmission_risk': 'READMISSION_RISK'}
 
 
 class AIClinicalAlertEngine:
@@ -39,7 +47,7 @@ class AIClinicalAlertEngine:
 
     def scan_all_active_patients(self):
         """Scan all patients with recent activity for alerts."""
-        cutoff = datetime.now() - timedelta(days=7)
+        cutoff = utcnow() - timedelta(days=7)
         patient_ids = set()
         for order in LabOrder.query.filter(
                 LabOrder.order_date >= cutoff).all():
@@ -59,10 +67,10 @@ class AIClinicalAlertEngine:
         recent_results = LabResult.query.join(LabOrder).filter(
             LabOrder.patient_id == patient_id,
             LabResult.is_abnormal.is_(True),
-            LabResult.resulted_at >= datetime.now() - timedelta(hours=48)
+            LabResult.result_date >= utcnow() - timedelta(hours=48)
         ).all()
         for r in recent_results:
-            order = LabOrder.query.get(r.order_id)
+            order = r.order
             test_name = order.test.test_name if order and order.test else 'Lab test'
             # Check for truly critical values
             is_critical = self._is_critical_value(r, order)
@@ -169,11 +177,11 @@ class AIClinicalAlertEngine:
         alerts = []
         recent_discharge = Admission.query.filter(
             Admission.patient_id == patient_id,
-            Admission.status.in_(['Discharged', 'Completed'])
+            Admission.status == 'Discharged'
         ).order_by(Admission.discharged_at.desc()).first()
 
         if recent_discharge and recent_discharge.discharged_at:
-            days_since = (datetime.now().date() - recent_discharge.discharged_at.date()).days
+            days_since = (utcnow().date() - recent_discharge.discharged_at.date()).days
             if days_since <= 30:
                 alerts.append({
                     'severity': 'Moderate',
@@ -202,7 +210,7 @@ class AIClinicalAlertEngine:
             'potassium': (2.5, 6.5),
             'sodium': (120, 160),
             'hemoglobin': (5, 20),
-            'platelets': (20, 50),
+            'platelets': (20, 1000),
             'wbc': (1, 30),
             'creatinine': (0.1, 10),
             'inr': (0.5, 5),
@@ -215,18 +223,24 @@ class AIClinicalAlertEngine:
         return False
 
     def create_alert(self, alert_dict):
-        """Persist a ClinicalAlert record."""
+        """Persist an engine-generated alert through the shared alert
+        service: canonical severity/type vocabulary and no duplicate OPEN
+        alert for the same patient + type + title."""
         try:
-            alert = ClinicalAlert(
-                patient_id=alert_dict['patient_id'],
-                alert_type=alert_dict.get('category', 'general'),
-                severity=alert_dict.get('severity', 'Moderate'),
-                title=alert_dict.get('title', 'Clinical Alert'),
-                message=alert_dict.get('message', ''),
-            )
-            db.session.add(alert)
+            alert_type = _CATEGORY.get(alert_dict.get('category'), 'CRITICAL_LAB')
+            severity = _SEVERITY.get(alert_dict.get('severity'), 'MODERATE')
+            title = alert_dict.get('title', 'Clinical Alert')
+            existing = ClinicalAlert.query.filter_by(
+                patient_id=alert_dict['patient_id'], alert_type=alert_type,
+                title=title, status='OPEN').first()
+            if existing is not None:
+                return existing
+            alert = alert_svc.create_alert(
+                alert_dict['patient_id'], alert_type, title,
+                message=alert_dict.get('message', ''), severity=severity,
+                source_type='ai_scan', source_id=None)
             db.session.commit()
             return alert
-        except Exception:
+        except Exception:  # noqa: BLE001
             db.session.rollback()
             return None

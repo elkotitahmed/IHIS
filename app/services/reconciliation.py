@@ -231,8 +231,11 @@ def _find_discrepancies(reconciliation_id, patient_id, home, active):
         med_brand = (med.brand_name or '').strip().lower()
         conflicting = (med_name in allergy_names) or (med_brand in allergy_names)
         if not conflicting and med_name:
-            conflicting = any(allerg in med_name or med_name in allerg
-                              for allerg in allergy_names if allerg)
+            # Substring matching only for reasonably specific names, so an
+            # allergy recorded as "ASA" or "nut" cannot flag unrelated drugs.
+            conflicting = any((allerg in med_name or med_name in allerg)
+                              for allerg in allergy_names
+                              if allerg and len(allerg) >= 4 and len(med_name) >= 4)
         if conflicting:
             findings.append(_disc(
                 reconciliation_id, med.id, 'ALLERGY',

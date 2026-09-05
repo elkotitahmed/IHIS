@@ -112,6 +112,7 @@ def profile():
             return redirect(url_for('patient.profile'))
         user = current_user
         user.phone = request.form.get('phone') or user.phone
+        patient.phone = request.form.get('phone') or patient.phone
         user.full_name = request.form.get('full_name') or user.full_name
         patient.date_of_birth = datetime.strptime(request.form['date_of_birth'], '%Y-%m-%d') \
             if request.form.get('date_of_birth') else patient.date_of_birth

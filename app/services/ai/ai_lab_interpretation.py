@@ -70,6 +70,9 @@ class AILaboratoryInterpretation(GeminiBase):
                         if abnormal else 'Within the reference range.'),
                     'source': 'heuristic'}
 
+        if patient is None:
+            return {**base_info, 'interpretation': 'Patient record unavailable.',
+                    'source': 'heuristic'}
         ctx = _collect_patient_context(patient)
         prompt = (
             f"{ctx}\n\n"
@@ -88,13 +91,20 @@ class AILaboratoryInterpretation(GeminiBase):
             if 'raw_text' in llm_result:
                 return {**base_info, 'interpretation': llm_result['raw_text'],
                         'source': 'gemini', 'available': True}
-            # Merge LLM interpretation with base info
-            merged = {**base_info, **llm_result, 'available': True, 'source': 'gemini'}
+            # Merge LLM interpretation with base info. The laboratory's own
+            # verified facts (value, unit, abnormal flag) always win over the
+            # model's output.
+            merged = {**llm_result, **base_info, 'available': True, 'source': 'gemini'}
+            merged.setdefault('interpretation',
+                              llm_result.get('clinical_significance')
+                              or llm_result.get('summary') or '')
             self._log_interpretation(order_id, patient.id, merged)
             return merged
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            from app.services.ai.gemini_base import AIServiceError
+            reason = str(e) if isinstance(e, AIServiceError) else 'provider error'
             return {**base_info,
-                    'interpretation': f'AI interpretation unavailable ({e}). '
+                    'interpretation': f'AI interpretation unavailable ({reason}). '
                                       'Manual review recommended.',
                     'source': 'error', 'available': True}
 

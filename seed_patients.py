@@ -268,7 +268,7 @@ def _add_appointment(patient, doctor, when, status='Scheduled', reason=None,
     return appt
 
 
-def _add_lab_order(patient, doctor, test_name, when, status='Ordered',
+def _add_lab_order(patient, doctor, test_name, when, status='Pending',
                    priority='Normal', specimen='Blood'):
     test = _lab_test(test_name)
     order = LabOrder(patient_id=patient.id, doctor_id=doctor.id,
@@ -294,7 +294,7 @@ def _add_lab_result(order, value, is_abnormal, is_critical, unit, when,
     return result
 
 
-def _add_radiology_order(patient, doctor, imaging_name, when, status='Ordered',
+def _add_radiology_order(patient, doctor, imaging_name, when, status='Pending',
                          priority='Normal', scheduled_at=None, notes=None):
     img = _imaging(imaging_name)
     order = RadiologyOrder(patient_id=patient.id, doctor_id=doctor.id,
@@ -462,7 +462,7 @@ def _seed_ahmed():
         db.session.add(tropo)
         db.session.flush()
     tro = LabOrder(patient_id=patient.id, doctor_id=doc.id, test_id=tropo.id,
-                   status='FINALIZED', priority='Urgent', order_date=_dt(0, 10, 20),
+                   status='Finalized', priority='Urgent', order_date=_dt(0, 10, 20),
                    specimen_type='Blood')
     db.session.add(tro)
     db.session.flush()
@@ -635,7 +635,7 @@ def _seed_fatima():
     # HbA1c result ready
     hba1c = _lab_test('HbA1c')
     hb = LabOrder(patient_id=patient.id, doctor_id=doc.id,
-                  test_id=hba1c.id if hba1c else None, status='FINALIZED',
+                  test_id=hba1c.id if hba1c else None, status='Finalized',
                   priority='Normal', order_date=past, specimen_type='Blood')
     db.session.add(hb)
     db.session.flush()
@@ -710,7 +710,7 @@ def _seed_khaled():
 
     # Radiology X-ray with report (fracture detected - YOLO candidate)
     xr = _add_radiology_order(patient, doc, 'X-Ray', _dt(-2, 10, 0),
-                              status='PERFORMED', priority='Urgent',
+                              status='Performed', priority='Urgent',
                               scheduled_at=_dt(-2, 10, 0),
                               notes='Right femur AP + Lateral')
     rep = _add_radiology_report(xr,
@@ -734,7 +734,7 @@ def _seed_khaled():
 
     # CT study with full dose metrics (exercises the dose dashboard + reference levels)
     ct = _add_radiology_order(patient, doc, 'CT Scan', _dt(-2, 11, 0),
-                              status='PERFORMED', priority='Normal',
+                              status='Performed', priority='Normal',
                               scheduled_at=_dt(-2, 11, 0),
                               notes='CT right femur post-ORIF for alignment verification')
     if ImagingDoseRecord.query.filter_by(order_id=ct.id).count() == 0:
@@ -950,7 +950,7 @@ def _seed_sara():
 
     # Radiology chest X-ray (result normal/clear)
     cxr = _add_radiology_order(patient, doc, 'X-Ray', _dt(0, 14, 30),
-                               status='PERFORMED', priority='Normal',
+                               status='Performed', priority='Normal',
                                scheduled_at=_dt(0, 15, 0))
     rep = _add_radiology_report(cxr, 'Clear lung fields; no consolidation.',
                                 'Normal chest radiograph.', 'No acute abnormality.',

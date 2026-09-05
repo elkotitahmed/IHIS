@@ -64,11 +64,17 @@ class AIDiagnosisSupport(GeminiBase):
                         'source': 'gemini'}
             result['available'] = True
             result['source'] = 'gemini'
+            result.setdefault('prior_diagnoses',
+                              [d.description for d in Diagnosis.query.filter_by(patient_id=patient_id).all()])
+            result.setdefault('disclaimer',
+                              'AI suggestions are for decision support only. Always confirm clinically.')
             # Log to audit trail
             self._log_diagnosis(patient_id, symptoms, result)
             return result
-        except Exception as e:
-            return self._fallback_heuristic(patient_id, symptoms, str(e))
+        except Exception as e:  # noqa: BLE001
+            from app.services.ai.gemini_base import AIServiceError
+            msg = str(e) if isinstance(e, AIServiceError) else 'provider error'
+            return self._fallback_heuristic(patient_id, symptoms, msg)
 
     def _fallback_heuristic(self, patient_id, symptoms, error=None):
         """Fallback to keyword matching when Gemini unavailable."""
@@ -85,7 +91,7 @@ class AIDiagnosisSupport(GeminiBase):
         matched = []
         for key, value in KNOWLEDGE.items():
             if all(kw in symptoms for kw in key.split()):
-                matched.append({'diagnosis': d.strip(), 'icd10': '',
+                matched.extend({'diagnosis': d.strip(), 'icd10': '',
                                 'confidence': 'Moderate', 'reasoning': f'Matched symptom pattern: {key}',
                                 'key_findings': [key], 'next_steps': ['Clinical correlation recommended'],
                                 'urgency': 'Routine'}
