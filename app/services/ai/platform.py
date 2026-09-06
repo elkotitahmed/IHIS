@@ -365,6 +365,15 @@ def data_block(label, text, limit=4000):
     return f"<<<DATA {label}>>>\n{body}\n<<<END DATA>>>"
 
 
+_DATA_RE = re.compile(r'<<<DATA [^>]*>>>\n?(.*?)\n?<<<END DATA>>>', re.S)
+
+
+def _data_only(prompt):
+    """Only the untrusted data blocks of a prompt (never our own markers or
+    task instructions) are screened for instruction-like text."""
+    return '\n'.join(_DATA_RE.findall(prompt or ''))
+
+
 def clean_output(text):
     """Model output is rendered as text; strip anything that looks like markup."""
     if text is None:
@@ -398,7 +407,7 @@ def run_ai(feature, patient_id, context, prompt, *, system=None, heavy=False,
     from app.services.ai.gemini_base import GeminiBase, AIServiceError
     result = {'feature': feature, 'status': 'unavailable', 'provider': None,
               'text': None, 'data': None, 'message': '', 'usage_id': None,
-              'cached': False, 'injection_flag': looks_like_injection(prompt)}
+              'cached': False, 'injection_flag': looks_like_injection(_data_only(prompt))}
     if result['injection_flag']:
         record_usage(feature, 'injection_flagged', provider='local', patient_id=patient_id,
                      detail='instruction-like text found in data')

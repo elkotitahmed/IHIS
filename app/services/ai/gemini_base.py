@@ -16,6 +16,9 @@ BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 # current free-tier flash model (pinned ids such as gemini-2.5-flash have been
 # retired for new keys). Override per deployment with AI_MODEL.
 DEFAULT_MODEL = "gemini-flash-latest"
+# Tried once when the primary model answers 503 (overloaded) twice.
+FALLBACK_MODEL = "gemini-flash-lite-latest"
+RETRY_DELAY_SECONDS = 1.5
 # (connect, read) timeouts: fail fast on an unreachable provider, allow a
 # long generation once connected.
 REQUEST_TIMEOUT = (10, 90)
@@ -159,14 +162,32 @@ class GeminiBase:
         except platform.AIBudgetExceeded as exc:
             raise AIServiceError(str(exc)) from None
         started = time.monotonic()
-        try:
-            resp = _requests.post(
-                url,
-                headers={"Content-Type": "application/json",
-                         "x-goog-api-key": self.api_key},
-                json=payload, timeout=REQUEST_TIMEOUT)
-            resp.raise_for_status()
-        except _requests.RequestException as exc:
+        fallback = os.getenv('AI_FALLBACK_MODEL', FALLBACK_MODEL)
+        attempts = [(self.model_name, url)]
+        attempts.append((self.model_name, url))                      # one retry on 503
+        if fallback and fallback != self.model_name:                 # then a lighter model once
+            attempts.append((fallback, f"{BASE_URL}/{fallback}:generateContent"))
+        resp = None
+        last_exc = None
+        for i, (model_used, attempt_url) in enumerate(attempts):
+            try:
+                resp = _requests.post(
+                    attempt_url,
+                    headers={"Content-Type": "application/json",
+                             "x-goog-api-key": self.api_key},
+                    json=payload, timeout=REQUEST_TIMEOUT)
+                resp.raise_for_status()
+                last_exc = None
+                break
+            except _requests.RequestException as exc:
+                last_exc = exc
+                status = getattr(getattr(exc, 'response', None), 'status_code', None)
+                if status == 503 and i < len(attempts) - 1:
+                    time.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                break
+        if last_exc is not None:
+            exc = last_exc
             message = _safe_provider_error(exc)
             self.last_usage_id = platform.after_provider_call(
                 feature, ok=False,
