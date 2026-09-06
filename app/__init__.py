@@ -35,10 +35,23 @@ def create_app(config_name=None):
                 'Set the SECRET_KEY environment variable before starting the app.')
         db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
         if not db_uri or db_uri.startswith('sqlite:'):
-            raise RuntimeError(
-                'Production requires an explicit server DATABASE_URL '
-                '(e.g. postgresql+psycopg2://...). Running production on '
-                'SQLite is not supported.')
+            if os.environ.get('IHIS_EPHEMERAL_DEMO') == '1' and db_uri.startswith('sqlite:'):
+                # Ephemeral demo hosts (e.g. a Hugging Face Space without a
+                # database) may run production settings on a throw-away SQLite
+                # file. Data does not survive a restart; never use for real care.
+                app.logger.warning('IHIS_EPHEMERAL_DEMO=1: production profile on an ephemeral '
+                                   'SQLite database. Demo use only.')
+            else:
+                raise RuntimeError(
+                    'Production requires an explicit server DATABASE_URL '
+                    '(e.g. postgresql+psycopg2://...). Running production on '
+                    'SQLite is not supported.')
+
+    if os.environ.get('IHIS_BEHIND_PROXY') == '1':
+        # Behind a TLS-terminating proxy (Hugging Face, Cloud Run, nginx):
+        # trust X-Forwarded-Proto/Host so url_for builds https links.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # Ensure upload folder exists
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'app/static/uploads'), exist_ok=True)

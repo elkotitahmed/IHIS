@@ -13,7 +13,7 @@ AuditLog writer so backend logs can be correlated with the DB audit trail.
 import logging
 import time
 import uuid
-from flask import g, request
+from flask import has_request_context, g, request
 
 logger = logging.getLogger('ihis.request')
 
@@ -33,6 +33,16 @@ def setup_logging(app):
     )
     stream = logging.StreamHandler()
     stream.setFormatter(formatter)
+
+    class _RequestIdFilter(logging.Filter):
+        """Guarantee ``request_id`` on every record, including log calls made
+        outside a request (start-up warnings, CLI, bootstrap)."""
+        def filter(self, record):
+            if not hasattr(record, 'request_id'):
+                record.request_id = getattr(g, 'request_id', '-') if has_request_context() else '-'
+            return True
+
+    stream.addFilter(_RequestIdFilter())
     app.logger.addHandler(stream)
     app.logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
 

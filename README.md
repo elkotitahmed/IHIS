@@ -1,3 +1,17 @@
+---
+title: iHIS Hospital AI Copilot
+emoji: 🏥
+colorFrom: green
+colorTo: purple
+sdk: gradio
+sdk_version: 6.26.0
+app_file: hf_space_app.py
+python_version: "3.12"
+startup_duration_timeout: 1h
+short_description: Hospital information system with an AI Clinical Copilot
+pinned: false
+---
+
 # iHIS — Integrated Health Information System
 
 A multi-portal hospital information system built with **Flask** that brings an

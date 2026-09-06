@@ -24,10 +24,14 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, 'var', 'uploads')  # private, NOT under static/
     MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32 MB
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'dcm', 'mp4', 'webm'}
+    _RAD_EXTERNAL = os.path.join(basedir, 'AI apps', 'RadiologyAI_Integration_Package',
+                                 'RadiologyAI_Integration_Package')
+    # The small negation-aware classifier (60 KB) is bundled in the repo so
+    # containers work without the external "AI apps" checkout.
+    _RAD_BUNDLED = os.path.join(basedir, 'app', 'ai_packages', 'radiology_critical')
     RADIOLOGY_AI_PACKAGE_DIR = os.environ.get(
         'RADIOLOGY_AI_PACKAGE_DIR',
-        os.path.join(basedir, 'AI apps', 'RadiologyAI_Integration_Package',
-                     'RadiologyAI_Integration_Package'))
+        _RAD_EXTERNAL if os.path.isdir(_RAD_EXTERNAL) else _RAD_BUNDLED)
 
     # Pagination
     ITEMS_PER_PAGE = 20
