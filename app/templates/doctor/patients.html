@@ -48,8 +48,8 @@
                             <td class="cell-secondary">{{ p.date_of_birth.strftime('%d %b %Y') if p.date_of_birth else '-' }}</td>
                             <td>{{ p.gender or '-' }}</td>
                             <td>
-                                <a href="{{ url_for('doctor.patient_overview', patient_id=p.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
-                                    <i class="fas fa-user-gear"></i> {{ t('overview') }}
+                                <a href="{{ url_for('clinical.patient_360', patient_id=p.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+                                    <i class="fas fa-circle-user"></i> 360
                                 </a>
                                 <a href="{{ url_for('doctor.patient_detail', patient_id=p.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
                                     <i class="fas fa-file-medical"></i> {{ 'السجل' if g.lang == 'ar' else 'Record' }}

@@ -28,10 +28,8 @@ ZERO_ARG_ROUTES = {
                                   'SuperAdmin'},
     '/ai/clinical-alerts': {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'},
     '/ai/health-insights': {'Patient', 'Admin', 'SuperAdmin'},
-    '/ai/analytics': {'Admin', 'SuperAdmin'},
     '/pharmacy/ai-workbench': {'Pharmacist', 'Admin', 'SuperAdmin'},
-    '/admin/ai/appointment-optimization': {'Admin', 'SuperAdmin'},
-    '/admin/ai/coding-assistant': {'Admin', 'SuperAdmin'},
+    '/admin/capacity': {'Admin', 'SuperAdmin'},
 }
 
 # username -> (user_type, list of roles)

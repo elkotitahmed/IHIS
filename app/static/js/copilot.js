@@ -266,6 +266,12 @@
                 if (act) setTimeout(function () { if (INPUT_ACTIONS[act]) renderInputs(act); else runAction(act, {}); }, 400);
             });
         });
+        // Deep link: ?copilot=<action> (retired AI pages redirect here)
+        var wanted = new URLSearchParams(window.location.search).get('copilot');
+        if (wanted && patientId) {
+            open();
+            setTimeout(function () { if (INPUT_ACTIONS[wanted]) renderInputs(wanted); else runAction(wanted, {}); }, 600);
+        }
         // "Analyze with AI" on a result: opens the panel with the review
         document.addEventListener('click', function (e) {
             var el = e.target.closest('[data-result-review]');

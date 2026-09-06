@@ -340,75 +340,10 @@ def patients():
 @doctor_bp.route('/patients/<int:patient_id>/overview')
 @login_required
 @roles_required('Doctor', 'Admin', 'SuperAdmin')
-@patient_access_required
 def patient_overview(patient_id):
-    """Patient 360 view: demographics, latest vitals, active problems,
-    current medications, recent labs/imaging, and clinical alerts in one page."""
-    patient = Patient.query.get_or_404(patient_id)
-
-    latest_vitals = VitalSign.query.filter_by(patient_id=patient.id) \
-        .order_by(VitalSign.recorded_at.desc()).first()
-    vitals_history = VitalSign.query.filter_by(patient_id=patient.id) \
-        .order_by(VitalSign.recorded_at.desc()).limit(5).all()
-
-    diagnoses = Diagnosis.query.filter_by(patient_id=patient.id) \
-        .order_by(Diagnosis.date_diagnosed.desc()).all()
-    records = MedicalRecord.query.filter_by(patient_id=patient.id) \
-        .order_by(MedicalRecord.visit_date.desc()).limit(5).all()
-    active_rxs = Prescription.query.filter_by(patient_id=patient.id, status='Active') \
-        .order_by(Prescription.prescribed_date.desc()).all()
-    all_rxs = Prescription.query.filter_by(patient_id=patient.id) \
-        .order_by(Prescription.prescribed_date.desc()).limit(10).all()
-
-    recent_labs = LabOrder.query.filter_by(patient_id=patient.id) \
-        .order_by(LabOrder.order_date.desc()).limit(5).all()
-    recent_imaging = RadiologyOrder.query.filter_by(patient_id=patient.id) \
-        .order_by(RadiologyOrder.order_date.desc()).limit(5).all()
-    attachments = PatientDocument.query.filter_by(patient_id=patient.id) \
-        .order_by(PatientDocument.uploaded_at.desc()).all()
-
-    alerts = []
-    if patient.allergies:
-        alerts.append({'level': 'danger', 'label': 'Allergy',
-                       'detail': patient.allergies})
-    if patient.chronic_diseases:
-        alerts.append({'level': 'warning', 'label': 'Chronic',
-                       'detail': patient.chronic_diseases})
-    if latest_vitals and latest_vitals.blood_pressure_systolic and \
-            latest_vitals.blood_pressure_systolic >= 140:
-        alerts.append({'level': 'danger', 'label': 'Elevated BP',
-                       'detail': f"{latest_vitals.blood_pressure_systolic}/"
-                                 f"{latest_vitals.blood_pressure_diastolic}"})
-    abnormal_labs = LabOrder.query.filter(LabOrder.patient_id == patient.id,
-                                          LabOrder.result.has(is_abnormal=True)).limit(5).all()
-    for o in abnormal_labs:
-        if o.result:
-            alerts.append({'level': 'warning', 'label': 'Abnormal Lab',
-                           'detail': f"{o.test.test_name}: {o.result.result_value}"})
-
-    image_attachments = [
-        document for document in attachments
-        if (document.document_type or '').lower() in {'imaging', 'clinical_image', 'radiology'}
-        or (document.file_url or '').lower().endswith(('.png', '.jpg', '.jpeg'))
-    ]
-    image_ai_tools = []
-    roles = {role.name for role in current_user.roles}
-    if roles & {'Doctor', 'Radiologist', 'Nurse', 'Physiotherapist', 'Dentist', 'Admin', 'SuperAdmin'}:
-        image_ai_tools.append(('fracture_detection', 'Fracture Detection', 'fa-bone'))
-    if roles & {'Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin'}:
-        image_ai_tools.append(('tooth_segmentation', 'Tooth Segmentation', 'fa-tooth'))
-    if roles & {'Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin'}:
-        image_ai_tools.append(('skin_lesion_detection', 'AI Skin Lesion Detection', 'fa-person-circle-question'))
-
-    return render_template('doctor/patient_overview.html',
-                           title='Patient Overview', patient=patient,
-                           latest_vitals=latest_vitals, vitals_history=vitals_history,
-                           diagnoses=diagnoses, records=records,
-                           active_rxs=active_rxs, all_rxs=all_rxs,
-                           recent_labs=recent_labs, recent_imaging=recent_imaging,
-                           attachments=attachments, image_attachments=image_attachments,
-                           image_ai_tools=image_ai_tools, alerts=alerts, **patient_safety_context(patient.id),
-                           today=utcnow().date())
+    """Retired duplicate of Patient 360."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id))
 
 
 @doctor_bp.route('/patients/<int:patient_id>')
@@ -430,109 +365,10 @@ def patient_detail(patient_id):
 
 @doctor_bp.route('/patients/<int:patient_id>/360')
 @login_required
-@roles_required('Doctor', 'Admin', 'SuperAdmin')
-@patient_access_required
 def patient_360(patient_id):
-    """Patient 360° — unified clinical view with alerts and a timeline."""
-    patient = Patient.query.get_or_404(patient_id)
-
-    latest_vitals = VitalSign.query.filter_by(patient_id=patient.id) \
-        .order_by(VitalSign.recorded_at.desc()).first()
-    diagnoses = Diagnosis.query.filter_by(patient_id=patient.id) \
-        .order_by(Diagnosis.date_diagnosed.desc()).all()
-    active_rxs = Prescription.query.filter_by(patient_id=patient.id, status='Active') \
-        .order_by(Prescription.prescribed_date.desc()).all()
-    recent_labs = LabOrder.query.filter_by(patient_id=patient.id) \
-        .order_by(LabOrder.order_date.desc()).limit(8).all()
-    recent_imaging = RadiologyOrder.query.filter_by(patient_id=patient.id) \
-        .order_by(RadiologyOrder.order_date.desc()).limit(8).all()
-    upcoming = Appointment.query.filter_by(
-        patient_id=patient.id, status='Scheduled') \
-        .order_by(Appointment.scheduled_at).limit(5).all()
-    attachments = PatientDocument.query.filter_by(patient_id=patient.id) \
-        .order_by(PatientDocument.uploaded_at.desc()).all()
-
-    alerts = []
-    if patient.allergies:
-        alerts.append({'level': 'danger', 'label': 'Allergy', 'detail': patient.allergies})
-    if patient.chronic_diseases:
-        alerts.append({'level': 'warning', 'label': 'Chronic', 'detail': patient.chronic_diseases})
-    if latest_vitals and latest_vitals.blood_pressure_systolic \
-            and latest_vitals.blood_pressure_systolic >= 140:
-        alerts.append({'level': 'danger', 'label': 'Elevated BP',
-                       'detail': f"{latest_vitals.blood_pressure_systolic}/"
-                                 f"{latest_vitals.blood_pressure_diastolic}"})
-    for o in recent_labs:
-        if o.result and o.result.is_abnormal:
-            alerts.append({'level': 'warning', 'label': 'Abnormal Lab',
-                           'detail': f"{o.test.test_name if o.test else 'Lab'}: "
-                                     f"{o.result.result_value}"})
-
-    # Each timeline entry carries (time, icon, label, detail, badge-color,
-    # specialty-name). The color + specialty make clear which discipline owns
-    # the event, which is the whole idea of a unified record over per-portal
-    # silos.
-    timeline = []
-    for a in Appointment.query.filter_by(patient_id=patient.id).all():
-        timeline.append((a.scheduled_at, 'calendar-check', 'Appointment',
-                         a.reason or a.status, 'info', 'Reception'))
-    for r in MedicalRecord.query.filter_by(patient_id=patient.id).all():
-        timeline.append((r.visit_date, 'file-medical', 'Consultation',
-                         r.diagnosis or '', 'primary', 'Doctor'))
-    for d in diagnoses:
-        timeline.append((d.date_diagnosed, 'stethoscope', 'Diagnosis',
-                         d.description, 'primary', 'Doctor'))
-    for rx in Prescription.query.filter_by(patient_id=patient.id).all():
-        timeline.append((rx.prescribed_date, 'pills', 'Prescription',
-                         f"{len(rx.items)} item(s) — {rx.status}", 'success', 'Pharmacy'))
-    for o in recent_labs:
-        if o.result:
-            timeline.append((o.result.result_date, 'flask', 'Lab result',
-                             o.test.test_name if o.test else 'Lab', 'warning', 'Laboratory'))
-    for o in recent_imaging:
-        if o.report:
-            timeline.append((o.report.report_date, 'x-ray', 'Radiology',
-                             o.imaging_type.name if o.imaging_type else 'Imaging',
-                             'secondary', 'Radiology'))
-    for v in VitalSign.query.filter_by(patient_id=patient.id).all():
-        timeline.append((v.recorded_at, 'heartbeat', 'Vitals recorded',
-                         '', 'info', 'Nursing'))
-
-    bill_records = Bill.query.filter_by(patient_id=patient.id).all()
-    for b in bill_records:
-        timeline.append((
-            b.issued_at, 'receipt', 'Bill',
-            f'{b.bill_no} — {b.status} ({b.balance():.2f} remaining)',
-            'danger' if b.status in ('Unpaid', 'PartiallyPaid') else 'success',
-            'Billing'))
-    bills_total = sum(b.total() for b in bill_records)
-    bills_balance = sum(b.balance() for b in bill_records)
-
-    timeline = [t for t in timeline if t[0]]
-    timeline.sort(key=lambda x: x[0], reverse=True)
-
-    image_attachments = [
-        document for document in attachments
-        if (document.document_type or '').lower() in {'imaging', 'clinical_image', 'radiology'}
-        or (document.file_url or '').lower().endswith(('.png', '.jpg', '.jpeg'))
-    ]
-    image_ai_tools = []
-    roles = {role.name for role in current_user.roles}
-    if roles & {'Doctor', 'Radiologist', 'Nurse', 'Physiotherapist', 'Dentist', 'Admin', 'SuperAdmin'}:
-        image_ai_tools.append(('fracture_detection', 'Fracture Detection', 'fa-bone'))
-    if roles & {'Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin'}:
-        image_ai_tools.append(('tooth_segmentation', 'Tooth Segmentation', 'fa-tooth'))
-    if roles & {'Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin'}:
-        image_ai_tools.append(('skin_lesion_detection', 'AI Skin Lesion Detection', 'fa-person-circle-question'))
-
-    return render_template(
-        'doctor/patient_360.html', title='Patient 360', patient=patient,
-        user=patient.user, latest_vitals=latest_vitals, diagnoses=diagnoses,
-        active_rxs=active_rxs, recent_labs=recent_labs, recent_imaging=recent_imaging,
-        upcoming=upcoming, attachments=attachments, image_attachments=image_attachments,
-        image_ai_tools=image_ai_tools, alerts=alerts, timeline=timeline[:30],
-        bills_total=bills_total, bills_balance=bills_balance,
-        **patient_safety_context(patient.id), today=utcnow().date())
+    """Retired duplicate of Patient 360 (clinical.patient_360)."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id))
 
 
 @doctor_bp.route('/patients/medical_documents/<path:filename>')

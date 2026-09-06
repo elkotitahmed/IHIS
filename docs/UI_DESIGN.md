@@ -94,6 +94,25 @@ properties (`inset-inline-*`, `margin-inline-*`) so Arabic mirrors correctly.
 One bug found and fixed on the way: Dentistry AI ordered procedures by a
 column that does not exist (`created_at` → `performed_at`).
 
+## Retired pages (2026-09-06, agreed with the owner)
+
+Every page was audited for real value. These were removed or consolidated;
+old URLs redirect so bookmarks keep working:
+
+| Old page | Why | Now |
+|----------|-----|-----|
+| `/admin/ai/appointment-optimization` | one threshold (≥ 20 bookings), not AI | `/admin/capacity`: utilisation next 7 days, no-show rate 30 days, rule-based advice |
+| `/admin/ai/coding-assistant` | 12-keyword dictionary | EMR ICD-10 lookup; `/ai/medical-coding/<pid>` (Gemini) |
+| `/ai/analytics`, `/admin/statistics` | counts only, duplicated | `/reports/statistics` |
+| `/ai/summary`, `/ai/diagnosis-support`, `/ai/soap-notes`, `/ai/smart-orders`, `/ai/patient-communication` | duplicated Copilot actions without budget/cache/review | Patient 360 + `?copilot=<action>` deep link opens the Copilot on that action |
+| `/ai/radiology/<order>` | only echoed the report | `/ai/copilot/radiology/<order>` |
+| `/ai/prescription/<rx>` | completeness check only | pharmacy prescription page (safety context) |
+| `/doctor/patients/<pid>/overview`, `/doctor/patients/<pid>/360` | 3 copies of Patient 360 | `/clinical/patient/<pid>` |
+
+Kept on purpose: `/ai/medication-review` (pharmacist deep review), `/ai/rehab`
+(physiotherapy progress), `/ai/lab/<order>` and `/ai/health-insights` (explicit
+"Explain with AI"), `/care/cases` (now linked from Referrals and the WORK menu).
+
 ## Verified (2026-09-06)
 
 - 333 unit/integration tests pass; the all-routes smoke walk (2,756

@@ -85,7 +85,7 @@
                         </td>
                         <td>
                             {% if li.status == 'Dispensed' %}
-                            <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.prescription', prescription_id=rx.id) }}"><i class="fas fa-brain"></i> {{ 'فحص AI' if g.lang == 'ar' else 'AI Check' }}</a>
+                            <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescription_detail', rx_id=rx.id) }}"><i class="fas fa-shield-halved"></i> {{ 'فحص السلامة' if g.lang == 'ar' else 'Safety check' }}</a>
                             {% elif li.status != 'Cancelled' %}
                             <form method="POST" action="{{ url_for('pharmacy.dispense', id=rx.id) }}" style="display:inline-flex;align-items:center;gap:var(--sp-1)">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -97,7 +97,7 @@
                                     <i class="fas fa-check"></i> {{ 'صرف' if g.lang == 'ar' else 'Dispense' }}
                                 </button>
                             </form>
-                            <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.prescription', prescription_id=rx.id) }}"><i class="fas fa-brain"></i> {{ 'فحص AI' if g.lang == 'ar' else 'AI Check' }}</a>
+                            <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescription_detail', rx_id=rx.id) }}"><i class="fas fa-shield-halved"></i> {{ 'فحص السلامة' if g.lang == 'ar' else 'Safety check' }}</a>
                             {% endif %}
                         </td>
                     </tr>

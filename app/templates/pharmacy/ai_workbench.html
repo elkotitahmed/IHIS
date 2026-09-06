@@ -62,7 +62,7 @@
                                 <a href="{{ url_for('ai.medication_review', patient_id=case.patient.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
                                     <i class="fas fa-brain"></i> {{ 'مراجعة AI' if g.lang == 'ar' else 'AI Review' }}
                                 </a>
-                                <a href="{{ url_for('ai.prescription', prescription_id=case.latest_rx.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+                                <a href="{{ url_for('pharmacy.prescription_detail', rx_id=case.latest_rx.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
                                     <i class="fas fa-shield-halved"></i> {{ 'فحص الوصفة' if g.lang == 'ar' else 'Rx Check' }}
                                 </a>
                             </div>

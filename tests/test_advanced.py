@@ -145,8 +145,14 @@ class AdvancedTestCase(unittest.TestCase):
     def test_ai_doctor(self):
         self._link_doc(self.patient.id)
         self._login(self.doc.email)
-        self.assertEqual(self.client.get(f'/ai/summary/{self.patient.id}').status_code, 200)
-        self.assertEqual(self.client.get(f'/ai/diagnosis-support/{self.patient.id}').status_code, 200)
+        # Retired legacy AI pages redirect to Patient 360 with the Copilot action deep-linked.
+        for path, action in ((f'/ai/summary/{self.patient.id}', 'patient.summary'),
+                             (f'/ai/diagnosis-support/{self.patient.id}', 'reasoning.differential')):
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 302, path)
+            self.assertIn(f'/clinical/patient/{self.patient.id}', r.headers['Location'])
+            self.assertIn(f'copilot={action}', r.headers['Location'])
+        self.assertEqual(self.client.get(f'/clinical/patient/{self.patient.id}').status_code, 200)
         # missing lab order -> graceful redirect back to lab orders (not a crash)
         r = self.client.get('/ai/lab/1')
         self.assertEqual(r.status_code, 302)
@@ -162,7 +168,9 @@ class AdvancedTestCase(unittest.TestCase):
         self.assertEqual(self.client.get('/ai/analytics').status_code, 403)
         self._logout()
         self._login(self.admin.email)
-        self.assertEqual(self.client.get('/ai/analytics').status_code, 200)
+        r = self.client.get('/ai/analytics')      # retired: counts live in /reports/statistics
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers['Location'].endswith('/reports/statistics'))
 
     # ---------------- Reports ----------------
     def _seed_clinical_reports(self):
@@ -439,8 +447,10 @@ class AdvancedTestCase(unittest.TestCase):
         self._link_doc(self.patient.id)
         self._login(self.doc.email)
         r = self.client.get(f'/doctor/patients/{self.patient.id}/360')
+        self.assertEqual(r.status_code, 302)      # consolidated into clinical.patient_360
+        self.assertTrue(r.headers['Location'].endswith(f'/clinical/patient/{self.patient.id}'))
+        r = self.client.get(f'/clinical/patient/{self.patient.id}')
         self.assertEqual(r.status_code, 200)
-        self.assertIn(b'Patient 360', r.data)
 
     def test_document_download_requires_login_and_owner_only(self):
         doc = PatientDocument(patient_id=self.patient.id, title='X',

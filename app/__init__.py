@@ -259,14 +259,8 @@ def register_context_processors(app):
                  'fa-bell', {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'}),
                 (_l('Health Insights', 'الرؤى الصحية'), '/ai/health-insights',
                  'fa-brain', {'Patient', 'Admin', 'SuperAdmin'}),
-                (_l('AI Analytics', 'تحليلات الذكاء'), '/ai/analytics',
-                 'fa-chart-line', {'Admin', 'SuperAdmin'}),
                 (_l('Clinical Pharmacist AI', 'الصيدلاني السريري'), '/pharmacy/ai-workbench',
                  'fa-user-doctor', {'Pharmacist', 'Admin', 'SuperAdmin'}),
-                (_l('Appointment Optimization', 'تحسين المواعيد'), '/admin/ai/appointment-optimization',
-                 'fa-calendar-check', {'Admin', 'SuperAdmin'}),
-                (_l('ICD-10 Coding Assistant', 'مساعد الترميز ICD-10'), '/admin/ai/coding-assistant',
-                 'fa-code-medical', {'Admin', 'SuperAdmin'}),
             ]
             return [{'label': label, 'url': url, 'icon': icon}
                     for label, url, icon, roles in specs if role_set & roles]
@@ -314,6 +308,7 @@ def register_context_processors(app):
                     {'label': _l('Task Queue', 'قائمة المهام'), 'url': '/tasks/queue', 'icon': 'fa-clipboard-list'},
                     {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                     {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
+                    {'label': _l('Multidisciplinary Cases', 'الحالات متعددة التخصصات'), 'url': '/care/cases', 'icon': 'fa-people-group'},
                 ]},
                 {'section': _l('DIAGNOSTICS', 'التشخيص'), 'items': [
                     {'label': _l('Laboratory', 'المختبر'), 'url': '/lab/orders', 'icon': 'fa-flask'},
@@ -335,6 +330,7 @@ def register_context_processors(app):
                 {'section': _l('ADMINISTRATION', 'الإدارة'), 'items': [
                     {'label': _l('Users', 'المستخدمون'), 'url': '/admin/staff', 'icon': 'fa-users-cog'},
                     {'label': _l('Departments', 'الأقسام'), 'url': '/admin/departments', 'icon': 'fa-building'},
+                    {'label': _l('Capacity & No-shows', 'السعة والغياب'), 'url': '/admin/capacity', 'icon': 'fa-gauge-high'},
                     {'label': _l('Roles & Permissions', 'الأدوار والصلاحيات'), 'url': '/super-admin/roles', 'icon': 'fa-shield-halved'},
                     {'label': _l('Audit Logs', 'سجلات المراجعة'), 'url': '/super-admin/audit-logs', 'icon': 'fa-clock-rotate-left'},
                     {'label': _l('Backup', 'النسخ الاحتياطي'), 'url': '/super-admin/backup', 'icon': 'fa-database'},
@@ -482,7 +478,7 @@ def register_context_processors(app):
                         {'label': _l('Users', 'المستخدمون'), 'url': '/admin/staff', 'icon': 'fa-users-cog'},
                         {'label': _l('Departments', 'الأقسام'), 'url': '/admin/departments', 'icon': 'fa-building'},
                         {'label': _l('Doctors', 'الأطباء'), 'url': '/admin/doctors', 'icon': 'fa-user-md'},
-                        {'label': _l('Statistics', 'الإحصائيات'), 'url': '/admin/statistics', 'icon': 'fa-chart-bar'},
+                        {'label': _l('Capacity & No-shows', 'السعة والغياب'), 'url': '/admin/capacity', 'icon': 'fa-gauge-high'},
                         {'label': _l('Reports', 'التقارير'), 'url': '/reports/', 'icon': 'fa-chart-pie'},
                         {'label': _l('Dose Reference Levels', 'عتبات الجرعة المرجعية'), 'url': '/radiology/reference-levels', 'icon': 'fa-ruler'},
                     ]},
@@ -516,6 +512,8 @@ def register_context_processors(app):
                     {'label': _l('My Tasks', 'مهامي'), 'url': '/tasks/my-tasks', 'icon': 'fa-clipboard-list'},
                     {'label': _l('Department Queue', 'قائمة القسم'), 'url': '/tasks/queue', 'icon': 'fa-layer-group'},
                 ]
+                if role_set & {'Doctor', 'Nurse', 'Physiotherapist', 'Dentist', 'LabTechnician', 'Radiologist', 'Pharmacist'}:
+                    work_items.append({'label': _l('Multidisciplinary Cases', 'الحالات متعددة التخصصات'), 'url': '/care/cases', 'icon': 'fa-people-group'})
                 permissioned_links = [
                     ('TIMELINE_VIEW', 'Clinical Workbench',
                      'منصة سريرية', '/clinical', 'fa-stethoscope'),

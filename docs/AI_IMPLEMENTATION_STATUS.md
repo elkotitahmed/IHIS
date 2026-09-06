@@ -62,7 +62,7 @@ NursingRiskAssessment, MedicationReconciliation (+ `home_med_list` /
   (blocks duplicate Open records; HIGH/CRITICAL findings → alerts);
   intervention create/respond (acceptance → DUPLICATE_THERAPY INFO alert;
   notify_role Doctor).
-- Admin: `/admin/ai/appointment-optimization` and `/admin/ai/coding-assistant`
+- Admin: `/admin/capacity` (rule-based capacity & no-show view, not AI). The former `/admin/ai/appointment-optimization` (one threshold) and `/admin/ai/coding-assistant` (12 keywords) were retired on 2026-09-06 and now redirect.
   (wiring AIAppointmentOptimization / AIMedicalCodingAssistant).
 - SuperAdmin: real 7-day health KPIs (previously hard-coded Operational / 0 logs).
 - Auth: removed unreachable doctor-registration branch.
@@ -388,9 +388,9 @@ model.
 ### New Routes (`app/routes/ai.py`)
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/ai/soap-notes/<patient_id>` | GET/POST | Generate SOAP clinical notes |
-| `/ai/smart-orders/<patient_id>` | GET/POST | Generate smart order sets |
-| `/ai/patient-communication/<patient_id>` | GET/POST | Generate patient communication (EN/AR) |
+| `/ai/soap-notes/<patient_id>` | GET | Retired → redirects to Patient 360 with `?copilot=doc.structure` |
+| `/ai/smart-orders/<patient_id>` | GET | Retired → `?copilot=reasoning.investigations` |
+| `/ai/patient-communication/<patient_id>` | GET | Retired → `?copilot=comm.summary` |
 | `/ai/medical-coding/<patient_id>` | GET/POST | ICD-10 coding from text or diagnoses |
 | `/ai/clinical-alerts` | GET | View active clinical alerts |
 | `/ai/clinical-alerts/scan` | POST | Full alert scan on all active patients |
@@ -399,8 +399,7 @@ model.
 | `/ai/hub` | GET | AI Hub: every AI capability the signed-in user can reach, with an honest AVAILABLE / LIMITED / COMING SOON status |
 
 ### New Templates (`app/templates/ai/`)
-- `soap_notes.html` — SOAP note generator with 4-panel output
-- `smart_orders.html` — Smart order sets with lab/imaging/Rx columns
+- (`soap_notes.html`, `smart_orders.html`, `patient_communication.html`, `summary.html`, `diagnosis_support.html`, `radiology.html`, `prescription.html`, `analytics.html` were removed on 2026-09-06; the Copilot panel covers them)
 - `patient_communication.html` — Patient communication with language/topic selection
 - `medical_coding.html` — ICD-10 coding with text input and diagnosis mode
 - `clinical_alerts.html` — Clinical alert feed with severity badges

@@ -178,43 +178,18 @@ def health_insights():
 
 @ai_bp.route('/summary/<int:patient_id>')
 @login_required
-@roles_required(*CLINICAL)
 def summary(patient_id):
-    patient = _patient_or_404(patient_id)
-    if not patient:
-        return redirect(url_for('main.dashboard'))
-    require_patient_access(patient)
-    clinical = AIClinicalAssistant()
-    risk = AIPatientRiskPrediction()
-    rehab = AIRehabilitationAssistant()
-    log_activity('AI_ANALYZE_PATIENT', 'patient', patient_id,
-                 f'AI summary for {patient.user.full_name}')
-    return render_template(
-        'ai/summary.html', title='AI Patient Summary', patient=patient,
-        summary=clinical.summarize_medical_history(patient.id),
-        analysis=clinical.analyze_patient(patient.id),
-        risk=risk.predict_risk(patient.id, use_ai=request.args.get('ai') == '1'),
-        rehab=rehab.analyze_progress(patient.id),
-        **patient_safety_context(patient.id), today=utcnow().date())
+    """Retired: superseded by Patient 360 + the Copilot patient summary."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id, copilot='patient.summary'))
 
 
 @ai_bp.route('/diagnosis-support/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
-@roles_required('Doctor', 'Admin', 'SuperAdmin')
 def diagnosis_support(patient_id):
-    patient = _patient_or_404(patient_id)
-    if not patient:
-        return redirect(url_for('main.dashboard'))
-    require_patient_access(patient)
-    result = None
-    if request.method == 'POST':
-        symptoms = request.form.get('symptoms', '')
-        result = AIDiagnosisSupport().suggest_diagnoses(patient.id, symptoms)
-        log_activity('AI_DIAGNOSIS_SUPPORT', 'patient', patient_id, symptoms)
-    return render_template('ai/diagnosis_support.html',
-                           title='AI Diagnosis Support', patient=patient,
-                           result=result, **patient_safety_context(patient.id),
-                           today=utcnow().date())
+    """Retired: the Copilot's differential action replaces this page."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id, copilot='reasoning.differential'))
 
 
 @ai_bp.route('/lab/<int:order_id>')
@@ -236,52 +211,16 @@ def lab_interpret(order_id):
 
 @ai_bp.route('/radiology/<int:order_id>')
 @login_required
-@roles_required(*CLINICAL)
 def radiology(order_id):
-    order = RadiologyOrder.query.filter_by(id=order_id).first()
-    if not order:
-        flash('Radiology order not found.', 'warning')
-        return redirect(url_for('radiology.orders'))
-    require_patient_access(order.patient)
-    result = AIRadiologyAssistant().analyze_study(order_id)
-    return render_template('ai/radiology.html',
-                           title='AI Radiology Summary', order=order,
-                           patient=order.patient, result=result,
-                           **patient_safety_context(order.patient_id),
-                           today=utcnow().date())
+    """Retired: only echoed the report. The radiology AI page does the analysis."""
+    return redirect(url_for('copilot.radiology_ai_report', order_id=order_id))
 
 
 @ai_bp.route('/prescription/<int:prescription_id>')
 @login_required
-@roles_required('Pharmacist', 'Doctor', 'Admin', 'SuperAdmin')
 def prescription(prescription_id):
-    rx = Prescription.query.filter_by(id=prescription_id).first()
-    if not rx:
-        flash('Prescription not found.', 'warning')
-        return redirect(url_for('pharmacy.prescriptions'))
-    require_patient_access(rx.patient)
-    checker = AIPrescriptionChecker()
-    engine = AIDrugInteractionEngine()
-    check = checker.check_prescription(prescription_id)
-    # Evaluate the current prescription against ALL of the patient's other
-    # active medications (and this prescription's own items), so drug-drug
-    # interactions are actually detected.
-    active_ids = []
-    for p in Prescription.query.filter_by(patient_id=rx.patient_id,
-                                          status='Active').all():
-        for item in p.items:
-            if item.medication_id and item.medication_id not in active_ids:
-                active_ids.append(item.medication_id)
-    for item in rx.items:
-        if item.medication_id and item.medication_id not in active_ids:
-            active_ids.append(item.medication_id)
-    interactions = engine.check_interactions(active_ids)
-    return render_template('ai/prescription.html',
-                           title='AI Prescription Check', rx=rx,
-                           patient=rx.patient, check=check,
-                           interactions=interactions,
-                           **patient_safety_context(rx.patient_id),
-                           today=utcnow().date())
+    """Retired: the pharmacy prescription page carries the safety context."""
+    return redirect(url_for('pharmacy.prescription_detail', rx_id=prescription_id))
 
 
 @ai_bp.route('/rehab/<int:patient_id>')
@@ -308,9 +247,8 @@ def rehab(patient_id):
 @login_required
 @roles_required('Admin', 'SuperAdmin')
 def analytics():
-    result = AIHospitalAnalytics().forecast_occupancy()
-    return render_template('ai/analytics.html', title='AI Hospital Analytics',
-                           result=result)
+    """Retired: counts only; /reports/statistics has them."""
+    return redirect(url_for('reports.statistics'))
 
 
 # ---------------------------------------------------------------------------
@@ -510,76 +448,26 @@ def ai_media(feature, kind, filename):
 
 @ai_bp.route('/soap-notes/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
-@roles_required('Doctor', 'Admin', 'SuperAdmin')
 def soap_notes(patient_id):
-    """Generate AI-powered SOAP clinical notes."""
-    patient = _patient_or_404(patient_id)
-    if not patient:
-        return redirect(url_for('main.dashboard'))
-    require_patient_access(patient)
-    note = None
-    if request.method == 'POST':
-        context = request.form.get('clinical_context', '')
-        generator = AIClinicalNotes()
-        note = generator.generate_soap(patient.id, context)
-        log_activity('AI_SOAP_NOTES', 'patient', patient_id,
-                     f'SOAP note generated for {patient.user.full_name}')
-    return render_template('ai/soap_notes.html',
-                           title='AI Clinical Notes (SOAP)',
-                           patient=patient, note=note,
-                           available=gemini_available(),
-                           **patient_safety_context(patient.id),
-                           today=utcnow().date())
+    """Retired: Copilot → Documentation → Structure Note (SOAP)."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id, copilot='doc.structure'))
 
 
 @ai_bp.route('/smart-orders/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
-@roles_required('Doctor', 'Admin', 'SuperAdmin')
 def smart_orders(patient_id):
-    """Generate AI-powered smart order sets."""
-    patient = _patient_or_404(patient_id)
-    if not patient:
-        return redirect(url_for('main.dashboard'))
-    require_patient_access(patient)
-    order_set = None
-    if request.method == 'POST':
-        diagnosis = request.form.get('diagnosis_text', '')
-        engine = AISmartOrders()
-        order_set = engine.generate_order_set(patient.id, diagnosis)
-        log_activity('AI_SMART_ORDERS', 'patient', patient_id,
-                     f'Order set generated for {patient.user.full_name}')
-    return render_template('ai/smart_orders.html',
-                           title='AI Smart Order Sets',
-                           patient=patient, order_set=order_set,
-                           available=gemini_available(),
-                           **patient_safety_context(patient.id),
-                           today=utcnow().date())
+    """Retired: Copilot → Clinical Reasoning → Suggested Investigations, plus Order Sets."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id, copilot='reasoning.investigations'))
 
 
 @ai_bp.route('/patient-communication/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
-@roles_required(*CLINICAL)
 def patient_communication(patient_id):
-    """Generate AI-powered patient-friendly communication."""
-    patient = _patient_or_404(patient_id)
-    if not patient:
-        return redirect(url_for('main.dashboard'))
-    require_patient_access(patient)
-    communication = None
-    if request.method == 'POST':
-        language = request.form.get('language', 'en')
-        topic = request.form.get('topic', 'full_summary')
-        gen = AIPatientCommunication()
-        communication = gen.generate_communication(
-            patient.id, language=language, topic=topic)
-        log_activity('AI_PATIENT_COMM', 'patient', patient_id,
-                     f'Patient communication generated for {patient.user.full_name}')
-    return render_template('ai/patient_communication.html',
-                           title='AI Patient Communication',
-                           patient=patient, communication=communication,
-                           available=gemini_available(),
-                           **patient_safety_context(patient.id),
-                           today=utcnow().date())
+    """Retired: Copilot → Patient Communication → Patient-friendly Summary."""
+    require_patient_access(Patient.query.get_or_404(patient_id))   # 403 before any redirect
+    return redirect(url_for('clinical.patient_360', patient_id=patient_id, copilot='comm.summary'))
 
 
 @ai_bp.route('/medical-coding/<int:patient_id>', methods=['GET', 'POST'])

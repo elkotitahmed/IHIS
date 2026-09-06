@@ -244,15 +244,17 @@ class ClinicalEngineTestCase(unittest.TestCase):
         db.session.commit()
         self._login('admin2@t.com')
 
+        # Retired one-threshold "optimisation" page redirects to the real capacity view.
         r = self.client.get('/admin/ai/appointment-optimization')
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers['Location'].endswith('/admin/capacity'))
+        r = self.client.get('/admin/capacity')
         self.assertEqual(r.status_code, 200)
-
+        self.assertIn(b'Capacity', r.data)
+        # Retired keyword coding page → AI Hub; the real ICD-10 lookup lives in the EMR.
         r = self.client.get('/admin/ai/coding-assistant')
-        self.assertEqual(r.status_code, 200)
-        csrf = _csrf(r.data)
-        r = self.client.post('/admin/ai/coding-assistant',
-                             data={'csrf_token': csrf, 'text': 'hypertension and diabetes'},
-                             follow_redirects=True)
+        self.assertEqual(r.status_code, 302)
+        r = self.client.get('/ai/copilot/diagnosis-lookup?q=hyper')
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'I10', r.data)
 

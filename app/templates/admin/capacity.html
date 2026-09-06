@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+{% set ar = g.lang == 'ar' %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'السعة والغياب' if ar else 'Capacity & no-shows' }}</h1>
+        <p class="page-subtitle">{{ 'إشغال كل طبيب في الأيام السبعة القادمة، ومعدل الغياب في آخر 30 يومًا، وتوصية قاعدية لفريق العمليات. ليست ذكاءً اصطناعيًا.' if ar else "Each physician's booked load for the next 7 days, the no-show rate over the last 30 days, and a rule-based recommendation for the operations team. Not AI." }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reception.appointments') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-calendar-check"></i> {{ 'المواعيد' if ar else 'Appointments' }}</a>
+        <a href="{{ url_for('reports.statistics') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-chart-pie"></i> {{ 'الإحصائيات' if ar else 'Statistics' }}</a>
+    </div>
+</div>
+
+<div class="tile-grid">
+    <div class="tile"><span class="tile-label"><i class="fas fa-user-doctor"></i> {{ 'أطباء' if ar else 'Physicians' }}</span><span class="tile-value">{{ rows|length }}</span><span class="tile-sub">{{ 'بمواعيد نشطة' if ar else 'with schedules' }}</span></div>
+    <div class="tile"><span class="tile-label"><i class="fas fa-calendar-week"></i> {{ 'مواعيد الأسبوع القادم' if ar else 'Booked next 7 days' }}</span><span class="tile-value">{{ totals.booked }}</span><span class="tile-sub">{{ totals.minutes }} {{ 'دقيقة محجوزة' if ar else 'minutes booked' }}</span></div>
+    <div class="tile {{ 'tile-warning' if totals.no_show_rate >= 20 }}"><span class="tile-label"><i class="fas fa-user-slash"></i> {{ 'معدل الغياب (30 يومًا)' if ar else 'No-show rate (30 d)' }}</span><span class="tile-value">{{ totals.no_show_rate }}%</span><span class="tile-sub">{{ totals.no_shows }} / {{ totals.past }} {{ 'موعد' if ar else 'appointments' }}</span></div>
+    <div class="tile {{ 'tile-danger' if totals.over }}"><span class="tile-label"><i class="fas fa-gauge-high"></i> {{ 'عيادات فوق 85%' if ar else 'Clinics above 85%' }}</span><span class="tile-value">{{ totals.over }}</span><span class="tile-sub">{{ 'تحتاج جلسات إضافية' if ar else 'need extra sessions' }}</span></div>
+</div>
+
+<div class="card-premium">
+    <div class="card-header"><div class="card-title"><i class="fas fa-people-group" style="color:var(--ihis-primary)"></i> {{ 'حسب الطبيب' if ar else 'By physician' }}</div><span class="cell-muted" style="font-size:.72rem">{{ 'السعة المفترضة: 8 ساعات × أيام العمل (الأحد–الخميس)' if ar else 'Assumed capacity: 8 h × working days (Sun–Thu)' }}</span></div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr>
+                    <th>{{ 'الطبيب' if ar else 'Physician' }}</th>
+                    <th>{{ 'التخصص' if ar else 'Specialty' }}</th>
+                    <th style="width:26%">{{ 'الإشغال (7 أيام)' if ar else 'Utilisation (7 d)' }}</th>
+                    <th>{{ 'محجوز' if ar else 'Booked' }}</th>
+                    <th>{{ 'غياب (30 يومًا)' if ar else 'No-show (30 d)' }}</th>
+                    <th>{{ 'التوصية' if ar else 'Recommendation' }}</th>
+                </tr></thead>
+                <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="cell-primary">{{ r.doctor.user.full_name if r.doctor.user else '-' }}</td>
+                    <td class="cell-secondary">{{ r.doctor.specialty.name if r.doctor.specialty else '-' }}</td>
+                    <td><div class="meter-row"><div class="meter"><span style="width:{{ [r.utilisation, 100]|min }}%;background:{{ 'var(--ihis-danger)' if r.utilisation >= 85 else 'var(--ihis-warning)' if r.utilisation >= 60 else 'var(--ihis-primary)' }}"></span></div><span class="t-num">{{ r.utilisation }}%</span></div></td>
+                    <td class="t-num">{{ r.booked }} <span class="cell-muted">({{ r.minutes }} {{ 'د' if ar else 'min' }})</span></td>
+                    <td><span class="ai-label {{ 'ai-label-danger' if r.no_show_rate >= 20 else 'ai-label-muted' }}">{{ r.no_show_rate }}%</span> <span class="cell-muted" style="font-size:.72rem">{{ r.no_shows }}/{{ r.past }}</span></td>
+                    <td class="cell-secondary">{{ r.recommendation_ar if ar else r.recommendation }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6"><div class="empty-state"><div class="empty-title">{{ 'لا أطباء' if ar else 'No physicians' }}</div></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

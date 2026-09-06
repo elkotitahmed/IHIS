@@ -203,14 +203,6 @@ def build(role_names, has_permission=None):
             'icon': 'fa-code-medical', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
             'url': None, 'inline': 'Inside the diagnosis field',
         })
-    if roles & ADMIN:
-        docs.append({
-            'key': 'coding', 'label': 'ICD-10 Coding Assistant', 'label_ar': 'مساعد الترميز ICD-10',
-            'desc': 'Suggests codes from free-text diagnoses for the coding team to confirm.',
-            'desc_ar': 'يقترح أكوادًا من نص التشخيص الحر ليؤكدها فريق الترميز.',
-            'icon': 'fa-barcode', 'engine': 'hybrid', 'status': gem_status, 'note': gem_note,
-            'url': url_for('admin.coding_assistant'),
-        })
     if docs:
         groups.append({
             'key': 'documentation', 'label': 'Documentation & coding', 'label_ar': 'التوثيق والترميز',
@@ -239,21 +231,6 @@ def build(role_names, has_permission=None):
 
     # 6. Operations & governance ---------------------------------------------
     ops = []
-    if roles & ADMIN:
-        ops.append({
-            'key': 'appt_opt', 'label': 'Appointment optimisation', 'label_ar': 'تحسين المواعيد',
-            'desc': 'Per-physician capacity and no-show patterns with scheduling recommendations.',
-            'desc_ar': 'سعة كل طبيب وأنماط الغياب مع توصيات للجدولة.',
-            'icon': 'fa-calendar-check', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
-            'url': url_for('admin.appointment_optimization'),
-        })
-        ops.append({
-            'key': 'analytics', 'label': 'AI hospital analytics', 'label_ar': 'تحليلات المستشفى',
-            'desc': 'Occupancy forecast from admissions history.',
-            'desc_ar': 'توقع الإشغال من سجل الاستشفاء.',
-            'icon': 'fa-chart-line', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
-            'url': url_for('ai.analytics'),
-        })
     if 'SuperAdmin' in roles:
         ops.append({
             'key': 'control', 'label': 'AI Control Center', 'label_ar': 'مركز التحكم بالذكاء',

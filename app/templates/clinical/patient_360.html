@@ -499,7 +499,7 @@
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}"><i class="fas fa-x-ray"></i> {{ 'تصوير' if g.lang == 'ar' else 'Order Imaging' }}</a>
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.referrals') }}"><i class="fas fa-share-nodes"></i> {{ 'إحالة' if g.lang == 'ar' else 'Refer' }}</a>
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.team', patient_id=patient.id) }}"><i class="fas fa-users"></i> {{ 'فريق الرعاية' if g.lang == 'ar' else 'Care Team' }}</a>
-        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.summary', patient_id=patient.id) }}"><i class="fas fa-brain"></i> {{ 'ملخص AI' if g.lang == 'ar' else 'AI Summary' }}</a>
+        <button type="button" class="ai-btn ai-btn-soft btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="patient.summary"><span class="ai-spark">✦</span> {{ 'ملخص ذكي' if g.lang == 'ar' else 'AI summary' }}</button>
         {% if active_admission and current_user.has_permission('ADMISSION_DISCHARGE') %}
         <a class="btn-ihs btn-ihs-danger btn-ihs-sm" href="{{ url_for('admissions.discharge', id=active_admission.id) }}"><i class="fas fa-door-open"></i> {{ 'تخريج' if g.lang == 'ar' else 'Discharge' }}</a>
         {% endif %}

@@ -155,7 +155,7 @@
                                         {% endif %}
                                     </div>
                                     {% if order.report %}
-                                    <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('ai.radiology', order_id=order.id) }}"><i class="fas fa-brain"></i> AI</a>
+                                    <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('copilot.radiology_ai_report', order_id=order.id) }}"><span class="ai-spark">✦</span> AI</a>
                                     {% endif %}
                                 {% elif order.status == 'Cancelled' %}
                                     <span class="cell-muted">{{ 'ملغي' if g.lang == 'ar' else 'Cancelled' }}</span>

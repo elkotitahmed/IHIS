@@ -6,6 +6,7 @@
         <p class="page-subtitle">{{ 'إدارة إحالات المرضى بين الأطباء والتخصصات' if g.lang == 'ar' else 'Refer patients between providers and specialties, and track every referral to completion' }}</p>
     </div>
     <div class="page-actions">
+        <a href="{{ url_for('care.cases') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-people-group"></i> {{ 'الحالات متعددة التخصصات' if g.lang == 'ar' else 'Multidisciplinary cases' }}</a>
         <form method="get" class="d-flex gap-2 align-items-center">
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">{{ 'كل الحالات' if g.lang == 'ar' else 'All statuses' }}</option>

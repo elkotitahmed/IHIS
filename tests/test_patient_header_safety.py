@@ -155,7 +155,7 @@ class PatientHeaderSafetyTestCase(unittest.TestCase):
         self._seed_safety()
         rec = self._med_record()
         self._lab()
-        for url in (f'/doctor/patients/{self.pat.id}/overview',
+        for url in (f'/doctor/patients/{self.pat.id}',
                     f'/doctor/patients/{self.pat.id}',
                     f'/doctor/patients/{self.pat.id}/emr/add',
                     f'/doctor/records/{rec.id}/edit',
@@ -164,21 +164,18 @@ class PatientHeaderSafetyTestCase(unittest.TestCase):
                     f'/doctor/patients/{self.pat.id}/radiology-order'):
             self._run('doctor', url)
 
-    def test_doctor_360_shows_safety_strip(self):
+    def test_doctor_360_redirects_to_clinical_360(self):
         self._seed_safety()
-        self._run('doctor', f'/doctor/patients/{self.pat.id}/360',
-                  expect_mark=STRIP_MARK)
+        self._login('doctor')
+        r = self.client.get(f'/doctor/patients/{self.pat.id}/360')
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers['Location'].endswith(f'/clinical/patient/{self.pat.id}'))
 
     def test_ai_pages_all_show_header(self):
         self._seed_safety()
         self._lab()
         self._rx()
-        for url in (f'/ai/summary/{self.pat.id}',
-                    f'/ai/diagnosis-support/{self.pat.id}',
-                    f'/ai/medication-review/{self.pat.id}',
-                    f'/ai/soap-notes/{self.pat.id}',
-                    f'/ai/smart-orders/{self.pat.id}',
-                    f'/ai/patient-communication/{self.pat.id}',
+        for url in (f'/ai/medication-review/{self.pat.id}',
                     f'/ai/medical-coding/{self.pat.id}'):
             self._run('doctor', url)
 

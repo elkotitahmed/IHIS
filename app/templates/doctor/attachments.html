@@ -55,7 +55,7 @@
                                 {% if doc.category %}&middot; <span class="tag-ihs">{{ doc.category }}</span>{% endif %}
                             </div>
                         </div>
-                        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.patient_360', patient_id=doc.patient_id) }}">
+                        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=doc.patient_id) }}">
                             <i class="fas fa-user-injured"></i> {{ 'الملف' if g.lang == 'ar' else 'Chart' }}
                         </a>
                         {% if is_img %}
@@ -109,7 +109,7 @@
                 <div class="activity-panel" style="border:none">
                     {% for pid, docs in by_patient.items() %}
                     {% set p = attachments|selectattr('patient_id', 'equalto', pid)|map(attribute='patient')|first %}
-                    <a href="{{ url_for('doctor.patient_360', patient_id=pid) }}" class="activity-item" style="text-decoration:none;color:inherit">
+                    <a href="{{ url_for('clinical.patient_360', patient_id=pid) }}" class="activity-item" style="text-decoration:none;color:inherit">
                         <div class="activity-dot" style="background:var(--ihis-primary)"></div>
                         <div class="activity-body">
                             <div class="activity-text">

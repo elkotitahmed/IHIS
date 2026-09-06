@@ -66,8 +66,11 @@ class DoctorPatientFilterTest(unittest.TestCase):
             html = client.get('/doctor/patients').get_data(as_text=True)
             self.assertIn(pat1.user.full_name, html)
             self.assertNotIn(pat2.user.full_name, html)
-            # overview of related patient works, unrelated is hidden (403 direct)
-            self.assertEqual(client.get(f'/doctor/patients/{pat1.id}/overview').status_code, 200)
+            # the legacy overview URL now consolidates into Patient 360: related
+            # patient redirects there (and the page renders), unrelated is 403 direct
+            r = client.get(f'/doctor/patients/{pat1.id}/overview')
+            self.assertEqual(r.status_code, 302)
+            self.assertTrue(r.headers['Location'].endswith(f'/clinical/patient/{pat1.id}'))
             self.assertEqual(client.get(f'/doctor/patients/{pat2.id}/overview').status_code, 403)
 
             client.get('/auth/logout')

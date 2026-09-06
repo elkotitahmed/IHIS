@@ -60,25 +60,65 @@ def dashboard():
     )
 
 
-# ─── AI Appointment Optimization ────────────────────────────────────
-@admin_bp.route('/ai/appointment-optimization')
+# ─── Capacity & no-shows (rule-based operations view; not AI) ─────
+@admin_bp.route('/capacity')
 @login_required
 @roles_required('Admin', 'SuperAdmin')
+def capacity():
+    """Per-physician booked load for the next 7 days, no-show rate over the
+    last 30 days and a deterministic recommendation for the operations team."""
+    from datetime import datetime, timedelta
+    from app.models import Appointment
+    now = datetime.utcnow()
+    week_end = now + timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    # Sun–Thu working days inside the next 7 days × 8 h
+    working_days = sum(1 for i in range(7) if (now + timedelta(days=i)).weekday() not in (4, 5))
+    capacity_minutes = max(working_days, 1) * 8 * 60
+    rows, totals = [], {'booked': 0, 'minutes': 0, 'no_shows': 0, 'past': 0, 'over': 0}
+    for doc in Doctor.query.order_by(Doctor.user_id).all():
+        upcoming = Appointment.query.filter(
+            Appointment.doctor_id == doc.id, Appointment.scheduled_at >= now,
+            Appointment.scheduled_at < week_end,
+            Appointment.status.notin_(['Cancelled', 'NoShow'])).all()
+        booked = len(upcoming)
+        minutes = sum((a.duration_minutes or 30) for a in upcoming)
+        past = Appointment.query.filter(
+            Appointment.doctor_id == doc.id, Appointment.scheduled_at >= month_ago,
+            Appointment.scheduled_at < now,
+            Appointment.status.in_(['Completed', 'NoShow', 'Cancelled', 'InConsultation'])).all()
+        no_shows = sum(1 for a in past if a.status == 'NoShow')
+        no_show_rate = round(100 * no_shows / len(past)) if past else 0
+        utilisation = round(100 * minutes / capacity_minutes)
+        if utilisation >= 85:
+            rec = ('Near capacity: add a session or redistribute follow-ups.',
+                   'قرب السعة القصوى: أضف جلسة أو وزّع المتابعات.')
+            totals['over'] += 1
+        elif no_show_rate >= 20:
+            rec = ('High no-show rate: enable reminders and confirmation calls.',
+                   'معدل غياب مرتفع: فعّل التذكيرات ومكالمات التأكيد.')
+        elif utilisation <= 30 and booked:
+            rec = ('Under-used: consider merging clinics or opening walk-in slots.',
+                   'استغلال منخفض: فكّر في دمج العيادات أو فتح مواعيد بدون حجز.')
+        elif not booked:
+            rec = ('No bookings in the next 7 days.', 'لا حجوزات في الأيام السبعة القادمة.')
+        else:
+            rec = ('Balanced.', 'متوازن.')
+        rows.append({'doctor': doc, 'booked': booked, 'minutes': minutes, 'utilisation': utilisation,
+                     'no_shows': no_shows, 'past': len(past), 'no_show_rate': no_show_rate,
+                     'recommendation': rec[0], 'recommendation_ar': rec[1]})
+        totals['booked'] += booked; totals['minutes'] += minutes
+        totals['no_shows'] += no_shows; totals['past'] += len(past)
+    totals['no_show_rate'] = round(100 * totals['no_shows'] / totals['past']) if totals['past'] else 0
+    rows.sort(key=lambda r: -r['utilisation'])
+    return render_template('admin/capacity.html', title='Capacity & no-shows', rows=rows, totals=totals)
+
+
+@admin_bp.route('/ai/appointment-optimization')
+@login_required
 def appointment_optimization():
-    """Reconnaissance view wiring AIAppointmentOptimization so that capacity
-    recommendations are reflected per-doctor on-screen."""
-    from app.services.ai import AIAppointmentOptimization
-    engine = AIAppointmentOptimization()
-    doctors = Doctor.query.order_by(Doctor.user_id).all()
-    rows = []
-    for doc in doctors:
-        rec = engine.recommend_slots(doc.id)
-        rows.append({'doctor': doc, **rec})
-    return render_template(
-        'admin/appointment_optimization.html',
-        title='Appointment Optimization (AI)',
-        rows=rows,
-    )
+    """Retired: the one-threshold 'AI optimisation' page. Redirects to the capacity view."""
+    return redirect(url_for('admin.capacity'))
 
 
 # ─── Code staff list remains below ──────────────────────────────────
@@ -189,24 +229,12 @@ def departments():
     )
 
 
-# ─── AI ICD-10 Coding Assistant ─────────────────────────────────────
+# ─── Retired: 12-keyword "coding assistant". The EMR diagnosis field has the
+#     real ICD-10 lookup; Gemini coding lives at /ai/medical-coding/<patient>.
 @admin_bp.route('/ai/coding-assistant', methods=['GET', 'POST'])
 @login_required
-@roles_required('Admin', 'SuperAdmin')
 def coding_assistant():
-    """ICD-10 coding support wiring AIMedicalCodingAssistant to suggest codes
-    from free text (diagnosis/discussion notes)."""
-    from app.services.ai import AIMedicalCodingAssistant
-    result = None
-    text = ''
-    if request.method == 'POST':
-        text = (request.form.get('text') or '').strip()
-        if text:
-            result = AIMedicalCodingAssistant().suggest_code(text)
-            log_activity('CODING_ASSISTANT', resource='admin',
-                         details=f'text_len={len(text)} matches={len(result.get("matches", {}))}')
-    return render_template('admin/coding_assistant.html', title='ICD-10 Coding Assistant (AI)',
-                           text=text, result=result)
+    return redirect(url_for('ai.ai_hub') + '#hub-documentation')
 
 
 # ─── Doctors ────────────────────────────────────────────────────────
@@ -234,37 +262,7 @@ def doctors():
 @login_required
 @roles_required('Admin', 'SuperAdmin')
 def statistics():
-    log_activity('VIEW_STATISTICS', resource='admin')
+    """Retired duplicate of /reports/statistics."""
+    return redirect(url_for('reports.statistics'))
 
-    total_patients = Patient.query.count()
-    total_doctors = Doctor.query.count()
-    total_appointments = Appointment.query.count()
-    total_lab_orders = LabOrder.query.count()
-    total_radiology_orders = RadiologyOrder.query.count()
-    total_users = User.query.count()
 
-    appointments_by_status = db.session.query(
-        Appointment.status, func.count(Appointment.id)
-    ).group_by(Appointment.status).all()
-
-    lab_by_status = db.session.query(
-        LabOrder.status, func.count(LabOrder.id)
-    ).group_by(LabOrder.status).all()
-
-    radiology_by_status = db.session.query(
-        RadiologyOrder.status, func.count(RadiologyOrder.id)
-    ).group_by(RadiologyOrder.status).all()
-
-    return render_template(
-        'admin/statistics.html',
-        title='Statistics',
-        total_patients=total_patients,
-        total_doctors=total_doctors,
-        total_appointments=total_appointments,
-        total_lab_orders=total_lab_orders,
-        total_radiology_orders=total_radiology_orders,
-        total_users=total_users,
-        appointments_by_status=appointments_by_status,
-        lab_by_status=lab_by_status,
-        radiology_by_status=radiology_by_status,
-    )
