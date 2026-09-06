@@ -155,3 +155,37 @@ legacy download path.
 - Baseline migration has unnamed unique constraints (harmless on SQLite,
   awkward to drop on PostgreSQL; leave until a PostgreSQL target exists).
 - Password complexity policy and a formal WCAG audit remain policy decisions.
+
+## Physician experience + Patient experience + AI Clinical Copilot (2026-09-06)
+
+Delivered on top of the audited baseline (see `docs/AI_CLINICAL_COPILOT.md`):
+
+- AI platform: configurable budget, patient-scoped content-hashed cache,
+  status pill, usage audit (no prompts stored), prompt hygiene, 429 cool-down;
+  every legacy Gemini feature now goes through the same hooks. Default model
+  moved to the provider alias `gemini-flash-latest` after the pinned
+  `gemini-2.5-flash` was retired for new keys (404 verified live).
+- Physician: minimal home (TODAY / PATIENTS / WORK / RESULTS / SAFETY / AI,
+  priority tiles, collapsed sections, no provider call on load), one ✦ AI
+  Copilot entry point with 32 explicit actions across seven groups, Smart
+  Inbox tabs with deterministic prioritisation, local-first autocomplete
+  (Tab/Esc/arrows/Enter), smart diagnosis entry, rule-based medication
+  safety at prescribing (incl. allergy class cross-reactivity), explicit
+  result review, pre-visit / encounter / post-visit / discharge / inpatient
+  daily assistants.
+- Radiology critical-finding engine: rules (authoritative, negation-aware)
+  + local classifier (dependencies added) → AI-assisted alert with
+  confidence and rationale → urgent task → physician + care-team
+  notification → red banner → acknowledge → in progress → resolve with
+  documented action / dismiss with reason → audit → configurable escalation.
+- Predictive AI: Dermatology (image quality, labels, differentials, ABCDE,
+  physician review), Radiology, Dentistry (chart/finding/plan/education/
+  abnormality) with honest AVAILABLE / COMING SOON status.
+- Patient: portal redesigned around MY HEALTH … MY NOTIFICATIONS, My Health
+  Summary, safe patient AI with cross-patient isolation tests.
+- SuperAdmin: AI Control Center, demo scenario, capabilities, role preview.
+- Display terminology Doctor → Physician (internal ids, DB values, endpoints
+  and API contracts unchanged).
+- Evidence: 326 tests pass (Gemini mocked; two live probe calls only), role
+  smoke 2,743 combinations clean, browser validation of the Copilot panel,
+  inbox tabs, patient portal and RTL/mobile.

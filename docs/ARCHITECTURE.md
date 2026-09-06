@@ -172,6 +172,21 @@ Roles: SuperAdmin, Admin, Doctor, Nurse, LabTechnician, Radiologist,
 RadiologyTechnician, Pharmacist, Physiotherapist, Dentist, Receptionist,
 Cashier, Patient (`docs/ROLE_CAPABILITIES.md`).
 
+## AI Clinical Copilot layer (2026-09-06)
+
+| Module | Responsibility |
+|--------|----------------|
+| `app/services/ai/platform.py` | Budget, cache, status, audit, prompt hygiene; `run_ai` never raises |
+| `app/services/ai/clinical_context.py` | Data-minimised verified chart context + content fingerprint |
+| `app/services/ai/copilot.py` | Action catalogue (7 groups), verified sections, prompts, role filter |
+| `app/services/ai/patient_education.py` | Clinician-reviewed static library for patient-facing explanations |
+| `app/services/ai/dentistry_ai.py` | Dentistry AI (local chart analysis + optional drafting) |
+| `app/services/radiology_critical.py` | Critical-finding engine: rules + classifier → alert/task/notify/audit |
+| `app/services/terminology.py` | Local ICD-10 + phrase banks for autocomplete and diagnosis entry |
+| `app/services/inbox_priority.py` | Deterministic inbox ranking (AI narrates only) |
+| `app/routes/copilot.py`, `app/routes/patient_ai.py` | Physician Copilot / predictive / autocomplete / safety / review endpoints; patient AI endpoints |
+| `app/static/js/copilot.js`, `autocomplete.js`, `patient_ai.js`, `css/copilot.css` | One AI entry point, drawer, autocomplete, patient modal, visual language (✦) |
+
 ## Security
 
 - Global CSRF protection (Flask-WTF `CSRFProtect`); the JSON REST API is `csrf.exempt`.

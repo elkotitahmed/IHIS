@@ -13,7 +13,7 @@ production):
 |------|---------|-----------|
 | SuperAdmin | superadmin@ihis.com | `/super-admin/dashboard` |
 | Admin | admin@ihis.com | `/admin/dashboard` |
-| Doctor | dr.ahmed@ihis.com | `/doctor/dashboard` |
+| Doctor (displayed as **Physician**) | dr.ahmed@ihis.com | `/doctor/dashboard` |
 | Nurse | nurse@ihis.com | `/nursing/dashboard` |
 | LabTechnician | lab@ihis.com | `/lab/dashboard` |
 | Radiologist | radio@ihis.com | `/radiology/dashboard` |
@@ -58,6 +58,9 @@ production):
 ## Capabilities per role
 
 ### SuperAdmin
+- AI Control Center: requests today/this hour, cache hits/misses, failures, 429
+  events, latency, feature and role usage, AI audit, unresolved critical alerts,
+  budget switches, cache clearing.
 - Command Center: hospital overview KPIs, Hospital Demo (10 guided
   scenarios), System Health, Platform Capabilities, audit log (paginated,
   filterable), backup creation/verification, roles and permissions, settings.
@@ -73,7 +76,7 @@ production):
 - Cannot sign clinical records, verify lab results, sign radiology reports or
   dispense.
 
-### Doctor
+### Doctor — shown everywhere as *Physician* (internal role id unchanged)
 - Own worklist: appointments (start consultation → in consultation →
   complete), patients (need-to-know), Patient 360, medical records (draft,
   sign, amend with audit), diagnoses, problems, allergies, immunizations.
@@ -82,9 +85,18 @@ production):
   doctor), order sets, follow-ups, admissions and discharge.
 - Cancels own prescriptions (MAR doses are discontinued, pharmacy task
   cancelled).
-- Acknowledges results in the Clinical Inbox; AI tools (summary, diagnosis
-  support, medication review, SOAP draft, ICD-10 coding, patient
-  communication, smart orders, image analysis).
+- Acknowledges results in the Smart Inbox (Critical / Results / Referrals /
+  Pharmacy Interventions / Tasks / Messages) with a deterministic "what needs
+  my attention first" ranking.
+- **AI Clinical Copilot** (✦ in the header): smart patient summary, pre-visit
+  summary, encounter/inpatient summaries, lab and radiology summaries and trends,
+  AI-assisted differential support, HPI/SOAP/assessment/plan/follow-up/
+  post-visit/discharge/referral drafts, medication/allergy/interaction/
+  reconciliation review, patient-friendly summaries and education, Predictive AI
+  (Dermatology, Radiology, Dentistry). Smart autocomplete and smart diagnosis
+  entry on clinical forms; rule-based medication safety shown at prescribing;
+  "Analyze with AI" on results. Every AI output is explicit, labelled and
+  reviewed; nothing writes to the chart.
 
 ### Nurse
 - Scoped dashboard (admitted patients, due/overdue doses, abnormal vitals).
@@ -132,6 +144,9 @@ production):
   No access to clinical documentation.
 
 ### Patient
-- Own portal: dashboard, appointments (book with validation), medical history,
-  lab and radiology results, prescriptions, bills and balance, documents,
-  messages to the treating doctor, profile.
+- Own portal around MY HEALTH / MY APPOINTMENTS / MY MEDICATIONS / MY RESULTS /
+  MY DOCUMENTS / MY FOLLOW-UP / MY MESSAGES / MY NOTIFICATIONS, plus My Health
+  Summary (verified data only; clinician-only content hidden).
+- Safe patient AI: explain a released result, explain a medicine, prepare for an
+  appointment, explain a term, summarise the record, prepare questions. Own
+  record only; never diagnoses or changes treatment.

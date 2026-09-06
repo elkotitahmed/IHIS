@@ -54,7 +54,14 @@ care-coordination modules, reporting/PDF generation, and a JSON REST API.
   medical records, lab results, radiology reports, and prescriptions.
 - **Security** — login lockout, CSRF protection, bcrypt password hashing,
   activity audit logging, and a fine-grained permission system.
-- **Testing & CI** — 257 automated tests, a role-by-route white-page audit, a SQL query-budget profile and a GitHub Actions CI workflow.
+- **AI Clinical Copilot** — one ✦ entry point for the Physician (patient summary,
+  differential support, documentation drafts, safety review, patient communication,
+  Predictive AI: Dermatology / Radiology / Dentistry), a radiology critical-finding
+  engine (alert → urgent task → notification → acknowledgement → audit), smart
+  autocomplete and diagnosis entry, safe patient-facing AI, and a SuperAdmin AI
+  Control Center with a configurable free-tier budget. See
+  [docs/AI_CLINICAL_COPILOT.md](docs/AI_CLINICAL_COPILOT.md).
+- **Testing & CI** — 326 automated tests, a role-by-route white-page audit, a SQL query-budget profile and a GitHub Actions CI workflow.
 
 ## Technology Stack
 
@@ -174,7 +181,7 @@ environment. Copy `.env.example` for the full list with placeholders.
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-The suite (257 tests) covers portal RBAC and need-to-know scoping, auth and
+The suite (326 tests) covers portal RBAC and need-to-know scoping, auth and
 lockout, every departmental workflow (lab, radiology, pharmacy, nursing,
 reception, billing, admissions, referrals), the AI layer (resilience and
 privacy), care coordination, PDF reports, the REST API, patient documents,
@@ -229,7 +236,7 @@ iHIS/
 │   └── static/              # CSS (uploads are gitignored)
 ├── tests/                   # 41 test modules (workflows, security, AI, E2E simulation)
 ├── migrations/              # Alembic migration scripts
-├── docs/                    # ARCHITECTURE, SYSTEM_AUDIT_REPORT, ROLE_CAPABILITIES, DEMO_GUIDE, API, DEPLOYMENT …
+├── docs/                    # ARCHITECTURE, AI_CLINICAL_COPILOT, SYSTEM_AUDIT_REPORT, ROLE_CAPABILITIES, DEMO_GUIDE, API …
 ├── .github/workflows/        # GitHub Actions CI
 ├── config.py                # environment-driven configuration
 ├── run.py                   # development runner

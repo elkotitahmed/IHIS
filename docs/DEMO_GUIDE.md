@@ -77,7 +77,35 @@ moon icon for dark mode.
 - **Dentistry**: odontogram with tooth surfaces, a procedure billed on
   completion.
 
-## 4. AI tools
+## 4. AI Clinical Copilot (the demo's centrepiece)
+
+1. **Physician** (dr.ahmed@ihis.com): the dashboard shows six priority tiles
+   and only TODAY open. Click **✦ AI Copilot** in the header → the panel opens
+   in patient context on any patient page (or choose a recent patient).
+   Run *Smart Patient Summary*: verified chart data appears first, then the
+   labelled AI-assisted section with thumbs-up/down.
+2. Open **Radiology AI** from the Predictive AI group → pick a report →
+   the AI Clinical Assistance column shows potential findings, severity, why
+   flagged and the recommended action, separately from the radiologist's
+   report. Enter a report mentioning "tension pneumothorax" as the
+   radiologist (radio@ihis.com) to trigger the full workflow: red banner for
+   the physician, urgent task, notification, acknowledge → action → resolve.
+3. On a prescription form, choose Warfarin then Aspirin: the rule-based
+   interaction warning appears immediately; *AI review* is a separate button.
+4. In the Smart Inbox click **What needs my attention first?** — the
+   deterministic ranking is shown; the AI only narrates it.
+5. **Dermatology AI**: upload a lesion photo → image quality score,
+   AI-ASSISTED / NOT A FINAL DIAGNOSIS labels, differential considerations,
+   ABCDE indicators and the physician review form.
+6. **Dentistry AI**: chart summary, finding summary, treatment-plan draft,
+   education, abnormality assistance for a patient with a dental chart.
+7. **Patient** (patient@ihis.com): MY HEALTH SUMMARY, then *Explain with AI*
+   on a released result or medicine — plain language, always ending with
+   when to contact the physician.
+8. **SuperAdmin**: AI Control Center shows the budget, usage and audit of
+   everything you just did (no prompts stored).
+
+## 4b. Other AI tools
 
 Gemini-backed tools fall back to rule-based output when `GEMINI_API_KEY` is
 absent, and never leak provider errors or keys to the page:
