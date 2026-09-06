@@ -36,7 +36,9 @@ PAGES = [
 BUDGET = 80
 # Patient 360 aggregates ~25 independent clinical sections for one patient; its
 # cost is bounded per patient (no per-row loops), so it gets a wider budget.
-PAGE_BUDGET = {'/clinical/patient/1': 110}
+PAGE_BUDGET = {'/clinical/patient/1': 110,
+               # KPI aggregate over ~20 tables and a 9-table global search
+               '/super-admin/dashboard': 100, '/search?q=a': 100}
 
 
 def main():

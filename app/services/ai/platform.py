@@ -105,12 +105,24 @@ def calls_last_minute():
         return len(_minute_window)
 
 
-def provider_calls_today():
+_day_cache = {'at': 0.0, 'value': 0}
+DAY_COUNT_CACHE_SECONDS = 30
+
+
+def provider_calls_today(force=False):
+    """Provider calls since 00:00 UTC. Cached in-process for a few seconds so
+    the status pill on every page does not cost a query; invalidated by
+    ``record_usage`` whenever a provider call is recorded."""
     from app.models import AIUsageLog
+    now = time.monotonic()
+    if not force and now - _day_cache['at'] < DAY_COUNT_CACHE_SECONDS:
+        return _day_cache['value']
     start = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    return (AIUsageLog.query
-            .filter(AIUsageLog.provider == 'gemini',
-                    AIUsageLog.created_at >= start).count())
+    value = (AIUsageLog.query
+             .filter(AIUsageLog.provider == 'gemini',
+                     AIUsageLog.created_at >= start).count())
+    _day_cache.update(at=now, value=value)
+    return value
 
 
 def status():
@@ -227,6 +239,8 @@ def record_usage(feature, status_, provider='local', patient_id=None,
             db.session.commit()
         else:
             db.session.flush()
+        if provider == 'gemini':
+            _day_cache['at'] = 0.0          # next status() recounts
         return row.id
     except Exception:  # noqa: BLE001 - auditing must not break the workflow
         db.session.rollback()
@@ -477,3 +491,4 @@ def reset_runtime_state():
     with _lock:
         _minute_window.clear()
     _state.update(limit_until=None, last_error=None, last_error_at=None)
+    _day_cache.update(at=0.0, value=0)
