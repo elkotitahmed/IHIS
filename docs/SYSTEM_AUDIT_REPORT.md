@@ -186,6 +186,6 @@ Delivered on top of the audited baseline (see `docs/AI_CLINICAL_COPILOT.md`):
 - SuperAdmin: AI Control Center, demo scenario, capabilities, role preview.
 - Display terminology Doctor → Physician (internal ids, DB values, endpoints
   and API contracts unchanged).
-- Evidence: 326 tests pass (Gemini mocked; two live probe calls only), role
+- Evidence: 328 tests pass (Gemini mocked; two live probe calls only), role
   smoke 2,743 combinations clean, browser validation of the Copilot panel,
   inbox tabs, patient portal and RTL/mobile.

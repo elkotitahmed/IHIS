@@ -149,14 +149,18 @@ def search_icd(q, limit=8):
     q = (q or '').strip().lower()
     if len(q) < 2:
         return []
-    starts, contains = [], []
+    starts, word_starts, contains = [], [], []
     for code, term, syns in ICD10:
         hay = term.lower()
-        if hay.startswith(q) or code.lower().startswith(q):
+        words = [w.strip('(),') for w in hay.split()] + [w for s in syns for w in s.split()]
+        if hay.startswith(q) or code.lower().startswith(q) or any(s.startswith(q) for s in syns):
             starts.append((code, term))
-        elif q in hay or any(q in s for s in syns) or any(s.startswith(q) for s in syns):
+        elif any(w.startswith(q) for w in words):
+            word_starts.append((code, term))       # "hyper" -> Essential hypertension
+        elif q in hay or any(q in s for s in syns):
             contains.append((code, term))
-    out = starts + contains
+    # list order encodes clinical frequency (I10 before rarer hyper- codes)
+    out = sorted(starts + word_starts, key=lambda ct: [c for c, _, _ in ICD10].index(ct[0])) + contains
     return [{'code': c, 'term': t} for c, t in out[:limit]]
 
 
