@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+{# AI Hub — every AI capability the signed-in user can reach, with an honest status.
+   Statuses are computed from configuration and model files; nothing here calls the provider. #}
+{% set st = hub.status %}
+{% set ar = g.lang == 'ar' %}
+<div class="hub-hero ai-surface">
+    <div>
+        <h1><span class="ai-spark">✦</span> {{ 'مركز الذكاء الاصطناعي' if ar else 'AI Hub' }}</h1>
+        <p>{{ 'كل أدوات الذكاء الاصطناعي المدمجة في iHIS في مكان واحد. القواعد الحتمية هي المرجع، والذكاء يشرح ويلخّص ويقترح، والطبيب هو من يقرر.' if ar else 'Every AI capability built into iHIS, in one place. Deterministic rules stay authoritative; AI explains, summarises and suggests; a clinician decides.' }}</p>
+        <div class="hub-meter mt-3">
+            <span><strong>{{ hub.available }}</strong>/{{ hub.total }} {{ 'متاح الآن' if ar else 'available now' }}</span>
+            <span><strong>{{ hub.models_installed }}</strong>/3 {{ 'نماذج صور مثبّتة' if ar else 'image models installed' }}</span>
+            {% if st.key_present %}<span><strong>{{ st.day_used }}</strong>/{{ st.day_limit }} {{ 'طلبات ذكاء اليوم' if ar else 'AI requests today' }}</span>{% endif %}
+        </div>
+    </div>
+    <div class="hub-hero-side">
+        <span class="ai-pill ai-pill-{{ 'ready' if st.state == 'READY' else 'limited' if st.state == 'LIMITED' else 'limit' if st.state == 'LIMIT_REACHED' else 'off' }}" title="{{ st.reason }}">{{ 'الذكاء جاهز' if ar and st.state == 'READY' else 'AI ' ~ st.state.replace('_', ' ') }}</span>
+        {% if copilot_enabled %}<button type="button" class="ai-btn" data-copilot-open=""><span class="ai-spark">✦</span> {{ 'افتح المساعد' if ar else 'Open AI Copilot' }}</button>{% endif %}
+        {% if st.state != 'READY' and st.reason %}<div class="ai-note ai-note-muted" style="max-width:280px">{{ st.reason }}</div>{% endif %}
+    </div>
+</div>
+
+{% for grp in hub.groups %}
+<section class="hub-group" id="hub-{{ grp.key }}">
+    <div class="hub-group-head">
+        <h2>{{ grp.label_ar if ar else grp.label }}</h2>
+        <p>{{ grp.desc_ar if ar else grp.desc }}</p>
+    </div>
+    <div class="hub-grid">
+        {% for it in grp['items'] %}
+        {% set status_cls = 'available' if it.status == 'AVAILABLE' else 'limited' if it.status == 'LIMITED' else 'soon' %}
+        {% set status_txt = ('متاح' if it.status == 'AVAILABLE' else 'محدود' if it.status == 'LIMITED' else 'قريبًا') if ar else it.status %}
+        {% set inner %}
+            <div class="hub-card-top">
+                <span class="hub-card-icon {{ it.engine }}"><i class="fas {{ it.icon }}"></i></span>
+                <span class="hub-card-title">{{ it.label_ar if ar else it.label }}</span>
+            </div>
+            <div class="hub-card-desc">{{ it.desc_ar if ar else it.desc }}{% if it.note %} <span class="cell-muted">— {{ it.note }}</span>{% endif %}</div>
+            <div class="hub-card-foot">
+                <span class="hub-status hub-status-{{ status_cls }}">{{ status_txt }}</span>
+                {% if it.inline %}<span class="ai-label ai-label-muted">{{ it.inline }}</span>{% endif %}
+                <span class="hub-engine">{{ {'rules': ('قواعد' if ar else 'rules'), 'model': ('نموذج محلي' if ar else 'local model'), 'hybrid': ('محلي + ذكاء' if ar else 'local + AI')}[it.engine] }}</span>
+            </div>
+        {% endset %}
+        {% if it.status == 'COMING SOON' %}
+            <div class="hub-card hub-card-off" aria-disabled="true">{{ inner }}</div>
+        {% elif it.url %}
+            <a class="hub-card" href="{{ it.url }}">{{ inner }}</a>
+        {% elif it.copilot and copilot_enabled %}
+            <button type="button" class="hub-card" data-copilot-open="" title="{{ 'يفتح المساعد' if ar else 'Opens the AI Copilot' }}">{{ inner }}</button>
+        {% else %}
+            <div class="hub-card hub-card-off">{{ inner }}</div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% else %}
+<div class="empty-state"><div class="empty-title">{{ 'لا أدوات ذكاء اصطناعي لدورك' if ar else 'No AI tools for your role' }}</div></div>
+{% endfor %}
+
+<div class="hub-note">
+    {{ 'كل مخرجات الذكاء الاصطناعي مُعلَّمة بوضوح، لا تُكتب في الملف تلقائيًا، وتُسجَّل للتدقيق دون تخزين نصوص المرضى. الميزانية والذاكرة المؤقتة تحميان الحصة المجانية.' if ar else 'Every AI output is clearly labelled, never written to the chart automatically, and logged for audit without storing patient prompts. Budget and cache protect the free provider quota.' }}
+    {% if 'SuperAdmin' in (current_user.roles|map(attribute='name')|list) %}· <a href="{{ url_for('super_admin.ai_control') }}">{{ 'مركز التحكم بالذكاء' if ar else 'AI Control Center' }}</a>{% endif %}
+</div>
+{% endblock %}

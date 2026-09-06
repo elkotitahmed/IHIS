@@ -22,6 +22,7 @@
                 if (icon) {
                     icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
                 }
+                this.classList.toggle('is-dark', next === 'dark');
             });
             const icon = themeToggle.querySelector('i');
             if (icon) {
@@ -40,6 +41,22 @@
                 window.location.href = url.toString();
             });
         }
+
+        /* ---------- Sidebar groups: remember open/closed per group ---------- */
+        (function () {
+            var KEY = 'ihis-nav-groups';
+            var state = {};
+            try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+            document.querySelectorAll('details.nav-group[data-nav-key]').forEach(function (d) {
+                var k = d.getAttribute('data-nav-key');
+                if (d.hasAttribute('data-nav-active')) { d.open = true; return; }   // always show the current page
+                if (Object.prototype.hasOwnProperty.call(state, k)) d.open = !!state[k];
+                d.addEventListener('toggle', function () {
+                    state[k] = d.open;
+                    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+                });
+            });
+        })();
 
         /* ---------- Mobile Sidebar ---------- */
         const mobileToggle = document.getElementById('mobileToggle');

@@ -373,13 +373,22 @@ def register_context_processors(app):
                 ]
 
             if 'Doctor' in role_set:
+                # PRACTICE = the daily essentials; everything else lives under WORK
+                # (collapsed by default) so the sidebar stays calm.
+                practice = [
+                    {'label': _l('Patients', 'المرضى'), 'url': '/doctor/patients', 'icon': 'fa-user-injured'},
+                    {'label': _l('Appointments', 'المواعيد'), 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
+                ]
+                if _has_menu_permission('INBOX_VIEW'):
+                    practice.append({'label': _l('Clinical Inbox', 'الصندوق السريري'), 'url': '/clinical/inbox', 'icon': 'fa-inbox'})
+                practice.append({'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/doctor/lab-results', 'icon': 'fa-flask'})
+                if _has_menu_permission('ALERT_VIEW'):
+                    practice.append({'label': _l('Clinical Alerts', 'التنبيهات السريرية'), 'url': '/clinical/alerts', 'icon': 'fa-bell'})
+                practice.append({'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'})
                 items += [
-                    {'section': _l('PRACTICE', 'الممارسة'), 'items': [
-                        {'label': _l('Patients', 'المرضى'), 'url': '/doctor/patients', 'icon': 'fa-user-injured'},
-                        {'label': _l('Appointments', 'المواعيد'), 'url': '/doctor/appointments', 'icon': 'fa-calendar-check'},
-                        {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
+                    {'section': _l('PRACTICE', 'الممارسة'), 'items': practice},
+                    {'section': _l('WORK', 'العمل'), 'items': [
                         {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
-                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                         {'label': _l('Attachments', 'المرفقات'), 'url': '/doctor/attachments', 'icon': 'fa-paperclip'},
                     ]},
                 ]
@@ -549,7 +558,7 @@ def register_context_processors(app):
             'COMMAND CENTER': ('command', 'COMMAND CENTER', 'مركز الأوامر'),
             'CLINICAL': ('clinical', 'CLINICAL', 'سريري'),
             'PRACTICE': ('clinical', 'CLINICAL', 'سريري'),
-            'WORK': ('clinical', 'CLINICAL', 'سريري'),
+            'WORK': ('work', 'WORK', 'العمل'),
             'OPERATIONS': ('operations', 'OPERATIONS', 'العمليات'),
             'RECEPTION': ('operations', 'OPERATIONS', 'العمليات'),
             'DIAGNOSTICS': ('diagnostics', 'DIAGNOSTICS', 'التشخيص'),
@@ -568,7 +577,7 @@ def register_context_processors(app):
         }
         category_order = [
             'command', 'health', 'clinical', 'operations', 'diagnostics',
-            'medications', 'specialties', 'finance', 'administration', 'ai',
+            'medications', 'specialties', 'work', 'finance', 'administration', 'ai',
         ]
         seen_urls = set()
         grouped = {}
@@ -581,7 +590,7 @@ def register_context_processors(app):
                 category = (section, section, section)
             key, en_label, ar_label = category
             target = grouped.setdefault(key, {
-                'section': _l(en_label, ar_label), 'items': []})
+                'section': _l(en_label, ar_label), 'key': key, 'items': []})
             for item in group['items']:
                 identity = item['url']
                 if identity in seen_urls:

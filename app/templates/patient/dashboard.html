@@ -44,7 +44,7 @@
                 {% for a in upcoming %}
                 <div class="list-item">
                     <i class="fas fa-calendar-check" style="color:var(--ihis-primary)"></i>
-                    <div style="flex:1;min-width:0"><div style="font-size:0.8125rem;font-weight:500">{{ a.scheduled_at.strftime('%A %d %b, %H:%M') if a.scheduled_at }}</div><div style="font-size:0.75rem;color:var(--ihis-text-muted)">Dr. {{ a.doctor.user.full_name if a.doctor and a.doctor.user else '' }}{% if a.reason %} · {{ a.reason }}{% endif %}</div></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:0.8125rem;font-weight:500">{{ a.scheduled_at.strftime('%A %d %b, %H:%M') if a.scheduled_at }}</div><div style="font-size:0.75rem;color:var(--ihis-text-muted)">{% set dn = a.doctor.user.full_name if a.doctor and a.doctor.user else "" %}{{ dn if dn.startswith("Dr") else "Dr. " ~ dn }}{% if a.reason %} · {{ a.reason }}{% endif %}</div></div>
                     <span class="status-badge s-{{ a.status|lower }}">{{ a.status }}</span>
                     <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-pai="appointment" data-id="{{ a.id }}"><span class="ai-spark">✦</span> {{ 'استعد' if g.lang == 'ar' else 'Prepare' }}</button>
                 </div>
@@ -65,7 +65,7 @@
         </div>
     </div>
     <div class="col-lg-5">
-        <div class="card-premium mb-4" style="border-color:var(--ihis-purple-light)">
+        <div class="card-premium ai-surface mb-4">
             <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'مساعدي الصحي' if g.lang == 'ar' else 'My health assistant' }}</div></div>
             <div class="card-body" style="font-size:0.8125rem">
                 <p class="mb-2">{{ 'يشرح نتائجك وأدويتك ومواعيدك بلغة بسيطة. لا يشخّص ولا يغيّر علاجك.' if g.lang == 'ar' else 'Explains your results, medicines and appointments in plain language. It never diagnoses or changes your treatment.' }}</p>

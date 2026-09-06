@@ -3,124 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iHIS - Integrated Hospital & Clinical Information System</title>
+    <title>iHIS — Integrated Hospital Information System with AI built in</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230e7a5f'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='13'>iH</text></svg>">
     {% if g.lang == 'ar' %}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     {% else %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     {% endif %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background: linear-gradient(135deg, #0d2b4e, #1f6feb); min-height: 100vh; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        [dir="rtl"] body { font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, sans-serif; letter-spacing: 0; }
-        .hero { color: #fff; }
-        .card-plain { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 1rem; transition: transform .15s ease, background .15s ease; }
-        .card-plain:hover { transform: translateY(-3px); background: rgba(255,255,255,.12); }
-        .feature-icon { font-size: 2rem; }
-        .pill { border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: .35rem 1rem; font-size: .8rem; }
-        .lang-btn { cursor: pointer; min-width: 40px; }
-    </style>
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/copilot.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/ui.css') }}" rel="stylesheet">
 </head>
-<body>
-    <div class="container pt-5">
-        <nav class="d-flex justify-content-between align-items-center mb-5">
-            <a class="navbar-brand text-white fw-bold fs-3" href="{{ url_for('main.home') }}">
-                <i class="fas fa-heartbeat me-2 text-danger"></i>iHIS
-            </a>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-light lang-btn me-2" id="langToggle" title="{{ 'التبديل إلى العربية' if g.lang == 'en' else 'Switch to English' }}"><i class="fas fa-language"></i></button>
+<body class="landing">
+{% set ar = g.lang == 'ar' %}
+<div class="wrap">
+    <nav class="landing-nav">
+        <a class="brand" href="{{ url_for('main.home') }}"><span class="brand-icon">iH</span> iHIS</a>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn-ihs btn-ihs-ghost btn-ihs-sm" id="langToggle" type="button" title="{{ 'التبديل إلى العربية' if g.lang == 'en' else 'Switch to English' }}"><i class="fas fa-language"></i> {{ 'English' if ar else 'العربية' }}</button>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.dashboard') }}" class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-house"></i> {{ 'لوحتي' if ar else 'My dashboard' }}</a>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-sign-in-alt"></i> {{ 'تسجيل الدخول' if ar else 'Sign in' }}</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <section class="landing-hero">
+        <div>
+            <span class="landing-kicker"><span class="ai-spark">✦</span> {{ 'نظام معلومات مستشفى بذكاء اصطناعي مدمج' if ar else 'Hospital information system with AI built in' }}</span>
+            <h1>{{ 'مستشفى واحد متصل،' if ar else 'One connected hospital,' }}<br><span class="ai-word">{{ 'بمساعد ذكي في كل خطوة' if ar else 'an AI copilot at every step' }}</span></h1>
+            <p>{{ 'سجلات طبية، مواعيد، مختبر، أشعة، صيدلية، تمريض وفوترة في منصة واحدة، مع مساعد سريري ذكي، ونماذج تنبؤية للجلدية والأشعة والأسنان، ومحركات سلامة حتمية. الطبيب يقرر دائمًا.' if ar else 'Records, appointments, lab, imaging, pharmacy, nursing and billing in one platform, with an AI clinical copilot, predictive models for dermatology, radiology and dentistry, and deterministic safety engines. A clinician always decides.' }}</p>
+            <div class="landing-actions">
                 {% if current_user.is_authenticated %}
-                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light me-2"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light"><i class="fas fa-sign-out-alt me-1"></i>Logout</a>
+                <a href="{{ url_for('main.dashboard') }}" class="btn-ihs btn-ihs-primary btn-ihs-lg"><i class="fas fa-house"></i> {{ 'اذهب إلى لوحتي' if ar else 'Go to my dashboard' }}</a>
+                <a href="{{ url_for('ai.ai_hub') }}" class="ai-btn"><span class="ai-spark">✦</span> {{ 'مركز الذكاء' if ar else 'AI Hub' }}</a>
                 {% else %}
-                <a href="{{ url_for('auth.login') }}" class="btn btn-light me-2"><i class="fas fa-sign-in-alt me-1"></i>Login</a>
-                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light"><i class="fas fa-user-plus me-1"></i>Register</a>
-                {% endif %}
-            </div>
-        </nav>
-
-        <div class="hero text-center py-5">
-            <h1 class="display-4 fw-bold">iHIS</h1>
-            <p class="lead mb-2">Integrated Hospital & Clinical Information System</p>
-            <p class="text-white-50 fw-semibold mb-3">One Patient · One Record · One Connected Hospital</p>
-            <div class="d-flex justify-content-center gap-2 mb-4 flex-wrap">
-                <span class="pill text-white"><i class="fas fa-user-md me-1"></i>Clinical</span>
-                <span class="pill text-white"><i class="fas fa-gears me-1"></i>Operations</span>
-                <span class="pill text-white"><i class="fas fa-pills me-1"></i>Pharmacy</span>
-                <span class="pill text-white"><i class="fas fa-flask me-1"></i>Diagnostics</span>
-                <span class="pill text-white"><i class="fas fa-clipboard-check me-1"></i>Administration</span>
-                <span class="pill text-white"><i class="fas fa-robot me-1"></i>AI</span>
-            </div>
-            <div class="mt-4">
-                {% if not current_user.is_authenticated %}
-                <a href="{{ url_for('auth.register') }}" class="btn btn-danger btn-lg me-2"><i class="fas fa-user-plus me-2"></i>Get Started</a>
-                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Login</a>
-                {% else %}
-                <a href="{{ url_for('main.dashboard') }}" class="btn btn-danger btn-lg"><i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard</a>
+                <a href="{{ url_for('auth.login') }}" class="btn-ihs btn-ihs-primary btn-ihs-lg"><i class="fas fa-sign-in-alt"></i> {{ 'تسجيل الدخول' if ar else 'Sign in' }}</a>
+                <a href="{{ url_for('auth.register') }}" class="btn-ihs btn-ihs-outline btn-ihs-lg">{{ 'إنشاء حساب مريض' if ar else 'Create a patient account' }}</a>
                 {% endif %}
             </div>
         </div>
-
-        <div class="row g-4 mt-3">
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-user-md feature-icon mb-3 text-info"></i>
-                    <h5>Clinical</h5>
-                    <p class="small">Electronic Medical Records, SOAP notes, ICD-10 coding, diagnosis, prescriptions, and treatment planning.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-gears feature-icon mb-3 text-success"></i>
-                    <h5>Operations</h5>
-                    <p class="small">Appointment scheduling, patient flow, reception queue, referrals, and multidisciplinary care coordination.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-pills feature-icon mb-3 text-danger"></i>
-                    <h5>Pharmacy</h5>
-                    <p class="small">Prescription verification, drug inventory, dispensing, and refill management.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-flask feature-icon mb-3 text-warning"></i>
-                    <h5>Diagnostics</h5>
-                    <p class="small">Laboratory test ordering, sample tracking, result validation, and radiology imaging with digital reports.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-clipboard-check feature-icon mb-3 text-info"></i>
-                    <h5>Administration</h5>
-                    <p class="small">Staff management, departments, dashboards, audit logging, and hospital-wide analytics.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-plain card p-4 text-white text-center">
-                    <i class="fas fa-robot feature-icon mb-3 text-warning"></i>
-                    <h5>AI</h5>
-                    <p class="small">Clinical summaries, diagnosis support, prescription safety checks, risk estimation, and rehab insights.</p>
-                </div>
-            </div>
+        <div class="landing-mock" aria-hidden="true">
+            <div class="mock-row ai"><span class="ai-spark">✦</span><span class="mock-label">{{ 'المساعد السريري الذكي' if ar else 'AI Clinical Copilot' }}<span class="mock-sub">{{ 'ملخص المريض · التشخيص التفريقي · مسودة الملاحظة · مراجعة السلامة' if ar else 'Patient summary · differential · note draft · safety review' }}</span></span><span class="ai-pill ai-pill-ready">{{ 'جاهز' if ar else 'READY' }}</span></div>
+            <div class="mock-row"><i class="fas fa-x-ray" style="color:var(--ai-2)"></i><span class="mock-label">{{ 'تقرير أشعة موقّع' if ar else 'Signed radiology report' }}<span class="mock-sub">{{ 'استرواح صدري كبير…' if ar else 'Large right pneumothorax…' }}</span></span><span class="ai-label ai-label-danger">{{ 'نتيجة حرجة' if ar else 'CRITICAL FINDING' }}</span></div>
+            <div class="mock-row"><i class="fas fa-bell" style="color:var(--ihis-danger)"></i><span class="mock-label">{{ 'تنبيه ← مهمة عاجلة ← إشعار الطبيب' if ar else 'Alert → urgent task → physician notified' }}<span class="mock-sub">{{ 'إقرار مطلوب · تصعيد بعد 30 دقيقة' if ar else 'Acknowledgement required · escalates in 30 min' }}</span></span><span class="ai-label ai-label-verified">{{ 'قواعد' if ar else 'RULES' }}</span></div>
+            <div class="mock-row"><i class="fas fa-pills" style="color:var(--ihis-primary)"></i><span class="mock-label">{{ 'وصفة: أموكسيسيلين' if ar else 'Prescription: Amoxicillin' }}<span class="mock-sub">{{ 'حساسية بنسلين مسجّلة · تفاعل متصالب' if ar else 'Penicillin allergy on record · cross-reactivity' }}</span></span><span class="ai-label ai-label-warn">{{ 'محجوب' if ar else 'BLOCKED' }}</span></div>
+            <div class="mock-row ai"><i class="fas fa-comment-medical" style="color:var(--ai-1)"></i><span class="mock-label">{{ 'المريض: "اشرح لي نتيجتي"' if ar else 'Patient: “Explain my result”' }}<span class="mock-sub">{{ 'لغة بسيطة · سجلّه فقط · بلا تشخيص' if ar else 'Plain language · own record only · never a diagnosis' }}</span></span><span class="ai-tag">AI</span></div>
         </div>
+    </section>
 
-        <p class="text-center text-white-50 mt-5 pb-4"><i class="fas fa-shield-halved me-2"></i>Multi-portal, role-based electronic health record platform for connected care.</p>
-    </div>
-    <script>
-        const langBtn = document.getElementById('langToggle');
-        if (langBtn) {
-            langBtn.addEventListener('click', () => {
-                const target = '{{ "ar" if g.lang == "en" else "en" }}';
-                const url = new URL(window.location.href);
-                url.searchParams.set('lang', target);
-                window.location.href = url.toString();
-            });
-        }
-    </script>
+    <section class="landing-grid">
+        <div class="landing-feature"><span class="hub-card-icon"><i class="fas fa-wand-magic-sparkles"></i></span><h3>{{ 'مساعد سريري واحد' if ar else 'One clinical copilot' }}</h3><p>{{ 'زر واحد في كل صفحة: ملخصات، استدلال، توثيق، سلامة، وتواصل مع المريض. يقرأ الملف ولا يكتب فيه.' if ar else 'One button on every page: summaries, reasoning, documentation, safety and patient communication. It reads the chart and never writes to it.' }}</p></div>
+        <div class="landing-feature"><span class="hub-card-icon model"><i class="fas fa-brain"></i></span><h3>{{ 'ذكاء تنبؤي صادق' if ar else 'Honest predictive AI' }}</h3><p>{{ 'الجلدية والأشعة والأسنان بنماذج محلية. ما ليس مثبّتًا يُعرض "قريبًا"، لا كميزة وهمية.' if ar else 'Dermatology, radiology and dentistry on local models. Anything not installed shows as “coming soon”, never as a fake feature.' }}</p></div>
+        <div class="landing-feature"><span class="hub-card-icon rules"><i class="fas fa-shield-halved"></i></span><h3>{{ 'القواعد هي المرجع' if ar else 'Rules stay authoritative' }}</h3><p>{{ 'النتائج الحرجة، سلامة الأدوية، وترتيب الأولويات تعمل بقواعد حتمية دائمًا. الذكاء يشرح ولا يقرر.' if ar else 'Critical findings, medication safety and priority ranking run on deterministic rules, always. AI explains; it never decides.' }}</p></div>
+        <div class="landing-feature"><span class="hub-card-icon"><i class="fas fa-lock"></i></span><h3>{{ 'محكوم ومدقَّق' if ar else 'Governed and audited' }}</h3><p>{{ 'ميزانية، ذاكرة مؤقتة، تسجيل تدقيق بدون نصوص مرضى، وصلاحيات بحسب الحاجة للمعرفة.' if ar else 'Budget, cache, audit logging without patient prompts, and need-to-know access on every request.' }}</p></div>
+    </section>
+
+    <p class="landing-foot"><i class="fas fa-heartbeat" style="color:var(--ihis-danger)"></i> iHIS · {{ 'مريض واحد · سجل واحد · مستشفى متصل' if ar else 'One Patient · One Record · One Connected Hospital' }}</p>
+</div>
+<script>
+    (function () {
+        var b = document.getElementById('langToggle');
+        if (!b) return;
+        b.addEventListener('click', function () {
+            var url = new URL(window.location.href);
+            url.searchParams.set('lang', '{{ "ar" if g.lang == "en" else "en" }}');
+            window.location.href = url.toString();
+        });
+    })();
+</script>
 </body>
 </html>

@@ -245,8 +245,18 @@ def dashboard():
                            department_attachments=department_attachments,
                            department_name=department_name,
                            ai_tools=ai_tools, supervisory=supervisory,
-                           inpatients=inpatients,
+                           inpatients=inpatients, predictive=_predictive_for_current_user(),
                            clinical_history_count=clinical_history_count)
+
+
+def _predictive_for_current_user():
+    """The three predictive capabilities (Dermatology / Radiology / Dentistry)
+    with their honest status, for the dashboard AI strip. Never raises."""
+    try:
+        from app.services.ai.copilot import predictive_catalogue
+        return [p for p in predictive_catalogue([r.name for r in current_user.roles]) if p.get('allowed', True)]
+    except Exception:  # noqa: BLE001 - the dashboard must render without AI
+        return []
 
 
 @doctor_bp.route('/attachments')

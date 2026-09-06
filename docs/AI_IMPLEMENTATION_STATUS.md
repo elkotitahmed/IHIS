@@ -395,7 +395,8 @@ model.
 | `/ai/clinical-alerts` | GET | View active clinical alerts |
 | `/ai/clinical-alerts/scan` | POST | Full alert scan on all active patients |
 | `/ai/clinical-alerts/<id>/read` | POST | Mark alert as read |
-| `/ai/ai-dashboard` | GET | Central AI Command Center dashboard |
+| `/ai/ai-dashboard` | GET | Legacy URL, renders the AI Hub (role-filtered) |
+| `/ai/hub` | GET | AI Hub: every AI capability the signed-in user can reach, with an honest AVAILABLE / LIMITED / COMING SOON status |
 
 ### New Templates (`app/templates/ai/`)
 - `soap_notes.html` — SOAP note generator with 4-panel output
@@ -403,7 +404,7 @@ model.
 - `patient_communication.html` — Patient communication with language/topic selection
 - `medical_coding.html` — ICD-10 coding with text input and diagnosis mode
 - `clinical_alerts.html` — Clinical alert feed with severity badges
-- `ai_dashboard.html` — AI Command Center with feature cards, stats, recommendation history
+- `ai/hub.html` — AI Hub (replaces the old AI Command Center): role-filtered catalogue built by `app/services/ai/hub.py`
 
 ### Audit Trail
 Every AI recommendation (diagnosis, lab interpretation, risk, coding, SOAP,

@@ -26,6 +26,33 @@
     </div>
 </div>
 
+<!-- AI at a glance: the project's differentiator gets the first row -->
+<div class="ai-strip">
+    <div class="ai-surface ai-strip-hero">
+        <div>
+            <div class="ai-strip-title"><span class="ai-spark">✦</span> {{ 'الذكاء الاصطناعي في المستشفى' if g.lang == 'ar' else 'AI across the hospital' }}
+                {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if g.lang == 'ar' and ai_status.state == 'READY' else ai_status.state.replace('_',' ') }}</span>{% endif %}
+            </div>
+            <p>{{ 'مساعد سريري واحد، ثلاث قدرات تنبؤية، ومحركات سلامة حتمية، كلها مراقبة بميزانية وتدقيق.' if g.lang == 'ar' else 'One clinical copilot, three predictive capabilities and deterministic safety engines, all governed by budget and audit.' }}</p>
+        </div>
+        <div class="ai-actions-row">
+            <a href="{{ url_for('ai.ai_hub') }}" class="ai-btn"><span class="ai-spark">✦</span> {{ 'مركز الذكاء' if g.lang == 'ar' else 'AI Hub' }}</a>
+            <a href="{{ url_for('super_admin.ai_control') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-sliders"></i> {{ 'مركز التحكم' if g.lang == 'ar' else 'AI Control Center' }}</a>
+            <a href="{{ url_for('super_admin.demo') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm"><i class="fas fa-play-circle"></i> {{ 'العرض التوضيحي' if g.lang == 'ar' else 'Demo scenarios' }}</a>
+        </div>
+    </div>
+    <div class="ai-strip-card">
+        <div class="ai-strip-label"><i class="fas fa-gauge" style="color:var(--ai-1)"></i> {{ 'ميزانية اليوم' if g.lang == 'ar' else "Today's AI budget" }}</div>
+        <div class="tile-value">{{ ai_status.day_used if ai_status else 0 }}<span style="font-size:.9rem;color:var(--ihis-text-muted)"> / {{ ai_status.day_limit if ai_status else '—' }}</span></div>
+        <div class="ai-strip-body">{{ 'طلبات للموفر اليوم؛ الذاكرة المؤقتة والقواعد المحلية تعمل بلا حدود.' if g.lang == 'ar' else 'provider requests today; cache and local rules are unlimited.' }}</div>
+    </div>
+    <div class="ai-strip-card">
+        <div class="ai-strip-label"><i class="fas fa-triangle-exclamation" style="color:var(--ihis-danger)"></i> {{ 'نتائج حرجة مفتوحة' if g.lang == 'ar' else 'Open critical findings' }}</div>
+        <div class="tile-value {{ 'text-danger' if copilot_critical_alerts }}">{{ copilot_critical_alerts|length }}</div>
+        <div class="ai-strip-body"><a href="{{ url_for('clinical.alerts_all') }}?severity=critical&status=active">{{ 'عرض التنبيهات وسلسلة التصعيد' if g.lang == 'ar' else 'View alerts and the escalation chain' }}</a></div>
+    </div>
+</div>
+
 <!-- ============================================================ -->
 <!-- SECTION 1: CRITICAL KPIs — Top of Command Center             -->
 <!-- ============================================================ -->

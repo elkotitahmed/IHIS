@@ -4,7 +4,7 @@ import re
 import time
 
 from flask import (Blueprint, render_template, redirect, url_for, flash,
-                   request, current_app, abort, send_file)
+                   request, current_app, abort, send_file, session)
 from flask_login import login_required, current_user
 
 from app import db
@@ -666,32 +666,31 @@ def mark_alert_read(alert_id):
     return redirect(url_for('ai.clinical_alerts'))
 
 
+def _hub_context():
+    from app.services.ai import hub as hub_svc
+    roles = [r.name for r in current_user.roles]
+    preview = session.get('preview_role')
+    if preview and current_user.has_role('SuperAdmin'):
+        roles = [preview]
+    data = hub_svc.build(roles, has_permission=current_user.has_permission)
+    return dict(title='AI Hub', hub=data, ai_status=data['status'])
+
+
 @ai_bp.route('/ai-dashboard')
 @login_required
 @roles_required('Doctor', 'Nurse', 'Admin', 'SuperAdmin')
 def ai_dashboard():
-    """Central AI dashboard showing all AI features and recent recommendations."""
-    from app.models import AIRecommendation, ClinicalAlert, Patient
-    recent_recs = AIRecommendation.query.order_by(
-        AIRecommendation.created_at.desc()).limit(20).all()
-    unread_alerts = ClinicalAlert.query.filter_by(status='OPEN').count()
-    total_recs = AIRecommendation.query.count()
-    applied_recs = AIRecommendation.query.filter_by(is_applied=True).count()
+    """Legacy AI Command Center URL: renders the AI Hub (role-filtered)."""
+    return render_template('ai/hub.html', **_hub_context())
 
-    # Stats by type
-    rec_types = db.session.query(
-        AIRecommendation.recommendation_type,
-        db.func.count(AIRecommendation.id)
-    ).group_by(AIRecommendation.recommendation_type).all()
 
-    return render_template('ai/ai_dashboard.html',
-                           title='AI Command Center',
-                           recent_recs=recent_recs,
-                           unread_alerts=unread_alerts,
-                           total_recs=total_recs,
-                           applied_recs=applied_recs,
-                           rec_types=rec_types,
-                           gemini_available=gemini_available())
+@ai_bp.route('/hub')
+@login_required
+def ai_hub():
+    """The AI Hub: every AI capability the current user can reach, with an
+    honest status. Available to every signed-in user (each sees their own
+    tools); never calls the AI provider."""
+    return render_template('ai/hub.html', **_hub_context())
 
 
 @ai_bp.route('/skin-lesion-detection/review', methods=['POST'])

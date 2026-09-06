@@ -4,21 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title|default('iHIS') }} — iHIS</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230f6b50'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='13'>iH</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230e7a5f'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='13'>iH</text></svg>">
     {% if g.lang == 'ar' %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     {% else %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     {% endif %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/copilot.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/ui.css') }}" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
 </head>
@@ -27,82 +28,99 @@
 
 <div class="app-layout">
     {% if current_user.is_authenticated %}
+    {% set nav = current_user_menus() %}
+    {% set ai_group = (nav|selectattr('key', 'equalto', 'ai')|list)|first %}
+    {% set is_ar = g.lang == 'ar' %}
     <!-- ========== SIDEBAR ========== -->
     <aside class="app-sidebar" id="appSidebar" role="navigation" aria-label="Main navigation">
         <div class="sidebar-brand">
             <div class="brand-icon">iH</div>
             <div>
                 <div class="brand-name">iHIS</div>
-                <div class="brand-sub">{{ 'منصة المستشفى' if g.lang == 'ar' else 'Hospital Platform' }}</div>
+                <div class="brand-sub">{{ 'مستشفى بذكاء اصطناعي' if is_ar else 'AI-powered hospital' }}</div>
             </div>
         </div>
 
+        {# ---- AI block: the one place AI lives in the navigation ---- #}
+        {% if copilot_enabled or ai_group %}
+        <div class="sb-ai">
+            {% if copilot_enabled %}
+            <button type="button" class="sb-ai-btn" data-copilot-open="" title="AI Clinical Copilot (Ctrl+Shift+A)">
+                <span class="ai-spark">✦</span> {{ 'المساعد الذكي' if is_ar else 'AI Copilot' }}
+                {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if is_ar and ai_status.state == 'READY' else ai_status.state.replace('_', ' ') }}</span>{% endif %}
+            </button>
+            {% endif %}
+            <a class="sb-ai-link {% if request.path in ('/ai/hub', '/ai/ai-dashboard') %}active{% endif %}" href="{{ url_for('ai.ai_hub') }}">
+                <i class="fas fa-layer-group"></i> {{ 'مركز الذكاء الاصطناعي' if is_ar else 'AI Hub' }}
+                <span class="sb-ai-arrow"><i class="fas fa-chevron-{{ 'left' if is_ar else 'right' }}"></i></span>
+            </a>
+        </div>
+        {% endif %}
+
         <nav class="sidebar-nav" id="sidebarNav">
-            {% set nav = current_user_menus() if current_user.is_authenticated else [] %}
+            <a class="nav-link {% if request.endpoint == 'main.dashboard' or (title is defined and title and 'Dashboard' in title) %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
+                <span class="nav-icon"><i class="fas fa-house"></i></span>
+                <span>{{ 'الرئيسية' if is_ar else 'Home' }}</span>
+            </a>
 
-            {# Dashboard link always first #}
-            <div class="sidebar-section">
-                <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
-                    <span class="nav-icon"><i class="fas fa-th-large"></i></span>
-                    <span>{{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</span>
-                </a>
-            </div>
-
-            {# Render grouped navigation #}
             {% for group in nav %}
-                {% if group.section is defined %}
-                    {# New grouped format #}
-                    <div class="sidebar-section">
-                        <div class="sidebar-section-label">{{ group.section }}</div>
+                {% if group.section is defined and group.key != 'ai' %}
+                    {% set ns = namespace(active=false) %}
+                    {% for item in group['items'] %}
+                        {% if request.path == item.url or (item.url != '/' and request.path.startswith(item.url ~ '/')) %}{% set ns.active = true %}{% endif %}
+                    {% endfor %}
+                    <details class="nav-group" data-nav-key="{{ group.key }}" {% if ns.active or loop.index == 1 %}open{% endif %} {% if ns.active %}data-nav-active="1"{% endif %}>
+                        <summary>{{ group.section }}</summary>
                         {% for item in group['items'] %}
-                        <div class="nav-item">
-                            <a class="nav-link {% if request.path == item.url or (item.url != '/' and request.path.startswith(item.url ~ '/')) %}active{% endif %}" href="{{ item.url }}">
-                                <span class="nav-icon"><i class="fas {{ item.icon }}"></i></span>
-                                <span>{{ item.label }}</span>
-                                {% if item.badge is defined and item.badge %}<span class="nav-badge">{{ item.badge }}</span>{% endif %}
-                            </a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% elif group.label is defined %}
-                    {# Flat format fallback #}
-                    <div class="nav-item">
-                        <a class="nav-link {% if request.path == group.url or (group.url != '/' and request.path.startswith(group.url ~ '/')) %}active{% endif %}" href="{{ group.url }}">
-                            <span class="nav-icon"><i class="fas {{ group.icon }}"></i></span>
-                            <span>{{ group.label }}</span>
-                            {% if group.badge is defined and group.badge %}<span class="nav-badge">{{ group.badge }}</span>{% endif %}
+                        <a class="nav-link {% if request.path == item.url or (item.url != '/' and request.path.startswith(item.url ~ '/')) %}active{% endif %}" href="{{ item.url }}">
+                            <span class="nav-icon"><i class="fas {{ item.icon }}"></i></span>
+                            <span>{{ item.label }}</span>
+                            {% if item.badge is defined and item.badge %}<span class="nav-badge">{{ item.badge }}</span>{% endif %}
                         </a>
-                    </div>
+                        {% endfor %}
+                    </details>
+                {% elif group.label is defined %}
+                    <a class="nav-link {% if request.path == group.url %}active{% endif %}" href="{{ group.url }}">
+                        <span class="nav-icon"><i class="fas {{ group.icon }}"></i></span>
+                        <span>{{ group.label }}</span>
+                    </a>
                 {% endif %}
             {% endfor %}
+
+            {% if ai_group %}
+            <details class="nav-group nav-group-ai" data-nav-key="ai" open>
+                <summary><span class="ai-spark">✦</span> {{ 'أدوات الذكاء' if is_ar else 'AI tools' }} <span class="ai-count">{{ ai_group['items']|length }}</span></summary>
+                {% for item in ai_group['items'] %}
+                <a class="nav-link {% if request.path == item.url %}active{% endif %}" href="{{ item.url }}">
+                    <span class="nav-icon"><i class="fas {{ item.icon }}"></i></span>
+                    <span>{{ item.label }}</span>
+                </a>
+                {% endfor %}
+            </details>
+            {% endif %}
         </nav>
 
         <div class="sidebar-user">
-            <div class="user-avatar">
-                {{ current_user.full_name[0]|upper if current_user.full_name else 'U' }}
-            </div>
+            <div class="user-avatar">{{ current_user.full_name[0]|upper if current_user.full_name else 'U' }}</div>
             <div class="user-info">
                 <div class="user-name">{{ current_user.full_name }}</div>
                 <div class="user-role">
-                    {% if session.get('preview_role') %}
-                        PREVIEW: {{ effective_role_name() }}
-                    {% elif current_user.roles %}
-                        {{ current_user.roles[0].name }}
-                    {% else %}
-                        {{ current_user.user_type|capitalize }}
-                    {% endif %}
+                    {% if session.get('preview_role') %}PREVIEW: {{ effective_role_name() }}
+                    {% elif current_user.roles %}{{ current_user.roles[0].name|physician_label }}
+                    {% else %}{{ current_user.user_type|capitalize }}{% endif %}
                 </div>
             </div>
             <div class="user-actions">
-                <button class="btn-icon" id="themeToggle" title="{{ 'الوضع الداكن' if g.lang == 'ar' else 'Toggle dark mode' }}" aria-label="Toggle dark mode">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <a class="btn-icon" href="{{ url_for('auth.profile') }}" title="{{ 'ملفي الشخصي' if g.lang == 'ar' else 'My profile' }}" aria-label="My profile">
-                    <i class="fas fa-user-gear"></i>
-                </a>
-                <a class="btn-icon" href="{{ url_for('auth.logout') }}" title="{{ 'تسجيل الخروج' if g.lang == 'ar' else 'Logout' }}" aria-label="Logout">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
+                <div class="dropup user-menu">
+                    <button class="btn-icon" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" title="{{ 'القائمة' if is_ar else 'Account menu' }}" aria-label="Account menu"><i class="fas fa-ellipsis"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="fas fa-user-gear"></i> {{ 'ملفي الشخصي' if is_ar else 'My profile' }}</a></li>
+                        <li><button class="dropdown-item" type="button" id="themeToggle"><i class="fas fa-moon"></i> {{ 'الوضع الداكن' if is_ar else 'Dark mode' }}</button></li>
+                        <li><button class="dropdown-item" type="button" id="langToggle"><i class="fas fa-language"></i> {{ 'English' if is_ar else 'العربية' }}</button></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> {{ 'تسجيل الخروج' if is_ar else 'Sign out' }}</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </aside>
@@ -110,28 +128,65 @@
 
     <!-- ========== MAIN AREA ========== -->
     <div class="app-main">
+        <!-- Topbar -->
+        <header class="app-topbar" role="banner">
+            <button class="btn-topbar mobile-toggle" id="mobileToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="topbar-title" aria-label="Breadcrumb">
+                <a class="crumb-home" href="{{ url_for('main.dashboard') }}">{{ 'الرئيسية' if is_ar else 'Home' }}</a><span class="sep crumb-home"><i class="fas fa-chevron-{{ 'left' if is_ar else 'right' }}"></i></span><span>{{ title|default('Dashboard') }}</span>
+            </div>
+
+            <div class="topbar-spacer"></div>
+
+            <div class="topbar-actions">
+                <button class="topbar-search" id="cmdTrigger" title="Ctrl+K" aria-label="Search">
+                    <i class="fas fa-search" style="font-size:0.75rem;color:var(--ihis-text-muted)"></i>
+                    <span class="search-text">{{ 'بحث عن مريض…' if is_ar else 'Search patients…' }}</span>
+                    <kbd>⌘K</kbd>
+                </button>
+
+                {% if copilot_enabled %}
+                <button type="button" class="ai-btn" id="copilotBtn" aria-controls="copilotPanel" aria-haspopup="dialog" title="AI Clinical Copilot (Ctrl+Shift+A)">
+                    <span class="ai-spark">✦</span><span class="ai-btn-text">{{ 'المساعد الذكي' if is_ar else 'AI Copilot' }}</span>
+                </button>
+                {% endif %}
+
+                <a href="{{ url_for('tasks.my_tasks') }}" class="btn-topbar" title="{{ 'المهام' if is_ar else 'Tasks' }}" aria-label="Tasks">
+                    <i class="fas fa-clipboard-list"></i>
+                    {% if pending_tasks %}<span class="notif-badge">{{ pending_tasks }}</span>{% endif %}
+                </a>
+
+                <a href="{{ url_for('main.notifications') }}" class="btn-topbar" title="{{ 'الإشعارات' if is_ar else 'Notifications' }}" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    {% if unread_notifications %}<span class="badge-dot"></span>{% endif %}
+                </a>
+            </div>
+        </header>
+
         <!-- Admin Global View Banner -->
         {% if is_superadmin_real() and not is_previewing() %}
         <div class="admin-banner" id="adminBanner">
             <span class="banner-icon"><i class="fas fa-eye"></i></span>
             <span class="banner-text">
-                {{ 'عرض المشرف العام — أنت تشاهد بيئة المستشفى بالكامل' if g.lang == 'ar' else 'Global Admin View — You are viewing the entire hospital environment' }}
+                {{ 'عرض المشرف العام — أنت تشاهد بيئة المستشفى بالكامل' if is_ar else 'Global Admin View — You are viewing the entire hospital environment' }}
             </span>
             <div class="banner-actions">
-                <select id="previewRoleSelect" onchange="if(this.value)window.location.href='/super-admin/preview/'+this.value" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--radius-sm);font-size:0.75rem;padding:3px 8px;">
-                    <option value="">{{ 'معاينة ك...' if g.lang == 'ar' else 'Preview as role...' }}</option>
-                    <option value="Physician">{{ 'طبيب' if g.lang == 'ar' else 'Physician' }}</option>
-                    <option value="Nurse">{{ 'ممرض' if g.lang == 'ar' else 'Nurse' }}</option>
-                    <option value="LabTechnician">{{ 'مختبري' if g.lang == 'ar' else 'Lab Technician' }}</option>
-                    <option value="Radiologist">{{ 'أخصائي أشعة' if g.lang == 'ar' else 'Radiologist' }}</option>
-                    <option value="RadiologyTechnician">{{ 'فني أشعة' if g.lang == 'ar' else 'Radiology Technician' }}</option>
-                    <option value="Pharmacist">{{ 'صيدلاني' if g.lang == 'ar' else 'Pharmacist' }}</option>
-                    <option value="Physiotherapist">{{ 'علاج طبيعي' if g.lang == 'ar' else 'Physiotherapist' }}</option>
-                    <option value="Dentist">{{ 'طبيب أسنان' if g.lang == 'ar' else 'Dentist' }}</option>
-                    <option value="Receptionist">{{ 'موظف استقبال' if g.lang == 'ar' else 'Receptionist' }}</option>
-                    <option value="Cashier">{{ 'أمين صندوق' if g.lang == 'ar' else 'Cashier' }}</option>
-                    <option value="Patient">{{ 'مريض' if g.lang == 'ar' else 'Patient' }}</option>
-                    <option value="Admin">{{ 'مدير' if g.lang == 'ar' else 'Administrator' }}</option>
+                <select id="previewRoleSelect" onchange="if(this.value)window.location.href='/super-admin/preview/'+this.value" aria-label="Preview as role">
+                    <option value="">{{ 'معاينة ك...' if is_ar else 'Preview as role...' }}</option>
+                    <option value="Physician">{{ 'طبيب' if is_ar else 'Physician' }}</option>
+                    <option value="Nurse">{{ 'ممرض' if is_ar else 'Nurse' }}</option>
+                    <option value="LabTechnician">{{ 'مختبري' if is_ar else 'Lab Technician' }}</option>
+                    <option value="Radiologist">{{ 'أخصائي أشعة' if is_ar else 'Radiologist' }}</option>
+                    <option value="RadiologyTechnician">{{ 'فني أشعة' if is_ar else 'Radiology Technician' }}</option>
+                    <option value="Pharmacist">{{ 'صيدلاني' if is_ar else 'Pharmacist' }}</option>
+                    <option value="Physiotherapist">{{ 'علاج طبيعي' if is_ar else 'Physiotherapist' }}</option>
+                    <option value="Dentist">{{ 'طبيب أسنان' if is_ar else 'Dentist' }}</option>
+                    <option value="Receptionist">{{ 'موظف استقبال' if is_ar else 'Receptionist' }}</option>
+                    <option value="Cashier">{{ 'أمين صندوق' if is_ar else 'Cashier' }}</option>
+                    <option value="Patient">{{ 'مريض' if is_ar else 'Patient' }}</option>
+                    <option value="Admin">{{ 'مدير' if is_ar else 'Administrator' }}</option>
                 </select>
             </div>
         </div>
@@ -140,62 +195,13 @@
         <!-- Role Preview Banner -->
         {% if is_previewing() %}
         <div class="role-preview-banner" id="rolePreviewBanner">
-            <span class="rp-label">
-                <i class="fas fa-eye"></i>
-                {{ 'وضع المعاينة' if g.lang == 'ar' else 'ROLE PREVIEW MODE' }}
-            </span>
+            <span class="rp-label"><i class="fas fa-eye"></i> {{ 'وضع المعاينة' if is_ar else 'ROLE PREVIEW MODE' }}</span>
             <span class="rp-role">{{ effective_role_name() }}</span>
-            <a href="{{ url_for('super_admin.exit_preview') }}" class="rp-exit">
-                <i class="fas fa-times"></i> {{ 'إنهاء المعاينة' if g.lang == 'ar' else 'Exit Preview' }}
-            </a>
+            <a href="{{ url_for('super_admin.exit_preview') }}" class="rp-exit"><i class="fas fa-times"></i> {{ 'إنهاء المعاينة' if is_ar else 'Exit Preview' }}</a>
         </div>
         {% endif %}
 
         {% include '_critical_banner.html' %}
-
-        <!-- Topbar -->
-        <header class="app-topbar" role="banner">
-            <button class="btn-topbar mobile-toggle" id="mobileToggle" aria-label="Toggle sidebar">
-                <i class="fas fa-bars"></i>
-            </button>
-
-            <div class="topbar-breadcrumb" aria-label="Breadcrumb">
-                <a href="{{ url_for('main.dashboard') }}"><i class="fas fa-home"></i></a>
-                <span class="separator"><i class="fas fa-chevron-right" style="font-size:0.5rem"></i></span>
-                <span>{{ title|default('Dashboard') }}</span>
-            </div>
-
-            <div class="topbar-spacer"></div>
-
-            <div class="topbar-actions">
-                <button class="topbar-search" id="cmdTrigger" title="Ctrl+K" aria-label="Search">
-                    <i class="fas fa-search" style="font-size:0.75rem;color:var(--ihis-text-muted)"></i>
-                    <span class="search-text">{{ 'بحث...' if g.lang == 'ar' else 'Search...' }}</span>
-                    <kbd>⌘K</kbd>
-                </button>
-
-                {% if copilot_enabled %}
-                <button type="button" class="ai-btn" id="copilotBtn" aria-controls="copilotPanel" aria-haspopup="dialog" title="AI Clinical Copilot (Ctrl+Shift+A)">
-                    <span class="ai-spark">✦</span><span class="ai-btn-text">{{ 'المساعد الذكي' if g.lang == 'ar' else 'AI Copilot' }}</span>
-                    {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if g.lang == 'ar' and ai_status.state == 'READY' else ai_status.state.replace('_', ' ') }}</span>{% endif %}
-                </button>
-                {% endif %}
-
-                <a href="{{ url_for('tasks.my_tasks') }}" class="btn-topbar" title="{{ 'المهام' if g.lang == 'ar' else 'Tasks' }}" aria-label="Tasks">
-                    <i class="fas fa-clipboard-list"></i>
-                    {% if pending_tasks %}<span class="notif-badge">{{ pending_tasks }}</span>{% endif %}
-                </a>
-
-                <a href="{{ url_for('main.notifications') }}" class="btn-topbar" title="{{ 'الإشعارات' if g.lang == 'ar' else 'Notifications' }}" aria-label="Notifications">
-                    <i class="fas fa-bell"></i>
-                    {% if unread_notifications %}<span class="badge-dot"></span>{% endif %}
-                </a>
-
-                <button class="btn-topbar" id="langToggle" title="{{ 'التبديل إلى العربية' if g.lang == 'en' else 'Switch to English' }}" aria-label="Toggle language">
-                    <i class="fas fa-language"></i>
-                </button>
-            </div>
-        </header>
 
         <!-- Content -->
         <main class="app-content" id="main-content" role="main">
@@ -241,7 +247,7 @@
     <div class="cmd-palette">
         <div class="cmd-input-wrap">
             <i class="fas fa-search cmd-search-icon"></i>
-            <input class="cmd-input" id="cmdInput" type="text" placeholder="{{ 'بحث عن مريض، طبيب، وصفة...' if g.lang == 'ar' else 'Search patients, doctors, prescriptions...' }}" aria-label="Search">
+            <input class="cmd-input" id="cmdInput" type="text" placeholder="{{ 'بحث عن مريض، طبيب، وصفة...' if g.lang == 'ar' else 'Search patients, physicians, prescriptions...' }}" aria-label="Search">
         </div>
         <div class="cmd-results" id="cmdResults"></div>
     </div>

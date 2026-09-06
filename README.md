@@ -119,6 +119,11 @@ calling code**. Routes live under `/ai/...` (e.g. patient summaries, diagnosis
 support, lab/radiology interpretation, analytics, health insights for
 patients/admin).
 
+**Where AI shows up in the UI:** one ✦ *AI Copilot* entry point in the sidebar and topbar, an
+*AI Hub* page (`/ai/hub`) listing every AI capability with an honest AVAILABLE / LIMITED /
+COMING SOON status, and an AI strip on the physician and command-center dashboards. Design
+rules and class names are in `docs/UI_DESIGN.md`.
+
 ## REST API
 
 A JSON API is mounted at `/api` (e.g. `/api/health`, `/api/doctors`,
