@@ -50,7 +50,7 @@ def global_search(query, limit=20):
                .filter(User.full_name.ilike(like))
                .limit(limit).all())
     results['doctors'] = [
-        {'id': d.id, 'label': (d.user.full_name if d.user else f'Doctor #{d.id}'),
+        {'id': d.id, 'label': (d.user.full_name if d.user else f'Physician #{d.id}'),
          'subtitle': d.specialty.name if d.specialty else 'No specialty', 'extra': ''}
         for d in doctors]
 

@@ -224,10 +224,14 @@ def find_terms(text):
 
 
 def preparation_for(visit_type=None, reason=None):
-    key = 'general'
-    blob = f'{visit_type or ""} {reason or ""}'.lower()
-    for k in ('lab', 'imaging', 'dental', 'physio', 'follow_up'):
-        if k.replace('_', ' ') in blob or k in blob or (k == 'imaging' and any(w in blob for w in ('x-ray', 'ct', 'mri', 'scan'))):
+    blob = f'{visit_type or ""} {reason or ""}'.lower().replace('-', ' ').replace('_', ' ')
+    key = None
+    for k, words in (('lab', ('lab', 'blood test', 'sample')),
+                     ('imaging', ('imaging', 'x ray', 'xray', 'ct', 'mri', 'scan', 'ultrasound')),
+                     ('dental', ('dental', 'tooth', 'teeth', 'dentist')),
+                     ('physio', ('physio', 'rehab', 'therapy')),
+                     ('follow_up', ('follow up', 'review', 'control', 'check up'))):
+        if any(w in blob for w in words):
             key = k
             break
-    return APPOINTMENT_PREP['general'] + APPOINTMENT_PREP.get(key, [])
+    return APPOINTMENT_PREP['general'] + (APPOINTMENT_PREP.get(key, []) if key else [])

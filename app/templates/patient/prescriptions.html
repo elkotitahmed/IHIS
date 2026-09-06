@@ -36,7 +36,7 @@
                         <td><span class="t-num">{{ li.dosage or 'N/A' }}</span></td>
                         <td class="cell-secondary">{{ li.frequency or 'N/A' }}</td>
                         <td class="cell-secondary">{{ li.duration or 'N/A' }}</td>
-                        <td><span class="t-num">{{ li.quantity or 1 }}</span></td>
+                        <td><span class="t-num">{{ li.quantity or 1 }}</span> <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-pai="medication" data-id="{{ li.id }}" title="{{ 'عن هذا الدواء' if g.lang == 'ar' else 'About this medicine' }}"><span class="ai-spark">✦</span></button></td>
                     </tr>
                     {% else %}
                     <tr>

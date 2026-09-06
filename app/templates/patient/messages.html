@@ -9,12 +9,12 @@
         {% if doctors %}
         <div class="dropdown">
             <button class="btn-ihs btn-ihs-primary dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="fas fa-paper-plane"></i> {{ 'إرسال رسالة' if g.lang == 'ar' else 'Compose to Doctor' }}
+                <i class="fas fa-paper-plane"></i> {{ 'إرسال رسالة' if g.lang == 'ar' else 'Compose to Physician' }}
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 {% for d in doctors %}
                 <li><a class="dropdown-item" href="{{ url_for('patient.compose_message', doctor_id=d.id) }}">
-                    {{ d.user.full_name if d.user else 'Doctor' }}
+                    {{ d.user.full_name if d.user else 'Physician' }}
                     {% if d.specialty %}<span class="cell-muted" style="font-size:0.75rem"> - {{ d.specialty.name }}</span>{% endif %}
                 </a></li>
                 {% endfor %}

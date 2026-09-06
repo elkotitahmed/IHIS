@@ -31,7 +31,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'نتائج الفحص' if g.lang == 'ar' else 'Examination Findings' }}</label>
-                        <textarea class="form-control" name="examination_findings" rows="3">{{ dental_record.examination_findings if dental_record and dental_record.examination_findings }}</textarea>
+                        <textarea class="form-control" name="examination_findings" data-ac="dental" data-copilot-target rows="3">{{ dental_record.examination_findings if dental_record and dental_record.examination_findings }}</textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'التشخيص السني' if g.lang == 'ar' else 'Dental Diagnosis' }}</label>
@@ -39,15 +39,15 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan (summary)' }}</label>
-                        <textarea class="form-control" name="treatment_plan" rows="2">{{ dental_record.treatment_plan if dental_record and dental_record.treatment_plan }}</textarea>
+                        <textarea class="form-control" name="treatment_plan" data-ac="dental" data-copilot-target rows="2">{{ dental_record.treatment_plan if dental_record and dental_record.treatment_plan }}</textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'ملاحظات اللثة' if g.lang == 'ar' else 'Periodontal Notes' }}</label>
-                        <textarea class="form-control" name="periodontal_notes" rows="2">{{ dental_record.periodontal_notes if dental_record and dental_record.periodontal_notes }}</textarea>
+                        <textarea class="form-control" name="periodontal_notes" data-ac="dental" rows="2">{{ dental_record.periodontal_notes if dental_record and dental_record.periodontal_notes }}</textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'التاريخ السني' if g.lang == 'ar' else 'Dental History' }}</label>
-                        <textarea class="form-control" name="dental_history" rows="4"
+                        <textarea class="form-control" name="dental_history" data-ac="dental" rows="4"
                                   placeholder="{{ 'الزيارات السابقة، العلاجات، تاريخ النظافة' if g.lang == 'ar' else 'Past dental visits, treatments, hygiene history' }}">{{ dental_record.dental_history if dental_record and dental_record.dental_history }}</textarea>
                     </div>
                     <div class="form-group">

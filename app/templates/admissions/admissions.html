@@ -43,7 +43,7 @@
       </div>
       <div class="col-md-3">
         <div class="form-group">
-          <label class="form-label-ihs">{{ 'الطبيب المعالج' if g.lang == 'ar' else 'Admitting Doctor' }}</label>
+          <label class="form-label-ihs">{{ 'الطبيب المعالج' if g.lang == 'ar' else 'Admitting Physician' }}</label>
           <select class="form-control" name="doctor_id">
             <option value="">{{ '-- اختياري --' if g.lang == 'ar' else '-- Optional --' }}</option>
             {% for d in doctors %}<option value="{{ d.id }}">{{ d.user.full_name }}</option>{% endfor %}

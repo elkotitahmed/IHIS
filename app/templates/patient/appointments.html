@@ -22,7 +22,7 @@
                 <thead>
                     <tr>
                         <th>{{ 'التاريخ والوقت' if g.lang == 'ar' else 'Scheduled At' }}</th>
-                        <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                        <th>{{ 'الطبيب' if g.lang == 'ar' else 'Physician' }}</th>
                         <th>{{ 'السبب' if g.lang == 'ar' else 'Reason' }}</th>
                         <th>{{ 'الأولوية' if g.lang == 'ar' else 'Priority' }}</th>
                         <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
@@ -43,6 +43,7 @@
                             <span class="status-badge s-{{ item.status|lower|replace(' ','-') }}">
                                 {{ item.status }}
                             </span>
+                            {% if item.status in ('Scheduled', 'Confirmed') %}<button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-pai="appointment" data-id="{{ item.id }}" title="{{ 'استعد للموعد' if g.lang == 'ar' else 'Prepare for this appointment' }}"><span class="ai-spark">✦</span> {{ 'استعد' if g.lang == 'ar' else 'Prepare' }}</button>{% endif %}
                         </td>
                     </tr>
                     {% else %}

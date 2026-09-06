@@ -48,7 +48,7 @@
                             <td class="cell-muted">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else 'N/A' }}</td>
                             <td>
                                 {% if order.result and order.result.result_value %}
-                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.lab_interpret', order_id=order.id) }}"><i class="fas fa-brain"></i> AI</a>
+                                <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-result-review="lab" data-result-id="{{ order.id }}" title="{{ 'تحليل بالذكاء' if g.lang == 'ar' else 'Analyze with AI' }}"><span class="ai-spark">✦</span> {{ 'تحليل' if g.lang == 'ar' else 'Analyze' }}</button>
                                 {% else %}
                                 <span class="cell-muted">-</span>
                                 {% endif %}

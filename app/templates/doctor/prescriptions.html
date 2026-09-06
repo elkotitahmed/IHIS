@@ -61,6 +61,7 @@
                         </div>
                     </div>
 
+                    <div id="rxSafety" data-patient="{{ patient.id }}" aria-live="polite"></div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'عدد مرات التجديد' if g.lang == 'ar' else 'Refills' }}</label>
                         <input type="number" class="form-control" name="refills" min="0" value="0">
@@ -141,6 +142,42 @@
         {% endif %}
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var box = document.getElementById('rxSafety'); if (!box) return;
+    var pid = box.getAttribute('data-patient');
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+    var cards = {};
+    function render() {
+        var h = '';
+        Object.keys(cards).forEach(function (mid) {
+            var d = cards[mid];
+            var cls = d.level === 'CRITICAL' ? 'alert-danger' : d.level === 'HIGH' ? 'alert-danger' : d.level === 'MODERATE' ? 'alert-warning' : 'alert-success';
+            h += '<div class="alert ' + cls + ' py-2 px-3 mb-2" style="font-size:0.8rem" data-med="' + mid + '"><strong>' + esc(d.medication) + '</strong> — ' + esc(d.level) +
+                 (d.allergy.length ? '<div><i class="fas fa-allergies"></i> ' + d.allergy.map(esc).join('; ') + '</div>' : '') +
+                 (d.interactions.length ? '<div><i class="fas fa-capsules"></i> ' + d.interactions.map(function (i) { return esc(i.severity) + ' with ' + esc(i['with']) + (i.description ? ': ' + esc(i.description) : ''); }).join('; ') + '</div>' : '') +
+                 (d.duplicates.length ? '<div><i class="fas fa-clone"></i> ' + d.duplicates.map(esc).join('; ') + '</div>' : '') +
+                 (d.warnings.length ? '<div class="cell-muted">' + d.warnings.map(esc).join(' · ') + '</div>' : '') +
+                 ' <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-rx-ai="' + mid + '"><span class="ai-spark">✦</span> {{ 'مراجعة بالذكاء' if g.lang == 'ar' else 'AI review' }}</button><div class="rx-ai-out"></div></div>';
+        });
+        box.innerHTML = h;
+    }
+    document.addEventListener('change', function (e) {
+        var sel = e.target; if (!sel.matches || !sel.matches('select[name="medication_id"]') || !sel.value) return;
+        fetch('/ai/copilot/medication-safety?patient_id=' + pid + '&medication_id=' + sel.value, {credentials: 'same-origin'})
+            .then(function (r) { return r.json(); }).then(function (d) { if (d.ok) { cards[sel.value] = d; render(); } }).catch(function () {});
+    });
+    box.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-rx-ai]'); if (!b) return;
+        var out = b.parentNode.querySelector('.rx-ai-out'); out.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+        var m = document.querySelector('meta[name="csrf-token"]');
+        fetch('/ai/copilot/medication-review', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': m ? m.content : ''}, body: JSON.stringify({patient_id: pid, medication_id: b.getAttribute('data-rx-ai')})})
+            .then(function (r) { return r.json(); }).then(function (d) {
+                out.innerHTML = (d.ai && (d.ai.status === 'ok' || d.ai.status === 'cached')) ? '<div class="ai-block mt-1"><span class="ai-label ai-label-ai">✦ AI ASSISTED</span><div class="ai-text">' + esc(d.ai.text).replace(/\n/g, '<br>') + '</div></div>' : '<div class="ai-note ai-note-muted mt-1">' + esc((d.ai && d.ai.message) || d.error || 'AI unavailable') + '</div>';
+            }).catch(function () { out.innerHTML = ''; });
+    });
+});
+</script>
 {% endblock %}
 
 {% block scripts %}

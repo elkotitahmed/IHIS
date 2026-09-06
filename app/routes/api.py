@@ -277,7 +277,7 @@ def create_appointment():
         return jsonify({'error': 'scheduled_at must be ISO 8601'}), 400
     if has_appointment_conflict(int(doctor_id), scheduled,
                                 int(data.get('duration_minutes', 30))):
-        return jsonify({'error': 'Doctor already has an appointment at that time'}), 409
+        return jsonify({'error': 'Physician already has an appointment at that time'}), 409
     patient = db.session.get(Patient, int(patient_id))
     doctor = db.session.get(Doctor, int(doctor_id))
     if patient is None or doctor is None:
@@ -298,7 +298,7 @@ def create_appointment():
     db.session.flush()
     from app.services.timeline import record_event
     record_event(patient.id, 'APPOINTMENT', 'Appointment booked',
-                 f'With Dr. {doctor.user.full_name if doctor.user else "doctor"} on '
+                 f'With Dr. {doctor.user.full_name if doctor.user else "physician"} on '
                  f'{scheduled.strftime("%d %b %Y %H:%M")}',
                  source_type='appointment', source_id=a.id, department='API')
     db.session.commit()
@@ -431,7 +431,7 @@ def create_prescription():
     patient_id = data.get('patient_id')
     items_data = data.get('items')
     if not doctor:
-        return jsonify({'error': 'Only doctors can create prescriptions'}), 403
+        return jsonify({'error': 'Only physicians can create prescriptions'}), 403
     if not current_user.has_permission('PRESCRIPTION_CREATE'):
         return jsonify({'error': 'You do not have permission to create prescriptions'}), 403
     if not patient_id:
@@ -527,7 +527,7 @@ def create_referral():
     patient_id = data.get('patient_id')
     to_specialty = data.get('to_specialty')
     if not doctor:
-        return jsonify({'error': 'Only doctors can create referrals'}), 403
+        return jsonify({'error': 'Only physicians can create referrals'}), 403
     if not (patient_id and to_specialty):
         return jsonify({'error': 'patient_id and to_specialty are required'}), 400
     patient = db.session.get(Patient, int(patient_id))

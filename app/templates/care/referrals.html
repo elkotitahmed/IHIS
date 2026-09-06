@@ -63,7 +63,7 @@
             <div class="col-md-9">
                 <div class="form-group">
                     <label class="form-label-ihs">{{ 'السبب / السؤال السريري' if g.lang == 'ar' else 'Reason / clinical question' }} <span class="required">*</span></label>
-                    <input name="reason" class="form-control" required placeholder="{{ 'سبب الإحالة' if g.lang == 'ar' else 'Why is this patient being referred?' }}">
+                    <input name="reason" class="form-control" data-ac="referral" required placeholder="{{ 'سبب الإحالة' if g.lang == 'ar' else 'Why is this patient being referred?' }}">
                 </div>
             </div>
             <div class="col-md-3">

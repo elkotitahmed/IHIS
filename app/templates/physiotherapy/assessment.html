@@ -18,11 +18,11 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'التقييم الوظيفي' if g.lang == 'ar' else 'Functional Assessment' }}</label>
-                        <textarea class="form-control" name="functional_assessment" rows="2"></textarea>
+                        <textarea class="form-control" name="functional_assessment" data-ac="physio" rows="2"></textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'تقييم الحركة' if g.lang == 'ar' else 'Mobility Assessment' }}</label>
-                        <textarea class="form-control" name="mobility_assessment" rows="2"></textarea>
+                        <textarea class="form-control" name="mobility_assessment" data-ac="physio" rows="2"></textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'تقييم الألم (0-10)' if g.lang == 'ar' else 'Pain Assessment (0-10)' }}</label>
@@ -50,7 +50,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</label>
-                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                        <textarea class="form-control" name="notes" data-ac="physio" rows="2"></textarea>
                     </div>
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                         <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-save"></i>{{ 'حفظ التقييم' if g.lang == 'ar' else 'Save Assessment' }}</button>

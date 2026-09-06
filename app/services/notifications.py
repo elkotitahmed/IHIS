@@ -73,7 +73,7 @@ def notify_patient(patient, title, message, notification_type='in-app',
 
 def notify_doctor(doctor, title, message, notification_type='in-app',
                   entity_type=None, entity_id=None):
-    """Notify a Doctor row's underlying user."""
+    """Notify a Physician row's underlying user."""
     if doctor and doctor.user_id:
         return notify(doctor.user_id, title, message, notification_type,
                       entity_type, entity_id)

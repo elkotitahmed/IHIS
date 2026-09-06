@@ -47,6 +47,14 @@
                 <div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'سجل جديد لـ' if g.lang == 'ar' else 'New Record for' }} {{ patient.user.full_name if patient and patient.user else 'Patient' }}</div>
             </div>
             <div class="card-body">
+                <div class="d-flex gap-2 flex-wrap mb-3" aria-label="AI encounter assistant">
+                    <button type="button" class="ai-btn" data-copilot-open="{{ patient.id }}" data-copilot-action="patient.summary"><span class="ai-spark">✦</span> {{ 'ملخص المريض' if g.lang == 'ar' else 'Summarize history' }}</button>
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="doc.hpi"><span class="ai-spark">✦</span> {{ 'مسودة HPI' if g.lang == 'ar' else 'Draft HPI' }}</button>
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="doc.structure"><span class="ai-spark">✦</span> {{ 'هيكلة الملاحظة' if g.lang == 'ar' else 'Organize (SOAP)' }}</button>
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="reasoning.differential"><span class="ai-spark">✦</span> {{ 'دعم التشخيص التفريقي' if g.lang == 'ar' else 'Differential support' }}</button>
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="doc.plan"><span class="ai-spark">✦</span> {{ 'مسودة الخطة' if g.lang == 'ar' else 'Draft plan' }}</button>
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="comm.education"><span class="ai-spark">✦</span> {{ 'تثقيف المريض' if g.lang == 'ar' else 'Patient education' }}</button>
+                </div>
                 <form method="POST" action="{{ url_for('doctor.add_emr', patient_id=patient.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     {% if template %}
@@ -55,7 +63,11 @@
 
                     <div class="form-group">
                         <label class="form-label-ihs" for="diagnosis">{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }} <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="diagnosis" name="diagnosis" required placeholder="{{ 'أدخل التشخيص' if g.lang == 'ar' else 'Enter diagnosis' }}">
+                        <div class="dx-wrap d-flex gap-1">
+                            <input type="text" class="form-control" id="diagnosis" name="diagnosis" required placeholder="{{ 'ابدأ الكتابة: hyper… → Hypertension I10' if g.lang == 'ar' else 'Start typing: hyper… → Hypertension (I10)' }}" data-dx-lookup data-dx-code-target="#icd10" data-dx-ai="#dxAiBtn" data-dx-source="#clinical_notes" autocomplete="off">
+                            <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="dxAiBtn" title="{{ 'اقتراحات ICD-10 بالذكاء (اختيار صريح)' if g.lang == 'ar' else 'AI-assisted ICD-10 suggestions (you choose)' }}"><span class="ai-spark">✦</span></button>
+                        </div>
+                        <div class="cell-muted" style="font-size:0.7rem;margin-top:2px">{{ 'المصطلحات المحلية أولًا، ثم الأخيرة والمفضلة؛ اقتراحات الذكاء اختيارية ولا تُنشئ تشخيصًا تلقائيًا.' if g.lang == 'ar' else 'Local terminology first, then your recent and favourite diagnoses; AI suggestions are optional and never create a diagnosis by themselves.' }}</div>
                     </div>
 
                     <div class="form-group">
@@ -72,12 +84,12 @@
 
                     <div class="form-group">
                         <label class="form-label-ihs" for="treatment_plan">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</label>
-                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" rows="4" placeholder="{{ 'صِف خطة العلاج...' if g.lang == 'ar' else 'Describe the treatment plan...' }}"></textarea>
+                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" data-ac="plan" data-copilot-target rows="4" placeholder="{{ 'صِف خطة العلاج...' if g.lang == 'ar' else 'Describe the treatment plan...' }}"></textarea>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label-ihs" for="clinical_notes">{{ 'ملاحظات سريرية' if g.lang == 'ar' else 'Clinical Notes' }}</label>
-                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" rows="4" placeholder="{{ 'ملاحظات سريرية إضافية...' if g.lang == 'ar' else 'Additional clinical notes...' }}"></textarea>
+                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" data-ac="hpi" data-copilot-target rows="4" placeholder="{{ 'ملاحظات سريرية إضافية...' if g.lang == 'ar' else 'Additional clinical notes...' }}"></textarea>
                     </div>
 
                     <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-4)">

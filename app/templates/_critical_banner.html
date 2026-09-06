@@ -1,17 +1,17 @@
 {# Immediate, visible critical-finding notification for the responsible physician
    (and supervisors). Never hidden inside the notification centre only. #}
-{% if critical_alerts %}
+{% if copilot_critical_alerts %}
 <div class="critical-banner" role="alert" aria-live="assertive">
     <i class="fas fa-triangle-exclamation"></i>
     <strong>{{ 'نتيجة حرجة تتطلب الإقرار' if g.lang == 'ar' else 'CRITICAL FINDING — ACKNOWLEDGEMENT REQUIRED' }}</strong>
-    <span>{{ critical_alerts|length }} {{ 'تنبيه مفتوح' if g.lang == 'ar' else 'open alert(s)' }}</span>
+    <span>{{ copilot_critical_alerts|length }} {{ 'تنبيه مفتوح' if g.lang == 'ar' else 'open alert(s)' }}</span>
     <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="criticalBannerToggle" aria-expanded="false" aria-controls="criticalDrawer">
         <i class="fas fa-list"></i> {{ 'عرض' if g.lang == 'ar' else 'Show' }}
     </button>
     <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.alerts_all') }}?severity=critical">{{ 'كل التنبيهات' if g.lang == 'ar' else 'All alerts' }}</a>
 </div>
 <div class="critical-drawer" id="criticalDrawer" hidden>
-    {% for a in critical_alerts %}
+    {% for a in copilot_critical_alerts %}
     <div class="list-item">
         <span class="ai-label {{ 'ai-label-danger' if a.severity == 'CRITICAL' else 'ai-label-warn' }}">{{ a.severity }}</span>
         {% if a.ai_assisted %}<span class="ai-label ai-label-ai">✦ {{ 'بمساعدة الذكاء' if g.lang == 'ar' else 'AI ASSISTED' }}</span>{% endif %}

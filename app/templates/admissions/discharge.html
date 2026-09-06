@@ -6,6 +6,7 @@
     <p class="page-subtitle">{{ 'تسجيل الخروج وملخص الحالة' if g.lang == 'ar' else 'Record discharge and clinical summary' }}</p>
   </div>
   <div class="page-actions">
+    <button type="button" class="ai-btn" data-copilot-open="{{ admission.patient_id }}" data-copilot-action="doc.discharge"><span class="ai-spark">✦</span> {{ 'مسودة الخروج بالذكاء' if g.lang == 'ar' else 'AI Discharge Draft' }}</button>
     <a class="btn-ihs btn-ihs-outline" href="{{ url_for('admissions.dashboard') }}"><i class="fas fa-arrow-left"></i> {{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}</a>
   </div>
 </div>
@@ -48,22 +49,22 @@
           </div>
           <div class="form-group">
             <label class="form-label-ihs" for="discharge_summary">{{ 'الملخص السريري' if g.lang == 'ar' else 'Clinical Summary' }} <span class="required">*</span></label>
-            <textarea class="form-control" id="discharge_summary" name="discharge_summary" rows="4"
+            <textarea class="form-control" id="discharge_summary" name="discharge_summary" data-ac="discharge" data-copilot-target rows="4"
                       placeholder="{{ 'ملخص الدخول والعلاجات المعطاة والاستجابة...' if g.lang == 'ar' else 'Summary of the admission, treatments given, and response...' }}"></textarea>
           </div>
           <div class="form-group">
             <label class="form-label-ihs" for="discharge_medications">{{ 'الأدوية عند الخروج' if g.lang == 'ar' else 'Medications on Discharge' }}</label>
-            <textarea class="form-control" id="discharge_medications" name="discharge_medications" rows="2"
+            <textarea class="form-control" id="discharge_medications" name="discharge_medications" data-ac="plan" rows="2"
                       placeholder="{{ 'مثال: أموكسيسيلين 500 ملغ 3 مرات يومياً لمدة 7 أيام...' if g.lang == 'ar' else 'e.g. Amoxicillin 500mg TID x 7 days; Paracetamol 1g PRN' }}"></textarea>
           </div>
           <div class="form-group">
             <label class="form-label-ihs" for="follow_up_instructions">{{ 'تعليمات المتابعة' if g.lang == 'ar' else 'Follow-Up Instructions' }}</label>
-            <textarea class="form-control" id="follow_up_instructions" name="follow_up_instructions" rows="2"
+            <textarea class="form-control" id="follow_up_instructions" name="follow_up_instructions" data-ac="plan" rows="2"
                       placeholder="{{ 'موعد العيادة، علامات التحذير، نصائح نمط الحياة...' if g.lang == 'ar' else 'Clinic follow-up date, warning signs, lifestyle advice...' }}"></textarea>
           </div>
           <div class="form-group">
             <label class="form-label-ihs" for="discharge_notes">{{ 'ملاحظات التمريض / الخروج' if g.lang == 'ar' else 'Nursing / Discharge Notes' }}</label>
-            <textarea class="form-control" id="discharge_notes" name="discharge_notes" rows="3"
+            <textarea class="form-control" id="discharge_notes" name="discharge_notes" data-ac="discharge" rows="3"
                       placeholder="{{ 'ملاحظات إضافية لسجل الخروج...' if g.lang == 'ar' else 'Additional notes for the discharge record...' }}"></textarea>
           </div>
           <button type="submit" class="btn-ihs btn-ihs-success"

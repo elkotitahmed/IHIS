@@ -207,7 +207,7 @@ def reject_sample(order_id):
                       f'The sample for "{order.test.test_name if order.test else ''}" was rejected: {reason}',
                       entity_type='lab_order', entity_id=order.id)
         db.session.commit()
-    flash('Lab order rejected; doctor notified.', 'success')
+    flash('Lab order rejected; physician notified.', 'success')
     return redirect(url_for('lab.orders'))
 
 

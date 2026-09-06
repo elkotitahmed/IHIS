@@ -28,7 +28,7 @@
                 <div class="col-md-12">
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'الملاحظة' if g.lang == 'ar' else 'Note' }} [<span class="required">*</span>]</label>
-                        <textarea class="form-control" name="note" rows="4" placeholder="{{ 'أدخل الملاحظات السريرية...' if g.lang == 'ar' else 'Enter clinical observations...' }}" required></textarea>
+                        <textarea class="form-control" name="note" data-ac="nursing" data-copilot-target rows="4" placeholder="{{ 'أدخل الملاحظات السريرية...' if g.lang == 'ar' else 'Enter clinical observations...' }}" required></textarea>
                     </div>
                 </div>
             </div>

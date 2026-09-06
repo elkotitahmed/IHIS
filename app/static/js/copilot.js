@@ -266,6 +266,21 @@
                 if (act) setTimeout(function () { if (INPUT_ACTIONS[act]) renderInputs(act); else runAction(act, {}); }, 400);
             });
         });
+        // "Analyze with AI" on a result: opens the panel with the review
+        document.addEventListener('click', function (e) {
+            var el = e.target.closest('[data-result-review]');
+            if (!el) return;
+            e.preventDefault();
+            open();
+            body.innerHTML = '<div class="ai-loading"><i class="fas fa-circle-notch fa-spin"></i> ' + t('Reviewing result…', 'جارٍ مراجعة النتيجة…') + '</div>';
+            post('/ai/copilot/result-review', { kind: el.getAttribute('data-result-review'), id: el.getAttribute('data-result-id') })
+                .then(function (d) {
+                    if (!d.ok) { body.innerHTML = '<div class="ai-note ai-note-warn">' + esc(d.error || 'Error') + '</div>'; return; }
+                    d.label = d.title; d.label_ar = d.title; d.status = null;
+                    renderResult(d);
+                })
+                .catch(function () { body.innerHTML = '<div class="ai-note ai-note-warn">' + t('The request failed.', 'فشل الطلب.') + '</div>'; });
+        });
         // Critical alert drawer toggle (banner)
         var cb = document.getElementById('criticalBannerToggle');
         var cd = document.getElementById('criticalDrawer');

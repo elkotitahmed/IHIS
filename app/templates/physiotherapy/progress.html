@@ -70,7 +70,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}</label>
-                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                        <textarea class="form-control" name="notes" data-ac="physio" data-copilot-target rows="2"></textarea>
                     </div>
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                         <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-save"></i>{{ 'تسجيل التقدم' if g.lang == 'ar' else 'Record Progress' }}</button>

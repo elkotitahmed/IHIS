@@ -89,10 +89,10 @@ def book_appointment():
             patient_id = int(request.form.get('patient_id'))
             doctor_id = int(request.form.get('doctor_id'))
         except (TypeError, ValueError):
-            flash('Please select a valid patient and doctor.', 'danger')
+            flash('Please select a valid patient and physician.', 'danger')
             return redirect(url_for('reception.book_appointment'))
         if db.session.get(Patient, patient_id) is None or db.session.get(Doctor, doctor_id) is None:
-            flash('Please select a valid patient and doctor.', 'danger')
+            flash('Please select a valid patient and physician.', 'danger')
             return redirect(url_for('reception.book_appointment'))
         try:
             duration = max(5, int(request.form.get('duration_minutes') or 30))
@@ -110,14 +110,14 @@ def book_appointment():
             created_by=current_user.id,
         )
         if has_appointment_conflict(doctor_id, scheduled_at, duration):
-            flash('This doctor already has an appointment at that time. Please choose another slot.', 'warning')
+            flash('This physician already has an appointment at that time. Please choose another slot.', 'warning')
             return redirect(url_for('reception.book_appointment'))
         db.session.add(appointment)
         db.session.flush()
         log_activity('BOOK_APPOINTMENT', 'appointment', appointment.id,
                      f'Appointment booked by receptionist {current_user.id}')
         record_event(patient_id, 'APPOINTMENT', 'Appointment booked',
-                     f'With Dr. {appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else "doctor"} on '
+                     f'With Dr. {appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else "physician"} on '
                      f'{scheduled_at.strftime("%d %b %Y %H:%M")}',
                      source_type='appointment', source_id=appointment.id,
                      department='Reception')
@@ -170,7 +170,7 @@ def checkin(id):
                entity_type='appointment', entity_id=appointment.id)
     record_event(appointment.patient_id, 'VISIT', 'Patient checked in',
                  f'Appointment #{appointment.id} · waiting for '
-                 + (appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else 'the doctor'),
+                 + (appointment.doctor.user.full_name if appointment.doctor and appointment.doctor.user else 'the physician'),
                  source_type='appointment', source_id=appointment.id,
                  department='Reception')
     db.session.commit()
@@ -260,7 +260,7 @@ def reschedule_appointment(id):
     doctor_id = request.form.get('doctor_id', type=int) or appointment.doctor_id
     if has_appointment_conflict(doctor_id, new_dt, appointment.duration_minutes or 30,
                                 exclude_id=appointment.id):
-        flash('That slot clashes with another appointment for the doctor.', 'warning')
+        flash('That slot clashes with another appointment for the physician.', 'warning')
         return redirect(url_for('reception.appointments'))
     old_dt = appointment.scheduled_at
     appointment.scheduled_at = new_dt

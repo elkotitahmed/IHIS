@@ -90,7 +90,7 @@ def dashboard():
     doctor = _current_doctor()
     supervisory = doctor is None and current_user.has_any_role('Admin', 'SuperAdmin')
     if not doctor and not supervisory:
-        flash('Doctor profile not found. Ask an administrator to link your account to a doctor record.', 'danger')
+        flash('Physician profile not found. Ask an administrator to link your account to a physician record.', 'danger')
         return redirect(url_for('main.home'))
     today = utcnow().date()
     day_start = datetime.combine(today, datetime.min.time())
@@ -234,7 +234,7 @@ def dashboard():
         clinical_history_count = (
             MedicalRecord.query.filter(MedicalRecord.patient_id.in_(sorted(ids))).count())
 
-    return render_template('doctor/dashboard.html', title='Doctor Dashboard',
+    return render_template('doctor/dashboard.html', title='Physician Dashboard',
                            doctor=doctor, todays_appts=todays_appts,
                            pending_labs=pending_labs, pending_radio=pending_radio,
                            critical_count=critical_count,
@@ -529,7 +529,7 @@ def patient_360(patient_id):
 @login_required
 @roles_required('Doctor', 'Admin', 'SuperAdmin')
 def view_medical_document(filename):
-    """Display a private patient attachment inline at the legacy doctor URL."""
+    """Display a private patient attachment inline at the legacy physician URL."""
     relative_url = f'medical_documents/{filename}'
     document = PatientDocument.query.filter_by(file_url=relative_url).first()
     if not document:
@@ -860,7 +860,7 @@ def appointments():
 
 
 def _appointment_owned(appt):
-    """A doctor may only act on their own appointments; supervisors on any."""
+    """A physician may only act on their own appointments; supervisors on any."""
     if current_user.has_any_role('Admin', 'SuperAdmin'):
         return True
     doctor = _current_doctor()

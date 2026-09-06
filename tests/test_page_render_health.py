@@ -9,7 +9,7 @@ from seed import ROLES
 
 ACCOUNTS = (
     ('admin', 'admin', 'Admin', '/admin/dashboard', 'Admin Dashboard'),
-    ('doctor', 'doctor', 'Doctor', '/doctor/dashboard', 'Doctor Dashboard'),
+    ('doctor', 'doctor', 'Doctor', '/doctor/dashboard', 'Physician Dashboard'),
     ('nurse', 'nurse', 'Nurse', '/nursing/dashboard', 'Nursing Dashboard'),
     ('lab', 'lab_technician', 'LabTechnician', '/lab/dashboard', 'Laboratory'),
     ('radio', 'radiologist', 'Radiologist', '/radiology/dashboard', 'Radiology'),

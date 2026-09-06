@@ -22,7 +22,7 @@
                                 <th>#</th>
                                 <th>{{ 'الاسم' if g.lang == 'ar' else 'Name' }}</th>
                                 <th>{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</th>
-                                <th>{{ 'رئيس القسم' if g.lang == 'ar' else 'Head Doctor' }}</th>
+                                <th>{{ 'رئيس القسم' if g.lang == 'ar' else 'Head Physician' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -77,9 +77,9 @@
                                   placeholder="{{ 'وصف القسم...' if g.lang == 'ar' else 'Department description...' }}"></textarea>
                     </div>
                     <div class="form-group">
-                        <label class="form-label-ihs" for="head_doctor_id">{{ 'رئيس القسم' if g.lang == 'ar' else 'Head Doctor' }}</label>
+                        <label class="form-label-ihs" for="head_doctor_id">{{ 'رئيس القسم' if g.lang == 'ar' else 'Head Physician' }}</label>
                         <select class="form-control" id="head_doctor_id" name="head_doctor_id">
-                            <option value="">{{ '— اختر طبيباً —' if g.lang == 'ar' else '-- Select Doctor --' }}</option>
+                            <option value="">{{ '— اختر طبيباً —' if g.lang == 'ar' else '-- Select Physician --' }}</option>
                             {% for doc in doctors %}
                             <option value="{{ doc.id }}">{{ doc.user.full_name }}{% if doc.specialty %} ({{ doc.specialty.name }}){% endif %}</option>
                             {% endfor %}

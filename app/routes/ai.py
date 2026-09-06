@@ -13,7 +13,7 @@ from app.models import (
     Patient, Doctor, PhysicalTherapist, LabOrder, RadiologyOrder,
     Prescription, Appointment, PatientDocument,
 )
-from app.routes.decorators import roles_required, log_activity
+from app.routes.decorators import roles_required, permissions_required, log_activity
 from app.access import require_patient_access, has_need_to_know
 from app.services import alerts as alert_svc
 from app.services.patient_safety import patient_safety_context
@@ -433,10 +433,26 @@ def skin_lesion_detection():
         storage, patient, doc, error = _resolve_image_input()
         if storage is not None:
             try:
+                from app.services.ai.skin_lesion_classification import (
+                    DIFFERENTIAL_CONSIDERATIONS, RISK_INDICATORS, image_quality)
+                try:
+                    raw = storage.stream.read() if hasattr(storage, 'stream') else storage.read()
+                    storage.stream.seek(0) if hasattr(storage, 'stream') else storage.seek(0)
+                    quality = image_quality(raw)
+                except Exception:  # noqa: BLE001
+                    quality = {'score': None, 'issues': ['Quality check unavailable']}
                 result = classify_skin_lesion(storage)
                 if 'error' in result:
                     error = result.pop('error', None)
                 else:
+                    result['quality'] = quality
+                    result['differentials'] = DIFFERENTIAL_CONSIDERATIONS['melanoma' if result.get('is_melanoma') else 'nevus']
+                    result['risk_indicators'] = RISK_INDICATORS
+                    from app.services.ai import platform as _platform
+                    result['usage_id'] = _platform.record_usage(
+                        'dermatology.classify', 'ok', provider='local',
+                        patient_id=patient.id if patient else None,
+                        detail=f"{'melanoma' if result.get('is_melanoma') else 'nevus'} {result.get('percent')}% q={quality.get('score')}")
                     _alert_on_positive_finding(result, patient, doc)
                     log_activity('AI_SKIN_LESION_DETECTION', 'patient',
                                  patient.id if patient else 0,
@@ -676,3 +692,26 @@ def ai_dashboard():
                            applied_recs=applied_recs,
                            rec_types=rec_types,
                            gemini_available=gemini_available())
+
+
+@ai_bp.route('/skin-lesion-detection/review', methods=['POST'])
+@login_required
+@roles_required('Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin')
+@permissions_required('AI_IMAGE_ANALYSIS')
+def skin_lesion_review():
+    """Explicit physician review of an AI-assisted dermatology result.
+    Records agreement/disagreement in the AI audit trail; never creates a
+    diagnosis or changes the chart."""
+    from app.services.ai import platform as _platform
+    usage_id = request.form.get('usage_id', type=int)
+    decision = request.form.get('decision')
+    note = (request.form.get('note') or '')[:300]
+    if usage_id and decision in ('agree', 'disagree', 'needs_biopsy'):
+        _platform.mark_feedback(usage_id, decision != 'disagree')
+        _platform.record_usage('dermatology.review', decision, provider='local', detail=note or None)
+        log_activity('AI_SKIN_LESION_REVIEW', 'ai_usage', usage_id, f'{decision}: {note}')
+        db.session.commit()
+        flash('Your review was recorded in the AI audit trail. No diagnosis was created.', 'success')
+    else:
+        flash('Review not recorded.', 'warning')
+    return redirect(url_for('ai.skin_lesion_detection'))

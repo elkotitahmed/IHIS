@@ -48,6 +48,9 @@
                             {% endif %}
                         </td>
                         <td style="text-align:right">
+                            {% if item.result and item.result.status in ('Verified', 'Locked', 'Finalized') %}
+                            <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-pai="result" data-id="{{ item.id }}"><span class="ai-spark">✦</span> {{ 'اشرح لي' if g.lang == 'ar' else 'Explain with AI' }}</button>
+                            {% endif %}
                             {% if item.status == 'Completed' and item.result %}
                             <a class="btn-ihs btn-ihs-outline btn-ihs-sm" target="_blank" href="{{ url_for('reports.lab_result', order_id=item.id) }}">
                                 <i class="fas fa-file-pdf"></i> {{ 'تحميل PDF' if g.lang == 'ar' else 'Download PDF' }}

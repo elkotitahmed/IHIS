@@ -24,12 +24,12 @@
                     <div class="row g-4">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label-ihs">{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }} [<span class="required">*</span>]</label>
+                                <label class="form-label-ihs">{{ 'الطبيب' if g.lang == 'ar' else 'Physician' }} [<span class="required">*</span>]</label>
                                 <select name="doctor_id" class="form-control" required>
-                                    <option value="">{{ '-- اختر الطبيب --' if g.lang == 'ar' else '-- Select Doctor --' }}</option>
+                                    <option value="">{{ '-- اختر الطبيب --' if g.lang == 'ar' else '-- Select Physician --' }}</option>
                                     {% for doc in doctors %}
                                     <option value="{{ doc.id }}">
-                                        {{ doc.user.full_name if doc.user else 'Doctor #' + doc.id|string }}
+                                        {{ doc.user.full_name if doc.user else 'Physician #' + doc.id|string }}
                                         {% if doc.specialty %}({{ doc.specialty.name }}){% endif %}
                                     </option>
                                     {% endfor %}

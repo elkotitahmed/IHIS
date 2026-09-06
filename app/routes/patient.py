@@ -92,11 +92,68 @@ def dashboard():
     other_patients = []
     if not _is_own_record(patient) and current_user.has_any_role('Admin', 'SuperAdmin'):
         other_patients = Patient.query.order_by(Patient.id.asc()).limit(50).all()
+    from app.models import FollowUp, Problem
+    follow_ups = (FollowUp.query.filter(FollowUp.patient_id == patient.id,
+                                        FollowUp.status.in_(('Scheduled', 'Pending', 'Overdue')))
+                  .order_by(FollowUp.scheduled_for.asc()).limit(3).all())
+    problems = (Problem.query.filter(Problem.patient_id == patient.id, Problem.status == 'Active')
+                .order_by(Problem.created_at.desc()).limit(5).all())
+    active_items = []
+    for rx in prescriptions:
+        if rx.status == 'Active':
+            active_items += [it for it in rx.items if it.status != 'Cancelled']
     return render_template('patient/dashboard.html', title='Patient Dashboard',
                            patient=patient, upcoming=upcoming, recent_labs=recent_labs,
                            prescriptions=prescriptions, notifications=notifications,
                            open_bills=open_bills, balance_due=balance_due,
+                           follow_ups=follow_ups, problems=problems, active_items=active_items[:6],
                            is_own=_is_own_record(patient), other_patients=other_patients)
+
+
+@patient_bp.route('/health-summary')
+@login_required
+@roles_required('Patient', 'Admin', 'SuperAdmin')
+def health_summary():
+    """MY HEALTH SUMMARY: the patient's own verified data, plain and simple.
+    Clinician-only content (drafts, internal notes, unreleased results) is
+    never shown; AI explanations are explicit and optional."""
+    patient, redirect_resp = _require_patient()
+    if redirect_resp:
+        return redirect_resp
+    from app.models import Allergy, ClinicalAlert, FollowUp, Problem
+    from app.services.ai.patient_education import find_terms
+    problems = (Problem.query.filter(Problem.patient_id == patient.id, Problem.status == 'Active')
+                .order_by(Problem.created_at.desc()).limit(10).all())
+    allergies = Allergy.query.filter_by(patient_id=patient.id).limit(10).all()
+    items = []
+    for rx in (Prescription.query.filter_by(patient_id=patient.id, status='Active')
+               .order_by(Prescription.prescribed_date.desc()).limit(10).all()):
+        items += [it for it in rx.items if it.status != 'Cancelled']
+    released = [o for o in LabOrder.query.filter_by(patient_id=patient.id)
+                .order_by(LabOrder.order_date.desc()).limit(30).all()
+                if o.result and o.result.status in ('Verified', 'Locked', 'Finalized')][:8]
+    upcoming = (Appointment.query.filter(Appointment.patient_id == patient.id,
+                                         Appointment.status.in_(('Scheduled', 'Confirmed', 'CheckedIn')))
+                .order_by(Appointment.scheduled_at).limit(5).all())
+    follow_ups = (FollowUp.query.filter(FollowUp.patient_id == patient.id,
+                                        FollowUp.status.in_(('Scheduled', 'Pending', 'Overdue')))
+                  .order_by(FollowUp.scheduled_for.asc()).limit(5).all())
+    # Patient-relevant alerts only: preventive / follow-up / vaccine reminders — never
+    # internal clinical-safety alerts meant for staff.
+    patient_alerts = (ClinicalAlert.query
+                      .filter(ClinicalAlert.patient_id == patient.id,
+                              ClinicalAlert.status.in_(('OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS')),
+                              ClinicalAlert.alert_type.in_(('VACCINE_DUE', 'UPCOMING_FOLLOWUP',
+                                                            'OVERDUE_FOLLOWUP', 'MISSED_APPOINTMENT')))
+                      .order_by(ClinicalAlert.created_at.desc()).limit(5).all())
+    last_record = (MedicalRecord.query.filter_by(patient_id=patient.id, status='Signed')
+                   .order_by(MedicalRecord.visit_date.desc()).first())
+    instructions = last_record.treatment_plan if last_record and last_record.treatment_plan else None
+    terms = find_terms(' '.join([p.description or '' for p in problems] + [instructions or '']))
+    return render_template('patient/health_summary.html', title='My Health Summary', patient=patient,
+                           problems=problems, allergies=allergies, items=items, released=released,
+                           upcoming=upcoming, follow_ups=follow_ups, patient_alerts=patient_alerts,
+                           instructions=instructions, terms=terms, is_own=_is_own_record(patient))
 
 
 @patient_bp.route('/profile', methods=['GET', 'POST'])
@@ -166,7 +223,7 @@ def book_appointment():
     if request.method == 'POST':
         doctor = db.session.get(Doctor, request.form.get('doctor_id', type=int) or -1)
         if not doctor:
-            flash('Please select a valid doctor.', 'danger')
+            flash('Please select a valid physician.', 'danger')
             return redirect(url_for('patient.book_appointment'))
         patient = Patient.query.filter_by(user_id=current_user.id).first()
         if not patient and current_user.has_any_role('Admin', 'SuperAdmin', 'Receptionist'):
@@ -183,7 +240,7 @@ def book_appointment():
             return redirect(url_for('patient.book_appointment'))
         duration = int(request.form.get('duration_minutes') or 30)
         if has_appointment_conflict(doctor.id, scheduled_at, duration):
-            flash('This doctor already has an appointment at that time. Please choose another slot.', 'warning')
+            flash('This physician already has an appointment at that time. Please choose another slot.', 'warning')
             return redirect(url_for('patient.book_appointment'))
         if scheduled_at < utcnow():
             flash('Please choose a future date and time.', 'warning')
@@ -203,7 +260,7 @@ def book_appointment():
         from app.services.timeline import record_event
         from app.services.notifications import notify
         record_event(patient.id, 'APPOINTMENT', 'Appointment booked',
-                     f'With Dr. {doctor.user.full_name if doctor.user else "doctor"} on '
+                     f'With Dr. {doctor.user.full_name if doctor.user else "physician"} on '
                      f'{scheduled_at.strftime("%d %b %Y %H:%M")}',
                      source_type='appointment', source_id=appt.id,
                      department='Patient Portal')

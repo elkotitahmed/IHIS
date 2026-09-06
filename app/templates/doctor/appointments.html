@@ -44,6 +44,7 @@
                                 {% if appt.status in ('CheckedIn', 'InConsultation') %}
                                 <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
                                     {% if appt.status == 'CheckedIn' %}
+                                    <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-copilot-open="{{ appt.patient_id }}" data-copilot-action="patient.previsit" title="{{ 'ملخص ما قبل الزيارة' if g.lang == 'ar' else 'Pre-visit summary' }}"><span class="ai-spark">✦</span> {{ 'قبل الزيارة' if g.lang == 'ar' else 'Pre-visit' }}</button>
                                     <form method="post" action="{{ url_for('doctor.start_consultation', appt_id=appt.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button class="btn-ihs btn-ihs-primary btn-ihs-sm" title="Start consultation and open the chart"><i class="fas fa-play"></i> {{ 'بدء الاستشارة' if g.lang == 'ar' else 'Start' }}</button>

@@ -119,6 +119,8 @@ def create_app(config_name=None):
     app.register_blueprint(fhir_bp, url_prefix='/fhir')
     from app.routes.copilot import copilot_bp
     app.register_blueprint(copilot_bp)
+    from app.routes.patient_ai import patient_ai_bp
+    app.register_blueprint(patient_ai_bp)
 
     # In production the schema is owned by Alembic migrations (`flask db
     # upgrade`). For local development the convenience of auto-creating missing
@@ -174,6 +176,16 @@ def create_app(config_name=None):
 def register_context_processors(app):
     """Provide role-based sidebar menus, unread counts, and language to all templates."""
 
+    @app.template_filter('physician_label')
+    def physician_label(value):
+        """Display terminology: the internal role/identifier 'Doctor' is shown
+        as 'Physician' (internal names, DB values and API contracts unchanged)."""
+        if value is None:
+            return ''
+        text = str(value)
+        return (text.replace('Doctors', 'Physicians').replace('doctors', 'physicians')
+                    .replace('Doctor', 'Physician').replace('doctor', 'physician'))
+
     @app.template_filter('mrn_label')
     def mrn_label(value):
         """Render a medical record number with a single 'MRN' prefix.
@@ -188,7 +200,7 @@ def register_context_processors(app):
     ROLE_LABELS = {
         'SuperAdmin': 'Super Administrator',
         'Admin': 'Administrator',
-        'Doctor': 'Doctor',
+        'Doctor': 'Physician',
         'Nurse': 'Nurse',
         'LabTechnician': 'Lab Technician',
         'Radiologist': 'Radiologist',
@@ -272,6 +284,7 @@ def register_context_processors(app):
                     {'label': _l('Hospital Overview', 'نظرة عامة على المستشفى'), 'url': '/super-admin/dashboard', 'icon': 'fa-gauge-high'},
                     {'label': _l('Hospital Demo', 'عرض المستشفى'), 'url': '/super-admin/demo', 'icon': 'fa-play-circle'},
                     {'label': _l('System Health', 'صحة النظام'), 'url': '/super-admin/system-health', 'icon': 'fa-heart-pulse'},
+                    {'label': _l('AI Control Center', 'مركز التحكم بالذكاء'), 'url': '/super-admin/ai-control', 'icon': 'fa-wand-magic-sparkles'},
                     {'label': _l('Platform Capabilities', 'قدرات المنصة'), 'url': '/super-admin/capabilities', 'icon': 'fa-rocket'},
                 ]},
                 {'section': _l('CLINICAL', 'سريري'), 'items': [
@@ -324,17 +337,25 @@ def register_context_processors(app):
             if 'Patient' in role_set or current_user.user_type == 'patient':
                 items += [
                     {'section': _l('MY HEALTH', 'صحتي'), 'items': [
+                        {'label': _l('My Health Summary', 'ملخص صحتي'), 'url': '/patient/health-summary', 'icon': 'fa-heart-pulse'},
                         {'label': _l('My Profile', 'ملفي'), 'url': '/patient/profile', 'icon': 'fa-id-card'},
                         {'label': _l('Medical History', 'التاريخ الطبي'), 'url': '/patient/medical-history', 'icon': 'fa-history'},
+                    ]},
+                    {'section': _l('MY APPOINTMENTS', 'مواعيدي'), 'items': [
                         {'label': _l('Appointments', 'المواعيد'), 'url': '/patient/appointments', 'icon': 'fa-calendar-check'},
                         {'label': _l('Book Appointment', 'حجز موعد'), 'url': '/patient/appointments/book', 'icon': 'fa-calendar-plus'},
-                        {'label': _l('Prescriptions', 'الروشتات'), 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
-                        {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/patient/lab-results', 'icon': 'fa-flask'},
-                        {'label': _l('My Radiology', 'أشعتي'), 'url': '/patient/my-radiology', 'icon': 'fa-radiation'},
-                        {'label': _l('Radiology Reports', 'تقارير الأشعة'), 'url': '/patient/radiology-reports', 'icon': 'fa-x-ray'},
-                        {'label': _l('Documents', 'المستندات'), 'url': '/patient/documents', 'icon': 'fa-folder-open'},
+                        {'label': _l('My Follow-up', 'متابعتي'), 'url': '/patient/health-summary#followup', 'icon': 'fa-calendar-day'},
+                    ]},
+                    {'section': _l('MY MEDICATIONS & RESULTS', 'أدويتي ونتائجي'), 'items': [
+                        {'label': _l('My Medications', 'أدويتي'), 'url': '/patient/prescriptions', 'icon': 'fa-pills'},
+                        {'label': _l('My Results', 'نتائجي'), 'url': '/patient/lab-results', 'icon': 'fa-flask'},
+                        {'label': _l('My Radiology', 'أشعتي'), 'url': '/patient/my-radiology', 'icon': 'fa-x-ray'},
+                    ]},
+                    {'section': _l('MY DOCUMENTS & MESSAGES', 'مستنداتي ورسائلي'), 'items': [
+                        {'label': _l('My Documents', 'مستنداتي'), 'url': '/patient/documents', 'icon': 'fa-folder-open'},
+                        {'label': _l('My Messages', 'رسائلي'), 'url': '/patient/messages', 'icon': 'fa-envelope'},
+                        {'label': _l('My Notifications', 'إشعاراتي'), 'url': '/notifications', 'icon': 'fa-bell'},
                         {'label': _l('Bills', 'الفواتير'), 'url': '/patient/bills', 'icon': 'fa-file-invoice-dollar'},
-                        {'label': _l('Messages', 'الرسائل'), 'url': '/patient/messages', 'icon': 'fa-envelope'},
                     ]},
                 ]
 
@@ -612,7 +633,7 @@ def register_context_processors(app):
         once per request; never calls the AI provider."""
         from flask import session
         from flask_login import current_user
-        empty = {'copilot_enabled': False, 'ai_status': None, 'critical_alerts': []}
+        empty = {'copilot_enabled': False, 'ai_status': None, 'copilot_critical_alerts': []}
         if not current_user.is_authenticated:
             return empty
         # Cached on the request object (not ``g``: under a long-lived app
@@ -645,7 +666,7 @@ def register_context_processors(app):
             except Exception:  # noqa: BLE001
                 critical = []
         request._copilot_ctx = {'copilot_enabled': enabled, 'ai_status': ai_status,
-                                'critical_alerts': critical}
+                                'copilot_critical_alerts': critical}
         return request._copilot_ctx
 
     app.context_processor(copilot_context)

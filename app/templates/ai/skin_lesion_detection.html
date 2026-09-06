@@ -87,7 +87,7 @@
                     <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
                     <th>{{ 'النوع' if g.lang == 'ar' else 'Type' }}</th>
                     <th>{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }}</th>
-                    <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                    <th>{{ 'الطبيب' if g.lang == 'ar' else 'Physician' }}</th>
                     <th>{{ 'الملاحظات' if g.lang == 'ar' else 'Notes' }}</th>
                 </tr></thead>
                 <tbody>
@@ -228,7 +228,7 @@
 {% if result and result.error is not defined %}
 <div class="card-premium" style="border-top:3px solid {{ 'var(--ihis-danger)' if result.is_melanoma else 'var(--ihis-success)' }}">
     <div class="card-header">
-        <div class="card-title"><i class="fas fa-person-circle-question" style="color:{{ 'var(--ihis-danger)' if result.is_melanoma else 'var(--ihis-success)' }}"></i> {{ 'نتيجة التصنيف' if g.lang == 'ar' else 'Classification Result' }}</div>
+        <div class="card-title"><i class="fas fa-person-circle-question" style="color:{{ 'var(--ihis-danger)' if result.is_melanoma else 'var(--ihis-success)' }}"></i> {{ 'نتيجة التصنيف' if g.lang == 'ar' else 'Classification Result' }} <span class="ai-label ai-label-ai">✦ {{ 'تحليل بمساعدة الذكاء' if g.lang == 'ar' else 'AI-ASSISTED ANALYSIS' }}</span> <span class="ai-label ai-label-warn">{{ 'ليس تشخيصًا نهائيًا' if g.lang == 'ar' else 'NOT A FINAL DIAGNOSIS' }}</span></div>
         {% if result.is_melanoma %}
         <span class="status-badge s-cancelled"><i class="fas fa-exclamation-triangle"></i>{{ 'تنبيه: اشتباه ميلانوما' if g.lang == 'ar' else 'Warning: Melanoma Suspected' }}</span>
         {% else %}
@@ -243,7 +243,38 @@
                 </span>
             </div>
             <div class="t-h4"><strong>{{ 'الثقة المجمّعة' if g.lang == 'ar' else 'Ensemble confidence' }}:</strong>
-                <span class="tag-ihs">{{ result.percent }}%</span></div>
+                <span class="tag-ihs">{{ result.percent }}%</span>
+                <span class="cell-muted" style="font-size:0.72rem">{{ 'مؤشر قوة النموذج وليس احتمالًا سريريًا مؤكدًا' if g.lang == 'ar' else 'model strength indicator — not a clinical probability' }}</span></div>
+            {% if result.quality %}
+            <div class="mt-2" style="font-size:0.8rem">
+                <strong>{{ 'جودة الصورة' if g.lang == 'ar' else 'Image quality' }}:</strong>
+                {% if result.quality.score is not none %}<span class="ai-label {{ 'ai-label-verified' if result.quality.score >= 70 else 'ai-label-warn' if result.quality.score >= 40 else 'ai-label-danger' }}">{{ result.quality.score }}/100</span>{% endif %}
+                {% if result.quality.width %}<span class="cell-muted">{{ result.quality.width }}×{{ result.quality.height }}</span>{% endif %}
+                {% for i in result.quality.issues %}<div class="text-warning" style="font-size:0.75rem"><i class="fas fa-triangle-exclamation"></i> {{ i }}</div>{% endfor %}
+                {% if result.quality.issues %}<div class="cell-muted" style="font-size:0.72rem">{{ 'انخفاض جودة الصورة يقلل موثوقية التصنيف.' if g.lang == 'ar' else 'Reduced image quality lowers the reliability of the classification.' }}</div>{% endif %}
+            </div>
+            {% endif %}
+            <div class="row mt-3 g-2" style="font-size:0.8rem">
+                <div class="col-md-6"><div class="ai-sec-title">{{ 'اعتبارات تفريقية مقترحة' if g.lang == 'ar' else 'Suggested differential considerations' }}</div><ul class="mb-0">{% for d in result.differentials or [] %}<li>{{ d }}</li>{% endfor %}</ul></div>
+                <div class="col-md-6"><div class="ai-sec-title">{{ 'مؤشرات الخطر (ABCDE)' if g.lang == 'ar' else 'Risk indicators to assess (ABCDE)' }}</div><ul class="mb-0">{% for r in result.risk_indicators or [] %}<li>{{ r }}</li>{% endfor %}</ul></div>
+            </div>
+            {% if result.usage_id %}
+            <form method="post" action="{{ url_for('ai.skin_lesion_review') }}" class="mt-3 p-2" style="border:1px dashed var(--ihis-border);border-radius:8px;font-size:0.8rem">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="usage_id" value="{{ result.usage_id }}">
+                <div class="fw-semibold mb-1">{{ 'مراجعة الطبيب (إلزامية قبل الاعتماد)' if g.lang == 'ar' else 'Physician review (required before this result is relied on)' }}</div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <select name="decision" class="form-select form-select-sm" style="max-width:220px" aria-label="Review decision">
+                        <option value="agree">{{ 'أتفق مع التقييم' if g.lang == 'ar' else 'I agree with the assessment' }}</option>
+                        <option value="disagree">{{ 'لا أتفق' if g.lang == 'ar' else 'I disagree' }}</option>
+                        <option value="needs_biopsy">{{ 'يلزم فحص/خزعة' if g.lang == 'ar' else 'Needs dermoscopy / biopsy' }}</option>
+                    </select>
+                    <input type="text" name="note" class="form-control form-control-sm" style="max-width:280px" placeholder="{{ 'ملاحظة (اختياري)' if g.lang == 'ar' else 'Note (optional)' }}">
+                    <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-user-check"></i> {{ 'تسجيل المراجعة' if g.lang == 'ar' else 'Record review' }}</button>
+                </div>
+                <div class="cell-muted mt-1" style="font-size:0.7rem">{{ 'تُسجَّل المراجعة في سجل تدقيق الذكاء فقط؛ لا يُنشأ تشخيص ولا يتغير الملف.' if g.lang == 'ar' else 'Recorded in the AI audit trail only; no diagnosis is created and the chart is unchanged.' }}</div>
+            </form>
+            {% endif %}
             <span class="cell-muted tag-ihs">{{ result.models_used|length }} {{ 'نموذج' if g.lang == 'ar' else 'model(s)' }}</span>
         </div>
 

@@ -21,7 +21,7 @@
     <div class="kpi-card">
         <div class="kpi-icon success"><i class="fas fa-user-md"></i></div>
         <div class="kpi-body">
-            <div class="kpi-label">{{ 'الأطباء' if g.lang == 'ar' else 'Doctors' }}</div>
+            <div class="kpi-label">{{ 'الأطباء' if g.lang == 'ar' else 'Physicians' }}</div>
             <div class="kpi-value">{{ total_doctors }}</div>
         </div>
     </div>
@@ -137,7 +137,7 @@ if (summaryEl) {
     new Chart(summaryEl, {
         type: 'bar',
         data: {
-            labels: ['Patients', 'Doctors', 'Users', 'Appointments', 'Lab Orders', 'Radiology Orders'],
+            labels: ['Patients', 'Physicians', 'Users', 'Appointments', 'Lab Orders', 'Radiology Orders'],
             datasets: [{
                 label: 'Count',
                 data: [{{ total_patients }}, {{ total_doctors }}, {{ total_users }}, {{ total_appointments }}, {{ total_lab_orders }}, {{ total_radiology_orders }}],

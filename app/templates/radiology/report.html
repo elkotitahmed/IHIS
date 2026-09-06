@@ -6,10 +6,24 @@
         <p class="page-subtitle">{{ 'إعداد تقرير التشخيص الشعاعي للدراسة' if g.lang == 'ar' else 'Draft the diagnostic report for the study' }}</p>
     </div>
     <div class="page-actions">
+        {% if report %}<a href="{{ url_for('copilot.radiology_ai_report', order_id=order.id) }}" class="ai-btn"><span class="ai-spark">✦</span> {{ 'المساعدة السريرية بالذكاء' if g.lang == 'ar' else 'AI Clinical Assistance' }}</a>{% endif %}
         <a href="{{ url_for('radiology.orders') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-arrow-left"></i> {{ 'رجوع للطلبات' if g.lang == 'ar' else 'Back to Orders' }}</a>
     </div>
 </div>
 
+{% if evaluation and evaluation.findings %}
+<div class="card-premium mb-3" style="border-color:var(--ihis-purple-light)">
+    <div class="card-header">
+        <div class="card-title"><span class="ai-spark">✦</span> {{ 'المساعدة السريرية بالذكاء' if g.lang == 'ar' else 'AI Clinical Assistance' }} <span class="ai-label ai-label-ai">AI ANALYSIS</span> <span class="cell-muted" style="font-weight:400;font-size:0.72rem">{{ 'منفصلة عن تقرير أخصائي الأشعة الرسمي' if g.lang == 'ar' else 'separate from the official radiologist report' }}</span></div>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('copilot.radiology_ai_report', order_id=order.id) }}">{{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</a>
+    </div>
+    <div class="card-body flush"><div class="list-compact">
+        {% for f in evaluation.findings[:4] %}
+        <div class="list-item"><span class="ai-label {{ 'ai-label-danger' if f.severity in ('CRITICAL','HIGH') else 'ai-label-warn' if f.severity == 'MODERATE' else 'ai-label-muted' }}">{{ f.severity }}</span><div style="flex:1;font-size:0.8125rem"><strong>{{ f.finding }}</strong> <span class="cell-muted">— {{ f.action }}</span><div class="cell-muted" style="font-size:0.7rem">{{ 'سبب الإشارة' if g.lang == 'ar' else 'Why flagged' }}: {{ f.rationale }}</div></div>{% if f.confidence %}<span class="cell-muted" style="font-size:0.75rem">{{ (f.confidence * 100)|round(0)|int }}%</span>{% endif %}</div>
+        {% endfor %}
+    </div></div>
+</div>
+{% endif %}
 <div class="card-premium mb-4">
     <div class="card-header">
         <div class="card-title"><i class="fas fa-info-circle" style="color:var(--ihis-info)"></i> {{ 'سياق الطلب' if g.lang == 'ar' else 'Order Context' }}</div>

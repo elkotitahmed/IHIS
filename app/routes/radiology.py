@@ -343,8 +343,16 @@ def enter_report(order_id):
         db.session.commit()
         return redirect(url_for('radiology.orders'))
 
+    evaluation = None
+    if report:
+        try:
+            from app.services import radiology_critical as rc
+            evaluation = rc.evaluate_report(order, report)
+        except Exception:  # noqa: BLE001 - the report page must never depend on the AI
+            evaluation = None
     return render_template('radiology/report.html', title='Enter Radiology Report',
-                           order=order, report=report, status_badge=_status_badge)
+                           order=order, report=report, status_badge=_status_badge,
+                           evaluation=evaluation)
 
 
 @radiology_bp.route('/orders/<int:order_id>/sign', methods=['POST'])

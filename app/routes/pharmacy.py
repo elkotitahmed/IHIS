@@ -299,7 +299,7 @@ def dispense(id):
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 @permissions_required('PRESCRIPTION_DISPENSE')
 def reject(rx_id):
-    """Reject an Active prescription with a reason, notifying the doctor."""
+    """Reject an Active prescription with a reason, notifying the physician."""
     rx = Prescription.query.get_or_404(rx_id)
     if rx.status in ('Dispensed', 'Cancelled'):
         flash('This prescription has already been dispensed or cancelled.', 'warning')
@@ -324,10 +324,10 @@ def reject(rx_id):
                       entity_type='prescription', entity_id=rx.id)
     from app.services.notifications import notify_patient
     notify_patient(rx.patient, 'Prescription rejected',
-                   f'Your prescription #{rx.id} could not be dispensed. Please contact your doctor.',
+                   f'Your prescription #{rx.id} could not be dispensed. Please contact your physician.',
                    entity_type='prescription', entity_id=rx.id)
     db.session.commit()
-    flash('Prescription rejected; prescribing doctor notified.', 'warning')
+    flash('Prescription rejected; prescribing physician notified.', 'warning')
     return redirect(url_for('pharmacy.prescriptions'))
 
 

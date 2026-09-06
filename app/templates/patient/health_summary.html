@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-heart-pulse" style="color:var(--ihis-primary)"></i> {{ 'ملخص صحتي' if g.lang == 'ar' else 'My Health Summary' }}</h1>
+        <p class="page-subtitle">{{ 'ما يعرفه فريقك الطبي عنك، بلغة واضحة. المحتوى المخصص للأطباء فقط لا يُعرض هنا.' if g.lang == 'ar' else 'What your care team has on record, in plain language. Clinician-only content is not shown here.' }}</p>
+    </div>
+    <div class="page-actions">
+        <button type="button" class="ai-btn" data-pai="summary"><span class="ai-spark">✦</span> {{ 'اشرح ملخصي' if g.lang == 'ar' else 'Explain my summary' }}</button>
+        <a href="{{ url_for('patient.dashboard') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'الرئيسية' if g.lang == 'ar' else 'Home' }}</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-primary)"></i> {{ 'الحالات النشطة' if g.lang == 'ar' else 'Active conditions' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for p in problems %}<div class="list-item"><i class="fas fa-circle" style="font-size:0.5rem;color:var(--ihis-primary)"></i><div style="flex:1;font-size:0.8125rem">{{ p.description }}</div>{% set term = p.description|lower %}<button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-pai="term" data-term="{{ p.description }}" title="{{ 'اشرح' if g.lang == 'ar' else 'Explain' }}"><span class="ai-spark">✦</span></button></div>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا حالات نشطة مسجلة' if g.lang == 'ar' else 'No active conditions recorded' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-allergies" style="color:var(--ihis-danger)"></i> {{ 'الحساسية' if g.lang == 'ar' else 'Allergies' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for a in allergies %}<div class="list-item"><i class="fas fa-allergies" style="color:var(--ihis-danger)"></i><div style="flex:1;font-size:0.8125rem">{{ a.substance }}{% if a.reaction %} — {{ a.reaction }}{% endif %}</div>{% if a.severity %}<span class="status-badge s-pending">{{ a.severity }}</span>{% endif %}</div>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا حساسية مسجلة' if g.lang == 'ar' else 'No allergies recorded' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-info)"></i> {{ 'أدويتي' if g.lang == 'ar' else 'My medications' }}</div><a href="{{ url_for('patient.prescriptions') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'View all' }}</a></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for it in items %}<div class="list-item"><i class="fas fa-capsules" style="color:var(--ihis-info)"></i><div style="flex:1;min-width:0"><div style="font-size:0.8125rem;font-weight:500">{{ it.medication.generic_name if it.medication else 'Medication' }}</div><div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ it.dosage or '' }} {{ it.frequency or '' }} {{ it.duration or '' }}{% if it.instructions %} · {{ it.instructions }}{% endif %}</div></div><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-pai="medication" data-id="{{ it.id }}"><span class="ai-spark">✦</span> {{ 'عن الدواء' if g.lang == 'ar' else 'About' }}</button></div>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا أدوية نشطة' if g.lang == 'ar' else 'No active medications' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        {% if instructions %}
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-clipboard-check" style="color:var(--ihis-success)"></i> {{ 'تعليمات الرعاية من آخر زيارة موقّعة' if g.lang == 'ar' else 'Care instructions from your last signed visit' }}</div></div>
+            <div class="card-body" style="font-size:0.8125rem;white-space:pre-wrap">{{ instructions }}</div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-lg-6">
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-flask" style="color:var(--ihis-success)"></i> {{ 'النتائج الصادرة' if g.lang == 'ar' else 'Released results' }}</div><a href="{{ url_for('patient.lab_results') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'View all' }}</a></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for o in released %}<div class="list-item"><i class="fas fa-vial" style="color:var(--ihis-success)"></i><div style="flex:1;min-width:0"><div style="font-size:0.8125rem;font-weight:500">{{ o.test.test_name if o.test else 'Test' }}: <span class="t-num">{{ o.result.result_value }} {{ o.result.result_unit or '' }}</span>{% if o.result.is_abnormal or o.result.is_critical %} <span class="status-badge s-pending" style="font-size:0.6rem">{{ 'خارج النطاق' if g.lang == 'ar' else 'outside range' }}</span>{% endif %}</div><div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ o.order_date.strftime('%d %b %Y') if o.order_date }}{% if o.test and o.test.normal_range %} · {{ 'النطاق' if g.lang == 'ar' else 'reference' }} {{ o.test.normal_range }}{% endif %}</div></div><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-pai="result" data-id="{{ o.id }}"><span class="ai-spark">✦</span> {{ 'اشرح' if g.lang == 'ar' else 'Explain' }}</button></div>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا نتائج صادرة بعد' if g.lang == 'ar' else 'No released results yet' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        <div class="card-premium mb-3" id="followup">
+            <div class="card-header"><div class="card-title"><i class="fas fa-calendar-day" style="color:var(--ihis-warning)"></i> {{ 'المواعيد والمتابعة' if g.lang == 'ar' else 'Appointments & follow-up' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for a in upcoming %}<div class="list-item"><i class="fas fa-calendar-check" style="color:var(--ihis-primary)"></i><div style="flex:1;font-size:0.8125rem">{{ a.scheduled_at.strftime('%d %b %Y %H:%M') if a.scheduled_at }} — Dr. {{ a.doctor.user.full_name if a.doctor and a.doctor.user else '' }}</div><button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-pai="appointment" data-id="{{ a.id }}"><span class="ai-spark">✦</span> {{ 'استعد' if g.lang == 'ar' else 'Prepare' }}</button></div>{% endfor %}
+                {% for f in follow_ups %}<div class="list-item"><i class="fas fa-calendar-day" style="color:var(--ihis-warning)"></i><div style="flex:1;font-size:0.8125rem">{{ 'متابعة' if g.lang == 'ar' else 'Follow-up' }} {{ f.scheduled_for.strftime('%d %b %Y') if f.scheduled_for }}{% if f.reason %} — {{ f.reason }}{% endif %}</div></div>{% endfor %}
+                {% if not upcoming and not follow_ups %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا مواعيد قادمة' if g.lang == 'ar' else 'Nothing scheduled' }}</div>{% endif %}
+            </div></div>
+        </div>
+        {% if patient_alerts %}
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-bell" style="color:var(--ihis-warning)"></i> {{ 'تذكيرات تخصك' if g.lang == 'ar' else 'Reminders for you' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for a in patient_alerts %}<div class="list-item"><i class="fas fa-bell" style="color:var(--ihis-warning)"></i><div style="flex:1;font-size:0.8125rem">{{ a.title }}</div></div>{% endfor %}
+            </div></div>
+        </div>
+        {% endif %}
+        {% if terms %}
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-book-medical" style="color:var(--ihis-teal)"></i> {{ 'مصطلحات مشروحة' if g.lang == 'ar' else 'Terms explained' }}</div></div>
+            <div class="card-body" style="font-size:0.8125rem">{% for t, x in terms.items() %}<div class="mb-1"><strong>{{ t }}</strong>: {{ x }}</div>{% endfor %}</div>
+        </div>
+        {% endif %}
+        <div class="ai-footer">{{ 'هذه المعلومات لمساعدتك في الحديث مع طبيبك وليست تشخيصًا. عند القلق أو تفاقم الأعراض اتصل بطبيبك أو بالطوارئ.' if g.lang == 'ar' else 'This information helps you talk with your physician; it is not a diagnosis. If you are worried or your symptoms get worse, contact your physician or emergency services.' }}</div>
+    </div>
+</div>
+{% endblock %}

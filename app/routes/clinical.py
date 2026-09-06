@@ -938,6 +938,14 @@ def inbox():
     scan_due_reminders(current_user.id)
     db.session.commit()
     reminders = open_reminders_for_patients(pids, limit=30)
+    crit_alerts = (ClinicalAlert.query
+                   .filter(ClinicalAlert.patient_id.in_(pid_filter),
+                           ClinicalAlert.status.in_(alert_svc.ACTIVE_STATUSES),
+                           ClinicalAlert.severity.in_(('CRITICAL', 'HIGH')))
+                   .order_by(ClinicalAlert.created_at.desc()).limit(30).all())
+    from app.models import Message
+    messages = (Message.query.filter_by(receiver_id=current_user.id)
+                .order_by(Message.is_read.asc(), Message.sent_at.desc()).limit(20).all())
 
     counts = {
         'lab': len(lab_rows), 'radiology': len(rad_rows), 'alerts': len(open_alerts),
@@ -950,6 +958,7 @@ def inbox():
                            open_alerts=open_alerts, pending_refs=pending_refs,
                            interventions=interventions, drafts=drafts,
                            my_tasks=my_tasks, reminders=reminders, counts=counts,
+                           crit_alerts=crit_alerts, messages=messages,
                            today=utcnow().date())
 
 

@@ -26,10 +26,10 @@
                             <div class="form-group">
                                 <label class="form-label-ihs">{{ 'إلى' if g.lang == 'ar' else 'To' }} [<span class="required">*</span>]</label>
                                 <select name="doctor_id" class="form-control" required>
-                                    <option value="">{{ '-- اختر الطبيب --' if g.lang == 'ar' else '-- Select Doctor --' }}</option>
+                                    <option value="">{{ '-- اختر الطبيب --' if g.lang == 'ar' else '-- Select Physician --' }}</option>
                                     {% if doctor %}
                                     <option value="{{ doctor.id }}" selected>
-                                        {{ doctor.user.full_name if doctor.user else 'Doctor #' + doctor.id|string }}
+                                        {{ doctor.user.full_name if doctor.user else 'Physician #' + doctor.id|string }}
                                     </option>
                                     {% endif %}
                                 </select>

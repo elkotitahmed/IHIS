@@ -37,12 +37,12 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label-ihs">{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }} <span class="required">*</span></label>
+                                <label class="form-label-ihs">{{ 'الطبيب' if g.lang == 'ar' else 'Physician' }} <span class="required">*</span></label>
                                 <select name="doctor_id" class="form-control" required>
-                                    <option value="">-- {{ 'اختر الطبيب' if g.lang == 'ar' else 'Select Doctor' }} --</option>
+                                    <option value="">-- {{ 'اختر الطبيب' if g.lang == 'ar' else 'Select Physician' }} --</option>
                                     {% for doctor in doctors %}
                                     <option value="{{ doctor.id }}">
-                                        {{ doctor.user.full_name if doctor.user else 'Doctor #' + doctor.id|string }}
+                                        {{ doctor.user.full_name if doctor.user else 'Physician #' + doctor.id|string }}
                                     </option>
                                     {% endfor %}
                                 </select>

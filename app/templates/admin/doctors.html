@@ -2,7 +2,7 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title"><i class="fas fa-user-md" style="color:var(--ihis-primary)"></i> {{ 'الأطباء' if g.lang == 'ar' else 'Doctors' }}</h1>
+        <h1 class="page-title"><i class="fas fa-user-md" style="color:var(--ihis-primary)"></i> {{ 'الأطباء' if g.lang == 'ar' else 'Physicians' }}</h1>
         <p class="page-subtitle">{{ doctors|length }} {{ 'إجمالي' if g.lang == 'ar' else 'total' }}</p>
     </div>
     <div class="page-actions"></div>
@@ -12,7 +12,7 @@
     <div class="kpi-card">
         <div class="kpi-icon primary"><i class="fas fa-user-md"></i></div>
         <div class="kpi-body">
-            <div class="kpi-label">{{ 'إجمالي الأطباء' if g.lang == 'ar' else 'Total Doctors' }}</div>
+            <div class="kpi-label">{{ 'إجمالي الأطباء' if g.lang == 'ar' else 'Total Physicians' }}</div>
             <div class="kpi-value">{{ doctors|length }}</div>
         </div>
     </div>
@@ -27,7 +27,7 @@
 
 <div class="card-premium">
     <div class="card-header">
-        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'قائمة الأطباء' if g.lang == 'ar' else 'Doctor Directory' }}</div>
+        <div class="card-title"><i class="fas fa-list" style="color:var(--ihis-primary)"></i> {{ 'قائمة الأطباء' if g.lang == 'ar' else 'Physician Directory' }}</div>
     </div>
     <div class="card-body flush">
         <div class="table-wrapper">
@@ -63,7 +63,7 @@
                         <td colspan="6">
                             <div class="empty-state">
                                 <div class="empty-icon"><i class="fas fa-user-md"></i></div>
-                                <div class="empty-title">{{ 'لا يوجد أطباء' if g.lang == 'ar' else 'No Doctors' }}</div>
+                                <div class="empty-title">{{ 'لا يوجد أطباء' if g.lang == 'ar' else 'No Physicians' }}</div>
                                 <div class="empty-desc">{{ 'لم يتم العثور على أي أطباء.' if g.lang == 'ar' else 'No doctors found.' }}</div>
                             </div>
                         </td>

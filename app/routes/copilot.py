@@ -108,6 +108,24 @@ def feedback():
     return jsonify({'ok': ok})
 
 
+@copilot_bp.route('/priority', methods=['POST'])
+@login_required
+@permissions_required(AI_USE)
+@limiter.limit('10/minute')
+def priority():
+    """'What needs my attention first?' — deterministic ranking, optional AI narrative."""
+    from app.services.inbox_priority import build_items, ai_priority_narrative
+    body = request.get_json(silent=True) or {}
+    items = build_items(current_user, accessible_patient_ids(current_user))
+    payload = [{k: (v.strftime('%Y-%m-%d %H:%M') if k == 'when' and v else v) for k, v in i.items()} for i in items]
+    ai = None
+    if body.get('use_ai', True) and items:
+        res = ai_priority_narrative(items, current_user.id)
+        ai = {k: res.get(k) for k in ('status', 'text', 'message', 'usage_id', 'cached')}
+    return jsonify({'ok': True, 'items': payload, 'ai': ai,
+                    'note': 'Ranking is rule-based and authoritative; AI only narrates.'})
+
+
 # ---------------------------------------------------------------------------
 # Smart autocomplete (local first, AI optional and debounced by the client)
 # ---------------------------------------------------------------------------
@@ -289,7 +307,7 @@ def _lab_review_local(patient, order):
     name = order.test.test_name if order.test else 'Lab test'
     ctx = build_context(patient, labs=30, imaging=0, encounters=1)
     series = [l for l in ctx['labs'] if l['test'] == name]
-    series.sort(key=lambda x: x['date'] or '')
+    series.sort(key=lambda x: (x['date'] or '', x['order_id']))
     trend = None
     if len(series) >= 2:
         try:

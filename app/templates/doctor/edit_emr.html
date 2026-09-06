@@ -39,7 +39,7 @@
                     {% if record.status == 'Signed' %}
                     <div class="form-group">
                         <label class="form-label-ihs" for="reason">{{ 'سبب التعديل' if g.lang == 'ar' else 'Amendment Reason' }} <span class="required">*</span></label>
-                        <textarea class="form-control" id="reason" name="reason" rows="2" required
+                        <textarea class="form-control" id="reason" name="reason" data-ac="hpi" rows="2" required
                                   placeholder="{{ 'لماذا يتم هذا التعديل؟' if g.lang == 'ar' else 'Why is this amendment being made?' }}"></textarea>
                     </div>
                     {% endif %}
@@ -50,11 +50,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs" for="treatment_plan">{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</label>
-                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" rows="4">{{ record.treatment_plan or '' }}</textarea>
+                        <textarea class="form-control" id="treatment_plan" name="treatment_plan" data-ac="plan" rows="4">{{ record.treatment_plan or '' }}</textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs" for="clinical_notes">{{ 'ملاحظات سريرية' if g.lang == 'ar' else 'Clinical Notes' }}</label>
-                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" rows="4">{{ record.clinical_notes or '' }}</textarea>
+                        <textarea class="form-control" id="clinical_notes" name="clinical_notes" data-ac="hpi" data-copilot-target rows="4">{{ record.clinical_notes or '' }}</textarea>
                     </div>
                     <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-4)">
                         <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'حفظ التغييرات' if g.lang == 'ar' else 'Save Changes' }}</button>

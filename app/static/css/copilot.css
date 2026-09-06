@@ -130,3 +130,14 @@ body.ai-panel-open { overflow: hidden; }
 .tabs-ihs button:focus-visible { outline: 2px solid var(--ihis-primary); outline-offset: -2px; }
 .tabs-ihs .tab-count { font-size: 0.625rem; background: var(--ihis-surface-inset); border-radius: 999px; padding: 1px 6px; margin-inline-start: 4px; }
 .tab-pane-ihs[hidden] { display: none; }
+
+/* ===== Patient AI modal ===== */
+.ai-modal { position: fixed; inset: auto; top: 8vh; left: 50%; transform: translateX(-50%); width: min(560px, 94vw); max-height: 84vh; overflow: auto; background: var(--ihis-surface); border: 1px solid var(--ihis-border); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.25); display: flex; flex-direction: column; }
+.ai-modal .ai-panel-body { overflow: auto; }
+#patientAiModal[hidden] { display: none; }
+.portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.portal-card { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--ihis-border); border-radius: 14px; background: var(--ihis-surface); text-decoration: none; color: inherit; }
+.portal-card:hover, .portal-card:focus-visible { border-color: var(--ihis-primary); color: inherit; outline: none; transform: translateY(-2px); }
+.portal-card i { font-size: 1.25rem; color: var(--ihis-primary); }
+.portal-card .portal-title { font-weight: 700; font-size: 0.85rem; }
+.portal-card .portal-sub { font-size: 0.72rem; color: var(--ihis-text-muted); }

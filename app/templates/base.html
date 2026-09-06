@@ -120,7 +120,7 @@
             <div class="banner-actions">
                 <select id="previewRoleSelect" onchange="if(this.value)window.location.href='/super-admin/preview/'+this.value" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--radius-sm);font-size:0.75rem;padding:3px 8px;">
                     <option value="">{{ 'معاينة ك...' if g.lang == 'ar' else 'Preview as role...' }}</option>
-                    <option value="Doctor">{{ 'طبيب' if g.lang == 'ar' else 'Doctor' }}</option>
+                    <option value="Physician">{{ 'طبيب' if g.lang == 'ar' else 'Physician' }}</option>
                     <option value="Nurse">{{ 'ممرض' if g.lang == 'ar' else 'Nurse' }}</option>
                     <option value="LabTechnician">{{ 'مختبري' if g.lang == 'ar' else 'Lab Technician' }}</option>
                     <option value="Radiologist">{{ 'أخصائي أشعة' if g.lang == 'ar' else 'Radiologist' }}</option>
@@ -255,6 +255,9 @@
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 <script src="{{ url_for('static', filename='js/copilot.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+{% if current_user.is_authenticated and (current_user.has_role('Patient') or (session.get('preview_patient_id') and current_user.has_any_role('Admin', 'SuperAdmin'))) %}
+<script src="{{ url_for('static', filename='js/patient_ai.js') }}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -294,3 +294,43 @@ def classify_skin_lesion(upload_file):
         return {'error': str(e)}
     except Exception as e:  # noqa: BLE001
         return {'error': f'Processing failed: {e}'}
+
+
+def image_quality(img_bytes):
+    """Cheap, deterministic image-quality checks so the physician knows when
+    a prediction should not be trusted: resolution, blur (Laplacian variance),
+    exposure. Returns {'score': 0..100, 'issues': [...], 'width', 'height'}."""
+    issues = []
+    try:
+        import io as _io
+        import numpy as _np
+        from PIL import Image as _Image
+        img = _Image.open(_io.BytesIO(img_bytes)).convert('L')
+        w, h = img.size
+        if min(w, h) < 224:
+            issues.append(f'Low resolution ({w}×{h}); at least 224×224 recommended')
+        arr = _np.asarray(img, dtype=_np.float32)
+        small = arr[::max(1, h // 256), ::max(1, w // 256)]
+        lap = (small[:-2, 1:-1] + small[2:, 1:-1] + small[1:-1, :-2] + small[1:-1, 2:] - 4 * small[1:-1, 1:-1])
+        blur = float(lap.var()) if lap.size else 0.0
+        if blur < 40:
+            issues.append('Image appears blurred; retake in focus')
+        mean = float(arr.mean())
+        if mean < 50:
+            issues.append('Image is very dark; improve lighting')
+        elif mean > 210:
+            issues.append('Image is over-exposed; reduce glare/flash')
+        score = max(0, 100 - 30 * len(issues))
+        return {'score': score, 'issues': issues, 'width': w, 'height': h, 'blur': round(blur, 1)}
+    except Exception:  # noqa: BLE001 - quality check is advisory only
+        return {'score': None, 'issues': ['Quality check unavailable'], 'width': None, 'height': None}
+
+
+DIFFERENTIAL_CONSIDERATIONS = {
+    'melanoma': ['Melanoma (model-favoured class)', 'Atypical / dysplastic naevus', 'Seborrhoeic keratosis (can mimic melanoma)',
+                 'Pigmented basal cell carcinoma', 'Traumatised or inflamed naevus'],
+    'nevus': ['Benign melanocytic naevus (model-favoured class)', 'Dysplastic naevus', 'Seborrhoeic keratosis',
+              'Dermatofibroma', 'Early melanoma cannot be excluded on image alone'],
+}
+RISK_INDICATORS = ['Asymmetry', 'Border irregularity', 'Colour variation', 'Diameter > 6 mm', 'Evolution / change over time',
+                   'New lesion in adulthood', 'Itching, bleeding or ulceration']

@@ -323,21 +323,44 @@ def capabilities():
             'color': 'var(--ihis-primary)',
             'items': [
                 {'feature': 'Patient Management', 'desc': 'Register, search, and manage patients with MRN tracking',
-                 'roles': 'Receptionist, Admin, Doctor, Nurse', 'url': '/reception/dashboard'},
+                 'roles': 'Receptionist, Admin, Physician, Nurse', 'url': '/reception/dashboard'},
                 {'feature': 'Patient 360', 'desc': 'Complete clinical view with timeline, alerts, and cross-department context',
                  'roles': 'All clinical staff', 'url': '/clinical'},
                 {'feature': 'Encounters & EMR', 'desc': 'Clinical encounters with diagnosis, orders, prescriptions',
-                 'roles': 'Doctor, Admin', 'url': '/doctor/patients'},
+                 'roles': 'Physician, Admin', 'url': '/doctor/patients'},
                 {'feature': 'Clinical Timeline', 'desc': 'Cross-department event timeline per patient',
                  'roles': 'All clinical staff', 'url': '/clinical'},
                 {'feature': 'Clinical Alerts', 'desc': 'Automated clinical alert engine with severity lifecycle',
                  'roles': 'All clinical staff', 'url': '/clinical/alerts'},
                 {'feature': 'Allergies & Problems', 'desc': 'Structured allergy and problem list management',
-                 'roles': 'Doctor, Nurse, Pharmacist', 'url': '/clinical'},
+                 'roles': 'Physician, Nurse, Pharmacist', 'url': '/clinical'},
                 {'feature': 'Follow-ups', 'desc': 'Schedule and track patient follow-up visits',
-                 'roles': 'Doctor, Nurse', 'url': '/clinical'},
+                 'roles': 'Physician, Nurse', 'url': '/clinical'},
                 {'feature': 'Care Teams', 'desc': 'Multidisciplinary care team coordination',
-                 'roles': 'Doctor, Admin', 'url': '/care/team'},
+                 'roles': 'Physician, Admin', 'url': '/care/team'},
+            ],
+        },
+        {
+            'group': 'AI Clinical Copilot',
+            'icon': 'fa-wand-magic-sparkles',
+            'color': 'var(--ihis-purple)',
+            'items': [
+                {'feature': 'Physician AI Copilot', 'desc': 'One entry point: patient summary, diagnostics, differential support, documentation drafts, safety review, patient communication — verified data first, AI optional',
+                 'roles': 'Physician, Nurse, Pharmacist, Dentist, Physiotherapist', 'url': '/doctor/dashboard'},
+                {'feature': 'Predictive AI — Dermatology', 'desc': 'AI-assisted skin lesion analysis with image quality checks and explicit physician review',
+                 'roles': 'Physician, Dentist, Nurse', 'url': '/ai/skin-lesion-detection'},
+                {'feature': 'Predictive AI — Radiology', 'desc': 'Report analysis (rules + local classifier) → critical alert → urgent task → notification → acknowledgement → audit',
+                 'roles': 'Physician, Radiologist', 'url': '/ai/copilot/radiology'},
+                {'feature': 'Predictive AI — Dentistry', 'desc': 'Chart summary, finding summary, treatment-plan draft, patient education, abnormality assistance',
+                 'roles': 'Dentist, Physician', 'url': '/ai/copilot/dentistry'},
+                {'feature': 'Smart autocomplete & diagnosis entry', 'desc': 'Local terminology first (ICD-10, phrase banks, recent, favourites); AI only when useful; Tab accept / Esc dismiss',
+                 'roles': 'All documenting roles', 'url': '/doctor/patients'},
+                {'feature': 'Medication intelligence', 'desc': 'Rule-based allergy / interaction / duplicate checks shown immediately at prescribing; optional AI review',
+                 'roles': 'Physician, Pharmacist', 'url': '/doctor/patients'},
+                {'feature': 'Patient AI', 'desc': 'Safe explanations of the patient\'s own results, medicines and appointments; never diagnoses or changes treatment',
+                 'roles': 'Patient', 'url': '/patient/health-summary'},
+                {'feature': 'AI Control Center', 'desc': 'Budget, usage, cache, failures, 429 events, latency, feature/role usage, audit, unresolved critical alerts',
+                 'roles': 'SuperAdmin', 'url': '/super-admin/ai-control'},
             ],
         },
         {
@@ -346,11 +369,11 @@ def capabilities():
             'color': 'var(--ihis-info)',
             'items': [
                 {'feature': 'Lab Orders', 'desc': 'Order tests, track specimens, enter and verify results',
-                 'roles': 'Doctor, Lab Technician', 'url': '/lab/orders'},
+                 'roles': 'Physician, Lab Technician', 'url': '/lab/orders'},
                 {'feature': 'Lab Result Verification', 'desc': 'Verify and finalize lab results with critical value handling',
                  'roles': 'Lab Technician', 'url': '/lab/orders'},
                 {'feature': 'Radiology Orders', 'desc': 'Order imaging, schedule studies, perform and report',
-                 'roles': 'Doctor, Radiologist', 'url': '/radiology/orders'},
+                 'roles': 'Physician, Radiologist', 'url': '/radiology/orders'},
                 {'feature': 'Radiology Reporting', 'desc': 'Findings, impression, recommendation, and sign-off',
                  'roles': 'Radiologist', 'url': '/radiology/orders'},
                 {'feature': 'Test Catalog', 'desc': 'Manage lab test catalog with pricing',
@@ -363,19 +386,19 @@ def capabilities():
             'color': 'var(--ihis-success)',
             'items': [
                 {'feature': 'Prescriptions', 'desc': 'Create, view, and manage prescriptions',
-                 'roles': 'Doctor, Pharmacist', 'url': '/pharmacy/dashboard'},
+                 'roles': 'Physician, Pharmacist', 'url': '/pharmacy/dashboard'},
                 {'feature': 'Prescription Dispensing', 'desc': 'Dispense medications with batch and stock tracking',
                  'roles': 'Pharmacist', 'url': '/pharmacy/dashboard'},
                 {'feature': 'Pharmacy Inventory', 'desc': 'Stock management with batch tracking and expiry alerts',
                  'roles': 'Pharmacist, Admin', 'url': '/pharmacy/inventory'},
                 {'feature': 'Drug Interaction Check', 'desc': 'Check drug-drug and drug-allergy interactions',
-                 'roles': 'Doctor, Pharmacist', 'url': '/pharmacy/drug-check'},
+                 'roles': 'Physician, Pharmacist', 'url': '/pharmacy/drug-check'},
                 {'feature': 'Medication Reconciliation', 'desc': 'Reconcile medications at transitions of care',
                  'roles': 'Pharmacist', 'url': '/pharmacy/reconciliations'},
                 {'feature': 'Clinical Pharmacy AI', 'desc': 'AI-powered medication therapy review',
                  'roles': 'Pharmacist', 'url': '/pharmacy/ai-workbench'},
                 {'feature': 'Pharmacy Interventions', 'desc': 'Document and resolve pharmacy interventions',
-                 'roles': 'Pharmacist, Doctor', 'url': '/pharmacy/interventions'},
+                 'roles': 'Pharmacist, Physician', 'url': '/pharmacy/interventions'},
             ],
         },
         {
@@ -439,15 +462,15 @@ def capabilities():
             'color': 'var(--ihis-warning)',
             'items': [
                 {'feature': 'Appointments', 'desc': 'Schedule, check-in, and manage appointments',
-                 'roles': 'Receptionist, Doctor, Admin', 'url': '/reception/appointments'},
+                 'roles': 'Receptionist, Physician, Admin', 'url': '/reception/appointments'},
                 {'feature': 'Queue Management', 'desc': 'Patient check-in queue',
                  'roles': 'Receptionist', 'url': '/reception/queue'},
                 {'feature': 'Admissions', 'desc': 'Patient admission and bed management',
                  'roles': 'Receptionist, Admin', 'url': '/admissions/dashboard'},
                 {'feature': 'Discharge', 'desc': 'Discharge planning and summary',
-                 'roles': 'Doctor, Admin', 'url': '/admissions/dashboard'},
+                 'roles': 'Physician, Admin', 'url': '/admissions/dashboard'},
                 {'feature': 'Referrals', 'desc': 'Cross-department referral management',
-                 'roles': 'Doctor, Admin', 'url': '/care/referrals'},
+                 'roles': 'Physician, Admin', 'url': '/care/referrals'},
                 {'feature': 'Task Engine', 'desc': 'Cross-department task queue and assignment',
                  'roles': 'All staff', 'url': '/tasks/my-tasks'},
             ],
@@ -473,25 +496,25 @@ def capabilities():
             'color': 'var(--ihis-info)',
             'items': [
                 {'feature': 'Clinical Summary AI', 'desc': 'AI-generated patient clinical summaries',
-                 'roles': 'Doctor, Nurse, Admin', 'url': '/ai/summary'},
+                 'roles': 'Physician, Nurse, Admin', 'url': '/ai/summary'},
                 {'feature': 'Diagnosis Support', 'desc': 'AI-assisted diagnosis suggestions',
                  'roles': 'Doctor', 'url': '/ai/diagnosis-support'},
                 {'feature': 'Lab Interpretation', 'desc': 'AI-assisted lab result interpretation',
-                 'roles': 'Doctor, Lab Technician', 'url': '/ai/lab'},
+                 'roles': 'Physician, Lab Technician', 'url': '/ai/lab'},
                 {'feature': 'Radiology AI', 'desc': 'AI-assisted radiology analysis',
                  'roles': 'Radiologist', 'url': '/ai/radiology'},
                 {'feature': 'Fracture Detection', 'desc': 'YOLOv8 bone fracture detection from X-rays',
-                 'roles': 'Doctor, Radiologist', 'url': '/ai/fracture-detection'},
+                 'roles': 'Physician, Radiologist', 'url': '/ai/fracture-detection'},
                 {'feature': 'Tooth Segmentation', 'desc': 'U-Net dental panoramic X-ray segmentation',
                  'roles': 'Dentist', 'url': '/ai/tooth-segmentation'},
                 {'feature': 'Skin Lesion Detection', 'desc': 'ResNet-50 + EfficientNet-B0 Nevus vs Melanoma classification',
                  'roles': 'Doctor', 'url': '/ai/skin-lesion-detection'},
                 {'feature': 'Health Insights', 'desc': 'AI-powered patient health insights',
-                 'roles': 'Doctor, Patient', 'url': '/ai/health-insights'},
+                 'roles': 'Physician, Patient', 'url': '/ai/health-insights'},
                 {'feature': 'Appointment Optimization', 'desc': 'AI scheduling optimization',
                  'roles': 'Admin', 'url': '/admin/ai/appointment-optimization'},
                 {'feature': 'ICD-10 Coding', 'desc': 'AI-assisted medical coding',
-                 'roles': 'Doctor, Admin', 'url': '/admin/ai/coding-assistant'},
+                 'roles': 'Physician, Admin', 'url': '/admin/ai/coding-assistant'},
             ],
         },
         {
@@ -1009,6 +1032,32 @@ def demo():
 
     scenarios = []
 
+    from app.models import ClinicalAlert as _CA
+    crit_alert = (_CA.query.filter(_CA.source_type == 'radiology_report')
+                  .order_by(_CA.created_at.desc()).first())
+    p = _pat(crit_alert) or _pat(latest_completed_appt) or _pat(latest_record)
+    scenarios.append({
+        'key': 'ai_copilot', 'icon': 'fa-wand-magic-sparkles',
+        'title': 'AI Copilot & Critical Finding', 'title_ar': 'المساعد الذكي والنتيجة الحرجة',
+        'summary': 'Physician opens Patient 360 → AI Copilot patient summary → radiology report analysed → critical alert, urgent task, notification → acknowledge → medication review (rules + AI). Synthetic demo data only.',
+        'patient': p,
+        'steps': [
+            step('Patient 360 (Physician)', p360(p) or url_for('clinical.workbench'), 'Physician', ok=bool(p)),
+            step('AI Copilot → Smart Patient Summary (✦ button in the header)', p360(p) or url_for('doctor.dashboard'), 'Physician', ok=bool(p)),
+            step('Radiology AI: report analysis (rules + local classifier)', url_for('copilot.radiology_ai'), 'Physician / Radiologist'),
+            step('Critical alert with AI-assisted flag, urgent task and notification',
+                 url_for('clinical.alert_detail', alert_id=crit_alert.id) if crit_alert else url_for('clinical.alerts_all'),
+                 'Physician', ok=bool(crit_alert), note=None if crit_alert else 'No critical radiology alert yet — enter a report mentioning e.g. pneumothorax'),
+            step('Acknowledge → document action → resolve (audited)',
+                 url_for('clinical.alert_detail', alert_id=crit_alert.id) if crit_alert else url_for('clinical.alerts_all'),
+                 'Physician', ok=bool(crit_alert)),
+            step('Prescribing: rule-based allergy/interaction check + optional AI review',
+                 url_for('doctor.prescriptions', patient_id=p.id) if p else url_for('doctor.patients'), 'Physician', ok=bool(p)),
+            step('Smart Inbox: "What needs my attention first?"', url_for('clinical.inbox'), 'Physician'),
+            step('Patient portal: My Health Summary + Explain with AI', url_for('patient.preview_as', patient_id=p.id) if p else url_for('patient.dashboard'), 'Patient (preview)', ok=bool(p)),
+            step('AI Control Center (budget, usage, audit)', url_for('super_admin.ai_control'), 'SuperAdmin'),
+        ]})
+
     p = _pat(latest_completed_appt) or _pat(latest_record)
     scenarios.append({
         'key': 'outpatient', 'icon': 'fa-user-md',
@@ -1019,7 +1068,7 @@ def demo():
             step('Register / find patient', url_for('reception.register'), 'Receptionist'),
             step('Book appointment', url_for('reception.book_appointment'), 'Receptionist'),
             step('Check-in queue', url_for('reception.queue'), 'Receptionist'),
-            step('Doctor appointments & start consultation', url_for('doctor.appointments'), 'Doctor'),
+            step('Physician appointments & start consultation', url_for('doctor.appointments'), 'Doctor'),
             step('Encounter note (medical record)', url_for('doctor.patient_detail', patient_id=p.id) if p else url_for('doctor.patients'),
                  'Doctor', ok=bool(latest_record), note=None if latest_record else 'No encounter recorded yet'),
             step('Consultation bill', url_for('billing.bills', status='Unpaid'), 'Cashier'),
@@ -1029,8 +1078,8 @@ def demo():
     p = _pat(verified_lab) or _pat(critical_lab)
     scenarios.append({
         'key': 'lab', 'icon': 'fa-flask',
-        'title': 'Doctor → Laboratory', 'title_ar': 'الطبيب ← المختبر',
-        'summary': 'Order → accept → collect → receive → process → result → verify (critical escalation) → doctor inbox → PDF.',
+        'title': 'Physician → Laboratory', 'title_ar': 'الطبيب ← المختبر',
+        'summary': 'Order → accept → collect → receive → process → result → verify (critical escalation) → physician inbox → PDF.',
         'patient': p,
         'steps': [
             step('Order a test', url_for('doctor.lab_order', patient_id=p.id) if p else url_for('lab.new_order'), 'Doctor'),
@@ -1038,16 +1087,16 @@ def demo():
             step('Result entry & verification', url_for('lab.enter_result', order_id=verified_lab.id) if verified_lab else url_for('lab.orders'),
                  'Lab Technician', ok=bool(verified_lab), note=None if verified_lab else 'No verified result yet'),
             step('Critical value escalation', url_for('lab.enter_result', order_id=critical_lab.id) if critical_lab else url_for('lab.orders', critical=1),
-                 'Lab Technician → Doctor', ok=bool(critical_lab), note=None if critical_lab else 'No critical result yet'),
-            step('Doctor results inbox', url_for('clinical.inbox'), 'Doctor'),
+                 'Lab Technician → Physician', ok=bool(critical_lab), note=None if critical_lab else 'No critical result yet'),
+            step('Physician results inbox', url_for('clinical.inbox'), 'Doctor'),
             step('Lab report PDF', url_for('reports.lab_result', order_id=verified_lab.id) if verified_lab else url_for('reports.dashboard'),
-                 'Doctor / Patient', ok=bool(verified_lab)),
+                 'Physician / Patient', ok=bool(verified_lab)),
         ]})
 
     p = _pat(signed_rad)
     scenarios.append({
         'key': 'radiology', 'icon': 'fa-x-ray',
-        'title': 'Doctor → Radiology', 'title_ar': 'الطبيب ← الأشعة',
+        'title': 'Physician → Radiology', 'title_ar': 'الطبيب ← الأشعة',
         'summary': 'Order → safety screening → schedule → arrive → perform (technician) → report → sign (radiologist) → notify → PDF.',
         'patient': p,
         'steps': [
@@ -1057,16 +1106,16 @@ def demo():
                  'Technician / Nurse', ok=bool(signed_rad)),
             step('Report & sign', url_for('radiology.enter_report', order_id=signed_rad.id) if signed_rad else url_for('radiology.orders'),
                  'Radiologist', ok=bool(signed_rad), note=None if signed_rad else 'No signed report yet'),
-            step('Critical findings board', url_for('radiology.critical_findings'), 'Radiologist / Doctor'),
+            step('Critical findings board', url_for('radiology.critical_findings'), 'Radiologist / Physician'),
             step('Radiology report PDF', url_for('reports.radiology_report', order_id=signed_rad.id) if signed_rad else url_for('reports.dashboard'),
-                 'Doctor / Patient', ok=bool(signed_rad)),
+                 'Physician / Patient', ok=bool(signed_rad)),
         ]})
 
     rx = dispensed.prescription if dispensed else rx_pending
     p = _pat(rx)
     scenarios.append({
         'key': 'pharmacy', 'icon': 'fa-pills',
-        'title': 'Doctor → Pharmacy', 'title_ar': 'الطبيب ← الصيدلية',
+        'title': 'Physician → Pharmacy', 'title_ar': 'الطبيب ← الصيدلية',
         'summary': 'Prescription → safety alerts → pharmacy queue → review / intervention → FEFO dispensing → stock ledger → bill.',
         'patient': p,
         'steps': [
@@ -1076,7 +1125,7 @@ def demo():
                  'Pharmacist', ok=bool(rx), note=None if rx else 'No prescription yet'),
             step('AI medication review', url_for('ai.medication_review', patient_id=p.id) if p else url_for('pharmacy.ai_workbench'), 'Pharmacist'),
             step('Stock ledger', url_for('pharmacy.transactions'), 'Pharmacist'),
-            step('Interventions to prescriber', url_for('pharmacy.interventions'), 'Pharmacist ↔ Doctor'),
+            step('Interventions to prescriber', url_for('pharmacy.interventions'), 'Pharmacist ↔ Physician'),
         ]})
 
     p = _pat(mar) or _pat(admission)
@@ -1092,7 +1141,7 @@ def demo():
                  'Nurse', ok=bool(mar), note=None if mar else 'No dose scheduled yet'),
             step('Medication schedule board', url_for('nursing.medication_schedule'), 'Nurse'),
             step('Admission detail', url_for('admissions.view', id=admission.id) if admission else url_for('admissions.dashboard'),
-                 'Nurse / Doctor', ok=bool(admission)),
+                 'Nurse / Physician', ok=bool(admission)),
         ]})
 
     p = _pat(therapy)
@@ -1129,10 +1178,10 @@ def demo():
     scenarios.append({
         'key': 'referral', 'icon': 'fa-share-nodes',
         'title': 'Referral', 'title_ar': 'الإحالة',
-        'summary': 'Doctor refers → task + notification to the receiving service → accept / review / complete → referrer notified.',
+        'summary': 'Physician refers → task + notification to the receiving service → accept / review / complete → referrer notified.',
         'patient': p,
         'steps': [
-            step('Referral worklist', url_for('care.referrals'), 'Doctor / Specialist'),
+            step('Referral worklist', url_for('care.referrals'), 'Physician / Specialist'),
             step('Care team', url_for('care.team', patient_id=p.id) if p else url_for('clinical.workbench'), 'Doctor', ok=bool(p)),
             step('Task engine', url_for('tasks.queue', department='Care Coordination'), 'All staff'),
             step('Patient timeline', p360(p) or url_for('clinical.workbench'), 'Any clinician', ok=bool(referral),
@@ -1179,3 +1228,40 @@ def demo():
                            scenarios=scenarios, total_steps=total_steps,
                            ready_steps=ready_steps,
                            patient_count=Patient.query.count())
+
+
+# ---------------------------------------------------------------------------
+# AI Control Center (usage, budget, cache, failures, audit, unresolved alerts)
+# ---------------------------------------------------------------------------
+@super_admin_bp.route('/ai-control')
+@login_required
+@roles_required('SuperAdmin')
+def ai_control():
+    from app.models import AIUsageLog, ClinicalAlert
+    from app.services.ai import platform
+    from app.services.ai.copilot import predictive_catalogue
+    from app.services.alerts import escalation_thresholds
+    stats = platform.usage_stats()
+    cache = platform.cache_stats()
+    recent = AIUsageLog.query.order_by(AIUsageLog.created_at.desc()).limit(40).all()
+    unresolved = (ClinicalAlert.query
+                  .filter(ClinicalAlert.status.in_(('OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS')),
+                          ClinicalAlert.severity.in_(('CRITICAL', 'HIGH')))
+                  .order_by(ClinicalAlert.created_at.desc()).limit(30).all())
+    return render_template('super_admin/ai_control.html', title='AI Control Center', stats=stats,
+                           cache=cache, recent=recent, unresolved=unresolved,
+                           predictive=predictive_catalogue({'SuperAdmin'}),
+                           escalation=escalation_thresholds())
+
+
+@super_admin_bp.route('/ai-control/clear-cache', methods=['POST'])
+@login_required
+@roles_required('SuperAdmin')
+def ai_cache_clear():
+    from app.models import AICacheEntry
+    n = AICacheEntry.query.delete()
+    db.session.commit()
+    log_activity('AI_CACHE_CLEAR', 'ai_cache', None, f'{n} entries removed')
+    db.session.commit()
+    flash(f'AI cache cleared ({n} entries).', 'success')
+    return redirect(url_for('super_admin.ai_control'))

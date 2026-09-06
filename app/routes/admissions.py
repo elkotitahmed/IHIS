@@ -208,7 +208,7 @@ def admit():
 @roles_required(*STAFF)
 @permissions_required('ADMISSION_VIEW')
 def view(id):
-    """Inpatient episode detail: bed, doctor, stay, discharge summary, bills."""
+    """Inpatient episode detail: bed, physician, stay, discharge summary, bills."""
     admission = Admission.query.get_or_404(id)
     require_patient_access(admission.patient)
     from app.models import VitalSign, MedicationAdministration, NursingNote

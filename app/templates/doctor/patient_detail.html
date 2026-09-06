@@ -70,6 +70,8 @@
                     <a href="{{ url_for('ai.medical_coding', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-code"></i> {{ 'ترميز ICD-10' if g.lang == 'ar' else 'ICD-10 Coding' }}</a>
                     <a href="{{ url_for('ai.patient_communication', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-comment-medical"></i> {{ 'شرح للمريض' if g.lang == 'ar' else 'Patient-friendly Explanation' }}</a>
                     <a href="{{ url_for('ai.smart_orders', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-wand-magic-sparkles"></i> {{ 'اقتراح الطلبات' if g.lang == 'ar' else 'Smart Order Suggestions' }}</a>
+                    <button type="button" class="ai-btn" data-copilot-open="{{ patient.id }}" style="justify-content:flex-start"><span class="ai-spark">✦</span> {{ 'المساعد الذكي (كل الإجراءات)' if g.lang == 'ar' else 'AI Copilot — all actions' }}</button>
+                    <button type="button" class="btn-ihs btn-ihs-outline" data-copilot-open="{{ patient.id }}" data-copilot-action="doc.postvisit" style="justify-content:flex-start"><span class="ai-spark">✦</span> {{ 'ملخص ما بعد الزيارة والتعليمات' if g.lang == 'ar' else 'Post-visit summary & instructions' }}</button>
                 </div>
                 <p class="cell-muted mb-0 mt-2" style="font-size:0.6875rem"><i class="fas fa-shield-halved"></i> {{ 'مخرجات الذكاء الاصطناعي استشارية وتتطلب مراجعة الطبيب' if g.lang == 'ar' else 'AI output is advisory and requires clinician review; it never changes the record by itself.' }}</p>
             </div>
@@ -90,7 +92,7 @@
                                 <th>{{ 'التاريخ' if g.lang == 'ar' else 'Visit' }}</th>
                                 <th>{{ 'التشخيص' if g.lang == 'ar' else 'Diagnosis' }}</th>
                                 <th>{{ 'خطة العلاج' if g.lang == 'ar' else 'Treatment Plan' }}</th>
-                                <th>{{ 'الطبيب' if g.lang == 'ar' else 'Doctor' }}</th>
+                                <th>{{ 'الطبيب' if g.lang == 'ar' else 'Physician' }}</th>
                                 <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
                                 <th></th>
                             </tr>

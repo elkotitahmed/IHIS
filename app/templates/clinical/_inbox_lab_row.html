@@ -1,0 +1,23 @@
+<div class="list-item" style="align-items:flex-start">
+    <i class="fas fa-vial" style="color:{{ 'var(--ihis-danger)' if order.result.is_critical else 'var(--ihis-warning)' }}"></i>
+    <div style="flex:1;min-width:0">
+        <div style="font-size:0.8125rem;font-weight:500">
+            <a href="{{ url_for('clinical.patient_360', patient_id=order.patient_id) }}" style="color:var(--ihis-primary);text-decoration:none">{{ order.patient.user.full_name if order.patient and order.patient.user else 'Patient' }}</a>
+            — {{ order.test.test_name if order.test else 'Lab' }}
+            <span class="text-muted" style="font-weight:400">({{ order.result.result_value }}{% if order.result.result_unit %} {{ order.result.result_unit }}{% endif %})</span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--ihis-text-muted)">
+            {{ order.result.result_date.strftime('%d %b %Y %H:%M') if order.result.result_date }}
+            {% if order.result.is_critical %}<span class="status-badge s-cancelled">CRITICAL</span>{% elif order.result.is_abnormal %}<span class="status-badge s-pending">Abnormal</span>{% endif %}
+        </div>
+    </div>
+    <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-result-review="lab" data-result-id="{{ order.id }}" title="{{ 'تحليل بالذكاء' if g.lang == 'ar' else 'Analyze with AI' }}"><span class="ai-spark">✦</span></button>
+    <form method="POST" action="{{ url_for('clinical.inbox_ack') }}" style="display:flex;gap:4px;align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="result_type" value="LAB">
+        <input type="hidden" name="result_id" value="{{ order.result.id }}">
+        <input type="hidden" name="patient_id" value="{{ order.patient_id }}">
+        <input class="form-control" name="note" placeholder="{{ 'ملاحظة' if g.lang == 'ar' else 'Note (optional)' }}" style="width:140px;font-size:0.75rem">
+        <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'أقر' if g.lang == 'ar' else 'Ack' }}</button>
+    </form>
+</div>

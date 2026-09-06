@@ -264,7 +264,7 @@ def _lab_trends(ctx):
     lines = []
     for test, rows in by.items():
         vals = []
-        for r in sorted(rows, key=lambda x: x['date'] or ''):
+        for r in sorted(rows, key=lambda x: (x['date'] or '', x['order_id'])):
             try:
                 vals.append((r['date'], float(str(r['value']).replace(',', '.'))))
             except ValueError:

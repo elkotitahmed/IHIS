@@ -19,7 +19,7 @@ from app.services.laboratory import evaluate_abnormality
 
 
 class AIClinicalAssistant:
-    """Assists doctors with patient analysis and clinical insights."""
+    """Assists physicians with patient analysis and clinical insights."""
 
     def summarize_medical_history(self, patient_id):
         patient = db.session.get(Patient, patient_id)
@@ -256,7 +256,7 @@ class AIAppointmentOptimization:
         Doctor = __import__('app.models', fromlist=['Doctor']).Doctor
         doc = db.session.get(Doctor, doctor_id)
         if not doc:
-            return {'error': 'Doctor not found'}
+            return {'error': 'Physician not found'}
         booked = Appointment.query.filter(
             Appointment.doctor_id == doctor_id,
             Appointment.status.notin_(['Cancelled', 'NoShow'])).count()

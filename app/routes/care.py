@@ -85,7 +85,7 @@ def referrals():
 def new_referral():
     doc = _current_doctor()
     if not doc and not current_user.has_any_role('Admin', 'SuperAdmin'):
-        flash('Only a doctor can create a referral.', 'warning')
+        flash('Only a physician can create a referral.', 'warning')
         return redirect(url_for('care.referrals'))
     patient_id = request.form.get('patient_id')
     to_doctor_id = request.form.get('to_doctor_id') or None
@@ -104,7 +104,7 @@ def new_referral():
     require_patient_access(p)
     to_doctor = db.session.get(Doctor, int(to_doctor_id)) if to_doctor_id else None
     if not to_doctor and not to_specialty:
-        flash('Choose a receiving doctor or a specialty.', 'warning')
+        flash('Choose a receiving physician or a specialty.', 'warning')
         return redirect(url_for('care.referrals'))
     ref = create_referral(p, doc, reason, to_specialty=to_specialty,
                           to_doctor=to_doctor, urgency=urgency,

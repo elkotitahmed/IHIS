@@ -34,7 +34,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">{{ 'الأدوار المسموح بها (مفصولة بفواصل، فارغ = الجميع)' if g.lang == 'ar' else 'Allowed roles (comma separated; empty = all)' }}</label>
-                    <input class="form-control" name="allowed_roles" value="{{ tpl.allowed_roles or '' }}" placeholder="Doctor, Nurse">
+                    <input class="form-control" name="allowed_roles" value="{{ tpl.allowed_roles or '' }}" placeholder="Physician, Nurse">
                 </div>
                 <div class="col-12">
                     <label class="form-label">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
