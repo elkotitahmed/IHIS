@@ -1265,6 +1265,16 @@ class ClinicalAlert(db.Model):
     resolved_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     resolved_at = db.Column(db.DateTime)
     resolved_note = db.Column(db.Text)
+    # --- critical-finding lifecycle (2026-09 AI copilot work) ---------------
+    ai_assisted = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+    confidence = db.Column(db.Float)            # 0..1 when an ML/AI detector flagged it
+    rationale = db.Column(db.Text)              # why it was flagged (rule / model / manual)
+    action_taken = db.Column(db.Text)           # documented clinical action on resolution
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    started_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    started_at = db.Column(db.DateTime)
+    escalated_at = db.Column(db.DateTime)
+    escalation_note = db.Column(db.Text)
     source_type = db.Column(db.String(50))
     source_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=utcnow, index=True)
@@ -2001,3 +2011,36 @@ class RadiologyReportVersion(db.Model):
 
     report = db.relationship('RadiologyReport', backref=db.backref('versions', lazy=True))
     changer = db.relationship('User', foreign_keys=[changed_by])
+
+
+class AIUsageLog(db.Model):
+    """One row per AI event: provider call, cache hit, budget block, fallback,
+    failure or feedback. Never stores prompts or model output."""
+    __tablename__ = 'ai_usage_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    role = db.Column(db.String(40))
+    feature = db.Column(db.String(80), nullable=False, index=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id', ondelete='SET NULL'))
+    provider = db.Column(db.String(20))       # gemini / cache / local / none
+    status = db.Column(db.String(24), index=True)  # ok / cached / error / rate_limited / budget / fallback
+    http_status = db.Column(db.Integer)
+    latency_ms = db.Column(db.Integer)
+    cache_hit = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+    accepted = db.Column(db.Boolean)          # clinician accepted / rejected the output
+    detail = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=utcnow, index=True)
+    user = db.relationship('User', foreign_keys=[user_id])
+
+
+class AICacheEntry(db.Model):
+    """Patient-scoped cache of repeatable AI output. The key hashes the
+    clinical context content, so changed source data misses automatically."""
+    __tablename__ = 'ai_cache_entries'
+    id = db.Column(db.Integer, primary_key=True)
+    cache_key = db.Column(db.String(64), unique=True, nullable=False)
+    feature = db.Column(db.String(80))
+    patient_id = db.Column(db.Integer, index=True)
+    payload = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    expires_at = db.Column(db.DateTime, index=True)

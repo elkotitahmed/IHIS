@@ -16,7 +16,8 @@ from app.models import ClinicalAlert
 from app.utils import utcnow
 
 SEVERITIES = ('INFO', 'LOW', 'MODERATE', 'HIGH', 'CRITICAL')
-STATUSES = ('OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED')
+STATUSES = ('OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED')
+ACTIVE_STATUSES = ('OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS')
 SEVERITY_WEIGHT = {s: i for i, s in enumerate(SEVERITIES)}
 
 _ALERT_TYPE_COLORS = {
@@ -85,8 +86,9 @@ def _transition(alert, new_status):
     if new_status not in STATUSES:
         raise ValueError(f'Unknown alert status: {new_status}')
     valid = {
-        'OPEN': {'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED'},
-        'ACKNOWLEDGED': {'RESOLVED', 'DISMISSED'},
+        'OPEN': {'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED'},
+        'ACKNOWLEDGED': {'IN_PROGRESS', 'RESOLVED', 'DISMISSED'},
+        'IN_PROGRESS': {'RESOLVED', 'DISMISSED'},
         'RESOLVED': set(),
         'DISMISSED': set(),
     }
@@ -103,28 +105,99 @@ def acknowledge(alert):
     alert.acknowledged_at = utcnow()
 
 
-def resolve(alert, note=None):
-    """Close an OPEN/ACKNOWLEDGED alert with a resolution note."""
+def start_progress(alert):
+    """The responsible clinician is acting on the alert."""
+    _transition(alert, 'IN_PROGRESS')
+    if alert.acknowledged_at is None:
+        alert.acknowledged_by = _uid()
+        alert.acknowledged_at = utcnow()
+    alert.status = 'IN_PROGRESS'
+    alert.started_by = _uid()
+    alert.started_at = utcnow()
+
+
+def resolve(alert, note=None, action_taken=None):
+    """Close an active alert with a resolution note and the documented action."""
     _transition(alert, 'RESOLVED')
+    if alert.severity in ('HIGH', 'CRITICAL') and not (action_taken or note):
+        raise ValueError('Document the action taken before resolving a high-severity alert.')
+    if alert.acknowledged_at is None:
+        alert.acknowledged_by = _uid()
+        alert.acknowledged_at = utcnow()
     alert.status = 'RESOLVED'
     alert.resolved_by = _uid()
     alert.resolved_at = utcnow()
     alert.resolved_note = note
+    if action_taken:
+        alert.action_taken = action_taken
 
 
 def dismiss(alert, note=None):
-    """Indicate an alert was considered and judged not actionable."""
+    """Indicate an alert was considered and judged not actionable. A reason is
+    mandatory for HIGH/CRITICAL alerts."""
     _transition(alert, 'DISMISSED')
+    if alert.severity in ('HIGH', 'CRITICAL') and not (note or '').strip():
+        raise ValueError('A reason is required to dismiss a high-severity alert.')
     alert.status = 'DISMISSED'
     alert.resolved_by = _uid()
     alert.resolved_at = utcnow()
     alert.resolved_note = note
 
 
+def escalation_thresholds():
+    """Minutes an unacknowledged alert may stay OPEN per severity
+    (``ALERT_ESCALATION_MINUTES`` in config; never a hard-coded policy)."""
+    from flask import current_app, has_app_context
+    default = {'CRITICAL': 30, 'HIGH': 120}
+    if has_app_context():
+        cfg = current_app.config.get('ALERT_ESCALATION_MINUTES') or {}
+        return {**default, **{k: int(v) for k, v in cfg.items()}}
+    return default
+
+
+def escalate_overdue(now=None):
+    """Escalate OPEN critical/high alerts that nobody acknowledged within the
+    configured window: notify supervisors and the patient's care team, open an
+    escalation task, and stamp the alert. Idempotent (one escalation per
+    alert). Returns the list of escalated alerts."""
+    from datetime import timedelta
+    from app.services import tasks as task_svc
+    from app.services.notifications import notify_role, notify_users, care_team_user_ids
+    now = now or utcnow()
+    escalated = []
+    for severity, minutes in escalation_thresholds().items():
+        cutoff = now - timedelta(minutes=minutes)
+        rows = (ClinicalAlert.query
+                .filter(ClinicalAlert.status == 'OPEN',
+                        ClinicalAlert.severity == severity,
+                        ClinicalAlert.escalated_at.is_(None),
+                        ClinicalAlert.created_at <= cutoff).all())
+        for alert in rows:
+            alert.escalated_at = now
+            alert.escalation_note = (f'Unacknowledged for more than {minutes} min; '
+                                     f'escalated to supervisors and the care team.')
+            title = f'ESCALATION: unacknowledged {severity.lower()} alert'
+            body = (f'Alert #{alert.id} "{alert.title}" for patient '
+                    f'#{alert.patient_id} has had no acknowledgement for {minutes} minutes.')
+            notify_role('Admin', title, body, notification_type='critical',
+                        entity_type='clinical_alert', entity_id=alert.id)
+            team = [uid for uid in care_team_user_ids(alert.patient_id) if uid != alert.assigned_to]
+            if team:
+                notify_users(team, title, body, notification_type='critical',
+                             entity_type='clinical_alert', entity_id=alert.id)
+            task_svc.create_task(
+                title=f'Escalated alert #{alert.id}: {alert.title}',
+                description=body, task_type='ESCALATION', department='Clinical Governance',
+                patient_id=alert.patient_id, assigned_role='Admin', priority='URGENT',
+                related_resource_type='clinical_alert', related_resource_id=alert.id)
+            escalated.append(alert)
+    return escalated
+
+
 def open_alerts_for_patient(patient_id):
     return (ClinicalAlert.query
             .filter(ClinicalAlert.patient_id == patient_id,
-                    ClinicalAlert.status.in_(('OPEN', 'ACKNOWLEDGED')))
+                    ClinicalAlert.status.in_(ACTIVE_STATUSES))
             .order_by(ClinicalAlert.created_at.desc()).all())
 
 

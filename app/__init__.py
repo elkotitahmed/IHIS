@@ -122,7 +122,12 @@ def create_app(config_name=None):
     # upgrade`). For local development the convenience of auto-creating missing
     # tables from the models is harmless, but it must never shadow the migration
     # process in production.
-    if config_name != 'production':
+    # Skipped under the `flask db ...` CLI (and when IHIS_SKIP_CREATE_ALL is
+    # set) so Alembic, not create_all, builds the schema when migrating.
+    import sys as _sys
+    _migrating = (_sys.argv[1:2] == ['db'] or 'flask' in _sys.argv[0:1] and 'db' in _sys.argv[1:3]
+                  or os.environ.get('IHIS_SKIP_CREATE_ALL') == '1')
+    if config_name != 'production' and not _migrating:
         with app.app_context():
             db.create_all()
 

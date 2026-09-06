@@ -38,6 +38,21 @@ class Config:
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '')
 
     # Security: login lockout
+    # --- AI platform (free-tier friendly; all optional) -------------------
+    # Never hardcode a provider's current quota here: tune per deployment.
+    AI_ENABLED = os.environ.get('AI_ENABLED', '1') not in ('0', 'false', 'False')
+    AI_MAX_REQUESTS_PER_MINUTE = int(os.environ.get('AI_MAX_REQUESTS_PER_MINUTE', '10'))
+    AI_MAX_REQUESTS_PER_DAY = int(os.environ.get('AI_MAX_REQUESTS_PER_DAY', '200'))
+    AI_AUTOCOMPLETE_ENABLED = os.environ.get('AI_AUTOCOMPLETE_ENABLED', '1') not in ('0', 'false', 'False')
+    AI_HEAVY_FEATURES_ENABLED = os.environ.get('AI_HEAVY_FEATURES_ENABLED', '1') not in ('0', 'false', 'False')
+    AI_CACHE_TTL_MINUTES = int(os.environ.get('AI_CACHE_TTL_MINUTES', '720'))
+    AI_COOLDOWN_AFTER_429_MINUTES = int(os.environ.get('AI_COOLDOWN_AFTER_429_MINUTES', '10'))
+    # Unacknowledged critical/high alerts escalate after these many minutes.
+    ALERT_ESCALATION_MINUTES = {
+        'CRITICAL': int(os.environ.get('ALERT_ESCALATION_CRITICAL_MINUTES', '30')),
+        'HIGH': int(os.environ.get('ALERT_ESCALATION_HIGH_MINUTES', '120')),
+    }
+
     MAX_LOGIN_ATTEMPTS = 5
     LOCKOUT_MINUTES = 15
 

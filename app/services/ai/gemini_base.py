@@ -146,6 +146,16 @@ class GeminiBase:
         # The key travels in a header, never in the URL, so it can never be
         # echoed back through an exception message, a proxy log or a referrer.
         url = f"{BASE_URL}/{self.model_name}:generateContent"
+        # Budget / cool-down / audit go through the shared AI platform so
+        # every feature (legacy or new) respects the free-tier limits.
+        from app.services.ai import platform
+        feature = getattr(self, 'feature', None) or type(self).__name__
+        try:
+            platform.before_provider_call(feature, heavy=getattr(self, 'heavy', False),
+                                          autocomplete=getattr(self, 'autocomplete', False))
+        except platform.AIBudgetExceeded as exc:
+            raise AIServiceError(str(exc)) from None
+        started = time.monotonic()
         try:
             resp = _requests.post(
                 url,
@@ -154,7 +164,17 @@ class GeminiBase:
                 json=payload, timeout=REQUEST_TIMEOUT)
             resp.raise_for_status()
         except _requests.RequestException as exc:
-            raise AIServiceError(_safe_provider_error(exc)) from None
+            message = _safe_provider_error(exc)
+            self.last_usage_id = platform.after_provider_call(
+                feature, ok=False,
+                http_status=getattr(getattr(exc, 'response', None), 'status_code', None),
+                latency_ms=int((time.monotonic() - started) * 1000),
+                patient_id=getattr(self, 'patient_id', None), detail=message)
+            raise AIServiceError(message) from None
+        self.last_usage_id = platform.after_provider_call(
+            feature, ok=True, http_status=resp.status_code,
+            latency_ms=int((time.monotonic() - started) * 1000),
+            patient_id=getattr(self, 'patient_id', None))
         try:
             data = resp.json()
             parts = data["candidates"][0]["content"]["parts"]
