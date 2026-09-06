@@ -12,7 +12,10 @@ import json
 import requests as _requests
 
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_MODEL = "gemini-2.5-flash"
+# "gemini-flash-latest" is the provider alias that always resolves to the
+# current free-tier flash model (pinned ids such as gemini-2.5-flash have been
+# retired for new keys). Override per deployment with AI_MODEL.
+DEFAULT_MODEL = "gemini-flash-latest"
 # (connect, read) timeouts: fail fast on an unreachable provider, allow a
 # long generation once connected.
 REQUEST_TIMEOUT = (10, 90)

@@ -322,7 +322,7 @@ class ReceptionTests(AuditBase):
         r = self.client.post('/reception/appointments/book', data={
             'patient_id': 9999, 'doctor_id': 9999, 'date': '2030-01-01', 'time': '10:00'},
             follow_redirects=True)
-        self.assertIn('valid patient and doctor', r.get_data(as_text=True))
+        self.assertIn('valid patient and physician', r.get_data(as_text=True))
         self.assertEqual(Appointment.query.count(), 0)
 
     def test_checkin_assigns_queue_number_and_cancel_reschedule(self):

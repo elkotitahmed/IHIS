@@ -4,7 +4,7 @@
    MY FOLLOW-UP · MY MESSAGES · MY NOTIFICATIONS. Simple by design. #}
 {% if not is_own %}
 <div class="alert alert-warning py-2" style="font-size:0.8125rem" role="status">
-    <i class="fas fa-eye"></i> {{ 'معاينة بوابة المريض (مشرف):' if g.lang == 'ar' else 'Patient-portal preview (supervisor):' }} <strong>{{ patient.user.full_name if patient.user else patient.id }}</strong>
+    <i class="fas fa-eye"></i> {{ 'معاينة للقراءة فقط لبوابة المريض (مشرف):' if g.lang == 'ar' else 'Patient-portal read-only preview (supervisor):' }} <strong>{{ patient.user.full_name if patient.user else patient.id }}</strong>
     {% if other_patients %}
     <form method="get" action="" class="d-inline" onsubmit="location.href='/patient/preview/'+this.pid.value;return false;">
         <select name="pid" class="form-select form-select-sm d-inline-block" style="width:auto" onchange="this.form.onsubmit()">
