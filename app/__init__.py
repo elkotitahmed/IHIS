@@ -247,8 +247,6 @@ def register_context_processors(app):
         def _ai_tools(role_set):
             """Zero-argument AI tools the given roles can reach, in display order."""
             specs = [
-                (_l('AI Command Center', 'مركز أوامر الذكاء'), '/ai/ai-dashboard',
-                 'fa-robot', {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'}),
                 (_l('Fracture Detection', 'كشف الكسور'), '/ai/fracture-detection',
                  'fa-bone', {'Radiologist', 'RadiologyTechnician', 'Doctor', 'Nurse', 'Physiotherapist',
                              'Dentist', 'Admin', 'SuperAdmin'}),
@@ -617,8 +615,29 @@ def register_context_processors(app):
             return ROLE_LABELS.get(current_user.roles[0].name, current_user.roles[0].name)
         return ''
 
+    def ai_quick_tools(limit=4):
+        """Up to ``limit`` AI capabilities for the effective role, for the
+        dashboard AI strip. Uses the AI Hub catalogue; never calls the provider."""
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return []
+        try:
+            from app.services.ai import hub as hub_svc
+            data = hub_svc.build(_get_effective_roles(current_user), has_permission=current_user.has_permission)
+        except Exception:  # noqa: BLE001 - a dashboard must render without AI
+            return []
+        out = []
+        for grp in data['groups']:
+            if grp['key'] == 'copilot':
+                continue
+            for it in grp['items']:
+                if it.get('url'):
+                    out.append(it)
+        return out[:limit]
+
     app.context_processor(lambda: {
         'current_user_menus': menus,
+        'ai_quick_tools': ai_quick_tools,
         'is_superadmin_real': _is_superadmin,
         'is_previewing': _is_previewing,
         'preview_role': lambda: session.get('preview_role'),

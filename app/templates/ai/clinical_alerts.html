@@ -1,53 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="page-title"><i class="fas fa-bell" style="color:var(--ihis-danger)"></i> {{ 'تنبيهات سريرية بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Clinical Alerts' }}</h1>
-        <p class="page-subtitle">{{ 'تنبيهات استباقية للحالات الحرجة' if g.lang == 'ar' else 'Proactive alerts for critical clinical events' }}</p>
-    </div>
-    <div class="page-actions">
+{% set ar = g.lang == 'ar' %}
+{% with wb_title='Clinical Alert Engine', wb_title_ar='محرك التنبيهات السريرية',
+        wb_desc='Rule scan of vitals, laboratory results and medications for your patients. Every alert is deterministic and explainable; nothing is auto-finalised.',
+        wb_desc_ar='فحص قاعدي للعلامات الحيوية ونتائج المختبر والأدوية لمرضاك. كل تنبيه حتمي وقابل للتفسير، ولا يُنهى شيء تلقائيًا.',
+        wb_icon='fa-bell',
+        wb_facts=[('fa-list-check', 'Deterministic rules', 'قواعد حتمية'), ('fa-clock-rotate-left', 'Full audit trail', 'سجل تدقيق كامل'), ('fa-user-doctor', 'A clinician acknowledges and resolves', 'الطبيب يقرّ ويحل')],
+        wb_back_url=url_for('clinical.alerts_all'), wb_back_label='All alerts', wb_back_label_ar='كل التنبيهات' %}
+{% include 'ai/_workbench_hero.html' %}
+{% endwith %}
+
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+    <span class="cell-muted" style="font-size:.8125rem">{{ alerts|length }} {{ 'تنبيه مفتوح' if ar else 'open alert(s)' }}</span>
+    <span style="margin-inline-start:auto" class="d-flex gap-2">
         {% if current_user.has_any_role('Admin', 'SuperAdmin') %}
         <form method="POST" action="{{ url_for('ai.scan_alerts') }}" class="d-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-radar"></i> {{ 'فحص التنبيهات' if g.lang == 'ar' else 'Scan All Patients' }}</button>
+            <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-radar"></i> {{ 'فحص كل المرضى' if ar else 'Scan all patients' }}</button>
         </form>
         {% endif %}
-        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('ai.ai_dashboard') }}">
-            <i class="fas fa-arrow-left"></i> {{ 'لوحة AI' if g.lang == 'ar' else 'AI Dashboard' }}</a>
-    </div>
+    </span>
 </div>
 
 {% if alerts %}
 <div class="row g-3">
     {% for alert in alerts %}
+    {% set sev = (alert.severity or '')|lower %}
     <div class="col-lg-6">
-        <div class="card-premium h-100" style="border-left:4px solid {% if alert.severity == 'Critical' %}var(--ihis-danger){% elif alert.severity == 'High' %}var(--ihis-warning){% elif alert.severity == 'Moderate' %}var(--ihis-info){% else %}var(--ihis-success){% endif %}">
-            <div class="card-header">
-                <div class="card-title">
-                    {% if alert.severity == 'Critical' %}<i class="fas fa-exclamation-circle" style="color:var(--ihis-danger)"></i>
-                    {% elif alert.severity == 'High' %}<i class="fas fa-exclamation-triangle" style="color:var(--ihis-warning)"></i>
-                    {% elif alert.severity == 'Moderate' %}<i class="fas fa-info-circle" style="color:var(--ihis-info)"></i>
-                    {% else %}<i class="fas fa-check-circle" style="color:var(--ihis-success)"></i>
-                    {% endif %}
-                    {{ alert.title }}
+        <div class="alert-card sev-{{ sev if sev in ('critical','high','moderate','low') else 'low' }}">
+            <span class="hub-card-icon {{ 'rules' if sev in ('low','moderate') else '' }}" style="{% if sev == 'critical' %}background:var(--ihis-danger-light);color:var(--ihis-danger){% elif sev == 'high' %}background:var(--ihis-warning-light);color:var(--ihis-warning){% endif %}"><i class="fas {{ 'fa-triangle-exclamation' if sev in ('critical','high') else 'fa-circle-info' }}"></i></span>
+            <div style="flex:1;min-width:0">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="alert-title">{{ alert.title }}</span>
+                    <span class="ai-label {{ 'ai-label-danger' if sev in ('critical','high') else 'ai-label-warn' if sev == 'moderate' else 'ai-label-muted' }}">{{ alert.severity }}</span>
+                    {% if alert.ai_assisted %}<span class="ai-label ai-label-ai">✦ {{ 'بمساعدة الذكاء' if ar else 'AI ASSISTED' }}</span>{% endif %}
                 </div>
-                <span class="badge {% if alert.severity == 'Critical' %}bg-danger{% elif alert.severity == 'High' %}bg-warning text-dark{% elif alert.severity == 'Moderate' %}bg-info{% else %}bg-secondary{% endif %}">{{ alert.severity }}</span>
-            </div>
-            <div class="card-body">
-                <p class="small mb-2">{{ alert.message }}</p>
-                {% if alert.patient %}
-                <div class="cell-muted small"><i class="fas fa-user"></i> {{ alert.patient.user.full_name if alert.patient.user else 'Patient' }}</div>
-                {% endif %}
-                {% if alert.created_at %}
-                <div class="cell-muted small"><i class="fas fa-clock"></i> {{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
-                {% endif %}
-                <hr class="my-2">
-                <form method="POST" action="{{ url_for('ai.mark_alert_read', alert_id=alert.id) }}" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="btn-ihs btn-ihs-outline btn-ihs-sm" style="font-size:0.7rem">
-                        <i class="fas fa-check"></i> {{ 'تمت المراجعة' if g.lang == 'ar' else 'Mark Read' }}
-                    </button>
-                </form>
+                <div class="alert-msg">{{ alert.message }}</div>
+                <div class="alert-meta">
+                    {% if alert.patient %}<span><i class="fas fa-user"></i> {{ alert.patient.user.full_name if alert.patient.user else 'Patient' }}</span>{% endif %}
+                    {% if alert.created_at %}<span><i class="fas fa-clock"></i> {{ alert.created_at.strftime('%d %b %Y %H:%M') }}</span>{% endif %}
+                    <span><i class="fas fa-tag"></i> {{ (alert.alert_type or '')|replace('_', ' ') }}</span>
+                </div>
+                <div class="d-flex gap-2 mt-2 flex-wrap">
+                    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.alert_detail', alert_id=alert.id) }}">{{ 'فتح' if ar else 'Open' }}</a>
+                    <form method="POST" action="{{ url_for('ai.mark_alert_read', alert_id=alert.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn-ihs btn-ihs-ghost btn-ihs-sm"><i class="fas fa-check"></i> {{ 'إقرار' if ar else 'Acknowledge' }}</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -55,10 +55,10 @@
 </div>
 {% else %}
 <div class="card-premium">
-    <div class="card-body text-center py-5">
-        <i class="fas fa-shield-alt fa-3x mb-3" style="color:var(--ihis-success)"></i>
-        <h5>{{ 'لا توجد تنبيهات نشطة' if g.lang == 'ar' else 'No Active Alerts' }}</h5>
-        <p class="cell-muted">{{ 'جميع المرضى في حالة مستقرة حالياً.' if g.lang == 'ar' else 'All patients are currently stable.' }}</p>
+    <div class="empty-state">
+        <div class="empty-icon" style="color:var(--ihis-success)"><i class="fas fa-shield-halved"></i></div>
+        <div class="empty-title">{{ 'لا توجد تنبيهات نشطة' if ar else 'No active alerts' }}</div>
+        <div class="empty-desc">{{ 'لم تُطلق القواعد أي تنبيه لمرضاك.' if ar else 'The rules have not raised anything for your patients.' }}</div>
     </div>
 </div>
 {% endif %}

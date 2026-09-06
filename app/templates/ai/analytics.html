@@ -1,15 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="page-title">{{ 'تحليلات المستشفى' if g.lang == 'ar' else 'AI Hospital Analytics' }}</h1>
-        <p class="page-subtitle">{{ 'لقطة فورية لنشاط المستشفى' if g.lang == 'ar' else 'Real-time snapshot of hospital activity' }}</p>
-    </div>
-    <div class="page-actions">
-        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('reports.statistics') }}">
-            <i class="fas fa-file-pdf"></i>{{ 'تقرير الإحصائيات' if g.lang == 'ar' else 'Statistics Report' }}</a>
-    </div>
-</div>
+{% with wb_title='Hospital Analytics', wb_title_ar='تحليلات المستشفى',
+        wb_desc='Occupancy forecast and a real-time snapshot of hospital activity, computed from the records.',
+        wb_desc_ar='توقع الإشغال ولقطة فورية لنشاط المستشفى محسوبة من السجلات.',
+        wb_icon='fa-chart-line', wb_facts=[('fa-list-check', 'Deterministic forecast', 'توقع حتمي')], wb_back_url=url_for('reports.statistics'), wb_back_label='Statistics report', wb_back_label_ar='تقرير الإحصائيات' %}
+{% include 'ai/_workbench_hero.html' %}
+{% endwith %}
 
 <div class="kpi-grid mb-4">
     {% set cards = [

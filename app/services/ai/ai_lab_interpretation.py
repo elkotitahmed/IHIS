@@ -39,7 +39,8 @@ class AILaboratoryInterpretation(GeminiBase):
         super().__init__(system_prompt=SYSTEM_PROMPT,
                          temperature=0.3, max_tokens=3000)
 
-    def interpret_result(self, order_id):
+    def interpret_result(self, order_id, use_ai=True):
+        """``use_ai=False`` returns the laboratory facts + reference-range flag only."""
         order = db.session.get(LabOrder, order_id)
         if not order or not order.result:
             return {'error': 'Lab order or result not found'}
@@ -63,7 +64,7 @@ class AILaboratoryInterpretation(GeminiBase):
             'comment': result.result_notes,
         }
 
-        if not self.available():
+        if not use_ai or not self.available():
             return {**base_info,
                     'interpretation': (
                         'Above or below the reference range. Review clinically.'

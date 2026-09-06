@@ -48,6 +48,7 @@
         <hr>
         <small><strong>{{ 'عوامل الخطر' if g.lang == 'ar' else 'Risk factors' }}:</strong>
             {% for r in risk.reasons %}<span class="tag-ihs me-1">{{ r }}</span>{% endfor %}
+            {% if risk.source != 'gemini' %}<div class="mt-2"><a class="ai-btn ai-btn-soft" href="?ai=1"><span class="ai-spark">✦</span> {{ 'اشرح المخاطر بالذكاء' if g.lang == 'ar' else 'Explain risk with AI' }}</a></div>{% elif risk.narrative %}<div class="ai-block mt-2"><div class="ai-block-head"><span class="ai-label ai-label-ai">✦ AI NARRATIVE</span></div><div class="ai-text" style="font-size:.8125rem">{{ risk.narrative }}</div></div>{% endif %}
         </small>
         {% endif %}
     </div>

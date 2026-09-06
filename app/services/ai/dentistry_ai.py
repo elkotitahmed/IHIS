@@ -42,7 +42,7 @@ def dental_context(patient):
                for r in DentalRecord.query.filter_by(patient_id=pid).order_by(DentalRecord.created_at.desc()).limit(4).all()]
     procedures = [{'date': _d(p.performed_at or p.scheduled_at), 'name': sanitize_text(p.procedure_name, 120),
                    'tooth': p.tooth_number, 'status': p.status, 'notes': sanitize_text(p.notes, 120)}
-                  for p in DentalProcedure.query.filter_by(patient_id=pid).order_by(DentalProcedure.created_at.desc()).limit(10).all()]
+                  for p in DentalProcedure.query.filter_by(patient_id=pid).order_by(DentalProcedure.performed_at.desc()).limit(10).all()]
     imaging = [{'date': _d(o.order_date), 'study': o.imaging_type.name if o.imaging_type else 'Imaging',
                 'impression': sanitize_text(o.report.impression, 300) if o.report else None}
                for o in RadiologyOrder.query.filter_by(patient_id=pid).order_by(RadiologyOrder.order_date.desc()).limit(10).all()

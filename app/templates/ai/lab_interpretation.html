@@ -6,6 +6,7 @@
         <p class="page-subtitle">{{ result.test }}</p>
     </div>
     <div class="page-actions">
+        {% if result.source != 'gemini' and result.error is not defined %}<a class="ai-btn" href="?ai=1"><span class="ai-spark">✦</span> {{ 'اشرح بالذكاء الاصطناعي' if g.lang == 'ar' else 'Explain with AI' }}</a>{% else %}<span class="ai-label ai-label-ai">✦ {{ 'تفسير بمساعدة الذكاء' if g.lang == 'ar' else 'AI-ASSISTED INTERPRETATION' }}</span>{% endif %}
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('lab.orders') }}">
             <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
     </div>

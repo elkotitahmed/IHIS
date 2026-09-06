@@ -1,82 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="page-title">{{ 'تجزئة الأسنان بالذكاء الاصطناعي' if g.lang == 'ar' else 'AI Tooth Segmentation' }}</h1>
-        <p class="page-subtitle">{{ 'U-Net - بيانات TUFTS البانورامية' if g.lang == 'ar' else 'U-Net trained on TUFTS panoramic dataset' }}</p>
-    </div>
-    <div class="page-actions">
-        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('dentistry.patients') }}">
-            <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
-    </div>
-</div>
+{% set ar = g.lang == 'ar' %}
+{% with wb_title='Tooth Segmentation', wb_title_ar='تجزئة الأسنان',
+        wb_desc='Segments teeth on panoramic X-rays to support dental assessment and treatment planning. It assists the dentist and never replaces clinical judgement.',
+        wb_desc_ar='يجزّئ الأسنان في الأشعة البانورامية لدعم التقييم السني وتخطيط العلاج. يساعد طبيب الأسنان ولا يحل محل حكمه السريري.',
+        wb_icon='fa-tooth',
+        wb_facts=[('fa-microchip', 'U-Net, trained on the TUFTS panoramic dataset', 'U-Net مدرَّب على بيانات TUFTS البانورامية'), ('fa-server', 'Runs locally on this server', 'يعمل محليًا على هذا الخادم'), ('fa-user-doctor', 'Dentist reviews every mask', 'يراجع طبيب الأسنان كل قناع')],
+        wb_back_url=url_for('dentistry.patients'), wb_back_label='Dental patients', wb_back_label_ar='مرضى الأسنان' %}
+{% include 'ai/_workbench_hero.html' %}
+{% endwith %}
 
 {% include 'clinical/_patient_header.html' %}
 
-{% if error %}
-<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>
-{% endif %}
+{% if error %}<div class="alert alert-danger"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>{% endif %}
 
-{% if selected_doc %}
-<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
-    <div class="card-header">
-        <div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ 'صورة المريض المحددة' if g.lang == 'ar' else 'Selected Patient Image' }} <span class="tag-ihs">AI</span></div>
+<div class="wb-grid">
+    <div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-teeth" style="color:var(--ai-1)"></i> {{ ('تحليل أشعة المريض' if selected_doc else 'أشعة بانورامية') if ar else ('Analyze the patient X-ray' if selected_doc else 'Panoramic X-ray') }}</div></div>
+            <div class="card-body">
+                {% with form_action=url_for('ai.tooth_segmentation'), submit_label='Segment teeth', submit_label_ar='تجزئة الأسنان', accept='.png,.jpg,.jpeg', camera=false, hint='Panoramic X-ray · PNG / JPG · max 16 MB', hint_ar='أشعة بانورامية · PNG / JPG · حتى 16 ميجابايت' %}
+                {% include 'ai/_image_input.html' %}
+                {% endwith %}
+            </div>
+        </div>
+
+        {% if result and result.error is not defined %}
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'نتيجة التجزئة' if ar else 'Segmentation result' }} <span class="ai-label ai-label-ai">{{ 'بمساعدة الذكاء' if ar else 'AI-ASSISTED' }}</span></div></div>
+            <div class="card-body">
+                <div class="verdict verdict-info">
+                    <span class="verdict-icon"><i class="fas fa-tooth"></i></span>
+                    <div><div class="verdict-title">{{ 'قناع الأسنان جاهز' if ar else 'Tooth mask ready' }}</div><div class="verdict-sub">{{ 'راجع القناع فوق الصورة قبل استخدامه في التخطيط.' if ar else 'Review the mask against the image before using it for planning.' }}</div></div>
+                    <div class="verdict-side"><div class="big">{{ result.coverage_percent }}%</div><div class="small-lbl">{{ 'تغطية الأسنان' if ar else 'tooth coverage' }}</div></div>
+                </div>
+                <div class="compare">
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة الأصلية' if ar else 'Original panoramic' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="Original"></figure>
+                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'قناع الأسنان المتوقع' if ar else 'Predicted tooth mask' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='masks', filename=result.mask_key) }}" alt="Segmentation mask"></figure>
+                </div>
+                <div class="ai-footer">{{ 'مخرجات دعم قرار من نموذج محلي؛ يبقى طبيب الأسنان مسؤولًا.' if ar else 'Decision-support output from a local model; the dentist remains responsible.' }}</div>
+            </div>
+        </div>
+        {% endif %}
     </div>
-    <div class="card-body">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-            <img src="{{ url_for('patient.download_document', doc_id=selected_doc.id, inline=1) }}"
-                 class="border rounded" alt="Patient image"
-                 style="width:130px;height:130px;object-fit:cover">
-            <div>
-                <div class="t-h4">{{ patient.user.full_name if patient else selected_doc.patient.user.full_name }}</div>
-                <p class="cell-secondary mb-1">{{ selected_doc.title or selected_doc.document_type or 'Document' }}</p>
-                <p class="cell-muted mb-0"><small><i class="fas fa-user-plus"></i>
-                    {{ 'أُرسلت من المريض' if g.lang == 'ar' else 'Uploaded by patient' }}
-                    — {{ selected_doc.uploaded_at.strftime('%d %b %Y') }}</small></p>
+
+    <div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-book-open" style="color:var(--ihis-primary)"></i> {{ 'ما الفائدة' if ar else 'What it is for' }}</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                <ul class="mb-0" style="padding-inline-start:18px;display:flex;flex-direction:column;gap:6px">
+                    <li>{{ 'تحديد الأسنان الظاهرة وعدّها بسرعة قبل تخطيط العلاج.' if ar else 'Quickly outline and count visible teeth before treatment planning.' }}</li>
+                    <li>{{ 'التغطية المنخفضة قد تعني صورة رديئة أو أسنانًا مفقودة؛ تحقق يدويًا.' if ar else 'Low coverage may mean a poor image or missing teeth; verify manually.' }}</li>
+                    <li>{{ 'لتحليل المخطط والنتائج استخدم ذكاء الأسنان.' if ar else 'For chart analysis and findings use Dentistry AI.' }}</li>
+                </ul>
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('copilot.dentistry_ai') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><span class="ai-spark">✦</span> {{ 'ذكاء الأسنان' if ar else 'Dentistry AI' }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'الحوكمة' if ar else 'Governance' }}</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                <dl class="kv">
+                    <dt>{{ 'المحرك' if ar else 'Engine' }}</dt><dd>{{ 'نموذج محلي (U-Net)' if ar else 'Local model (U-Net)' }}</dd>
+                    <dt>{{ 'البيانات' if ar else 'Data' }}</dt><dd>{{ 'تبقى على الخادم' if ar else 'Stays on the server' }}</dd>
+                    <dt>{{ 'الحالة' if ar else 'Status' }}</dt><dd><span class="hub-status hub-status-{{ 'available' if available else 'soon' }}">{{ ('متاح' if available else 'غير مثبّت') if ar else ('AVAILABLE' if available else 'NOT INSTALLED') }}</span></dd>
+                </dl>
             </div>
         </div>
     </div>
 </div>
-{% endif %}
-
-<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
-    <div class="card-header">
-        <div class="card-title"><i class="fas fa-upload" style="color:var(--ihis-primary)"></i> {{ ('تحليل أشعة المريض' if selected_doc else 'رفع أشعة بانورامية') if g.lang == 'ar' else ('Analyze Patient X-Ray' if selected_doc else 'Upload Panoramic X-Ray') }} <span class="tag-ihs">AI</span></div>
-    </div>
-    <div class="card-body">
-        <p class="cell-secondary mb-3">
-            {{ 'تجزأ هذه الأداة الذكية الأسنان تلقائياً لدعم التقييم السني. تساعد الأطباء ولا تحل محل حكم طبيب الأسنان.' if g.lang == 'ar' else 'This AI tool automatically segments teeth to support dental assessment. It assists clinicians and does not replace a dentist\'s judgment.' }}
-        </p>
-        <form method="POST" enctype="multipart/form-data" action="{{ url_for('ai.tooth_segmentation') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            {% if selected_doc %}<input type="hidden" name="doc" value="{{ selected_doc.id }}">{% endif %}
-            <div class="input-group">
-                <input type="file" class="form-control" name="file" accept=".png,.jpg,.jpeg" {% if not selected_doc %}required{% endif %}>
-                <button class="btn-ihs btn-ihs-primary" type="submit"><i class="fas fa-tooth"></i>{{ ('تجزئة الصورة المحددة' if selected_doc else 'تجزئة الأسنان') if g.lang == 'ar' else ('Segment This Image' if selected_doc else 'Segment Teeth') }}</button>
-            </div>
-            <div class="form-hint">{{ 'الصيغ المقبولة: .png، .jpg، .jpeg (بحد أقصى 16 ميجابايت)' if g.lang == 'ar' else 'Accepted formats: .png, .jpg, .jpeg (max 16 MB).' }}</div>
-        </form>
-    </div>
-</div>
-
-{% if result and result.error is not defined %}
-<div class="card-premium" style="border-top:3px solid var(--ihis-primary)">
-    <div class="card-header">
-        <div class="card-title"><i class="fas fa-tooth" style="color:var(--ihis-primary)"></i> {{ 'نتيجة التجزئة' if g.lang == 'ar' else 'Segmentation Result' }}</div>
-        <span class="status-badge s-active">{{ 'تغطية الأسنان المكتشفة' if g.lang == 'ar' else 'Detected tooth coverage' }}: {{ result.coverage_percent }}%</span>
-    </div>
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="t-h4">{{ 'الأشعة البانورامية الأصلية' if g.lang == 'ar' else 'Original Panoramic X-Ray' }}</div>
-                <img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" class="img-fluid border rounded" alt="Original">
-            </div>
-            <div class="col-md-6">
-                <div class="t-h4" style="color:var(--ihis-primary)">{{ 'قناع الأسنان المتوقع' if g.lang == 'ar' else 'Predicted Tooth Mask' }}</div>
-                <img src="{{ url_for('ai.ai_media', feature=result.feature, kind='masks', filename=result.mask_key) }}" class="img-fluid border border-primary rounded" alt="Segmentation Mask">
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

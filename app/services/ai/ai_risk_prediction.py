@@ -44,7 +44,8 @@ class AIPatientRiskPrediction(GeminiBase):
         super().__init__(system_prompt=SYSTEM_PROMPT,
                          temperature=0.3, max_tokens=4000)
 
-    def predict_risk(self, patient_id):
+    def predict_risk(self, patient_id, use_ai=True):
+        """``use_ai=False`` returns the deterministic heuristic only (no provider call)."""
         patient = db.session.get(Patient, patient_id)
         if not patient:
             return {'error': 'Patient not found'}
@@ -52,7 +53,7 @@ class AIPatientRiskPrediction(GeminiBase):
         # Always compute the basic heuristic first as a fallback
         base_risk = self._basic_risk(patient_id)
 
-        if not self.available():
+        if not use_ai or not self.available():
             return {**base_risk, 'source': 'heuristic'}
 
         ctx = _collect_patient_context(patient)

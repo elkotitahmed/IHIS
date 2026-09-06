@@ -168,11 +168,12 @@ def health_insights():
     risk = AIPatientRiskPrediction()
     summary = clinical.summarize_medical_history(patient.id)
     analysis = clinical.analyze_patient(patient.id)
-    risk_report = risk.predict_risk(patient.id)
+    want_ai = request.args.get('ai') == '1'      # explicit click only; never on a plain load
+    risk_report = risk.predict_risk(patient.id, use_ai=want_ai)
     return render_template(
         'ai/health_insights.html', title='AI Health Insights',
         patient=patient, summary=summary, analysis=analysis,
-        risk=risk_report, picker=picker, patients=patients)
+        risk=risk_report, picker=picker, patients=patients, want_ai=want_ai)
 
 
 @ai_bp.route('/summary/<int:patient_id>')
@@ -192,7 +193,7 @@ def summary(patient_id):
         'ai/summary.html', title='AI Patient Summary', patient=patient,
         summary=clinical.summarize_medical_history(patient.id),
         analysis=clinical.analyze_patient(patient.id),
-        risk=risk.predict_risk(patient.id),
+        risk=risk.predict_risk(patient.id, use_ai=request.args.get('ai') == '1'),
         rehab=rehab.analyze_progress(patient.id),
         **patient_safety_context(patient.id), today=utcnow().date())
 
@@ -225,7 +226,7 @@ def lab_interpret(order_id):
         flash('Lab order not found.', 'warning')
         return redirect(url_for('lab.orders'))
     require_patient_access(order.patient)
-    result = AILaboratoryInterpretation().interpret_result(order_id)
+    result = AILaboratoryInterpretation().interpret_result(order_id, use_ai=request.args.get('ai') == '1')
     return render_template('ai/lab_interpretation.html',
                            title='AI Lab Interpretation', order=order,
                            patient=order.patient, result=result,

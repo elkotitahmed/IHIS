@@ -11,6 +11,8 @@
     </div>
 </div>
 
+{% include '_ai_strip.html' %}
+
 <div class="kpi-grid mb-4">
     <div class="kpi-card">
         <div class="kpi-icon primary"><i class="fas fa-capsules"></i></div>
@@ -42,20 +44,6 @@
     </div>
 </div>
 
-<div class="card-premium mb-4" style="border-top:3px solid var(--ihis-primary)">
-    <div class="card-header">
-        <div class="card-title"><i class="fas fa-robot" style="color:var(--ihis-primary)"></i> {{ 'أدوات الذكاء الاصطناعي والصيدلة السريرية' if g.lang == 'ar' else 'Clinical AI Tools' }}</div>
-    </div>
-    <div class="card-body">
-        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
-            <a href="{{ url_for('pharmacy.ai_workbench') }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-user-doctor"></i> {{ 'الصيدلاني السريري AI' if g.lang == 'ar' else 'Clinical Pharmacist AI' }}</a>
-            <a href="{{ url_for('pharmacy.drug_check') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-dna"></i> {{ 'فحص التفاعلات الدوائية' if g.lang == 'ar' else 'Drug Interaction Check' }}</a>
-            <a href="{{ url_for('pharmacy.prescriptions') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-prescription"></i> {{ 'صف الصرف' if g.lang == 'ar' else 'Prescription Queue' }}</a>
-            <a href="{{ url_for('pharmacy.medications') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-pills"></i> {{ 'دليل الأدوية' if g.lang == 'ar' else 'Medications' }}</a>
-            <a href="{{ url_for('pharmacy.transactions') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-clock-rotate-left"></i> {{ 'الحركات' if g.lang == 'ar' else 'Transactions' }}</a>
-        </div>
-    </div>
-</div>
 
 <div class="row g-4">
     <div class="col-lg-7">

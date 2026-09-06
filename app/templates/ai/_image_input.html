@@ -1,0 +1,109 @@
+{# Image input for the image-AI workbenches: drop zone + optional camera + selected patient document.
+   Expects: form_action, submit_label, submit_label_ar, submit_icon, accept, camera (bool),
+   selected_doc, patient, available (bool), hint, hint_ar. #}
+{% set ar = g.lang == 'ar' %}
+{% set uid = form_action|replace('/', '_') %}
+{% if selected_doc %}
+<div class="wb-selected">
+    <img src="{{ url_for('patient.download_document', doc_id=selected_doc.id, inline=1) }}" alt="Patient image">
+    <div style="min-width:0;flex:1">
+        <div class="ai-sec-title">{{ 'صورة المريض المحددة' if ar else 'Selected Patient Image' }}</div>
+        <div style="font-weight:700;font-size:.875rem">{{ patient.user.full_name if patient and patient.user else selected_doc.patient.user.full_name }}</div>
+        <div class="cell-secondary" style="font-size:.78rem">{{ selected_doc.title or selected_doc.document_type or 'Document' }} · {{ 'أُرسلت من المريض' if ar else 'uploaded by the patient' }} · {{ selected_doc.uploaded_at.strftime('%d %b %Y') }}</div>
+    </div>
+    {% if patient %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}"><i class="fas fa-folder-open"></i> {{ 'الملف' if ar else 'Chart' }}</a>{% endif %}
+</div>
+{% endif %}
+
+{% if not available %}
+<div class="alert alert-warning mb-3"><i class="fas fa-circle-info"></i> {{ 'النموذج غير مثبّت على هذا الخادم بعد؛ الصفحة تعرض الإجراء لكن التحليل غير متاح.' if ar else 'The model is not installed on this server yet; the workflow is shown but analysis is unavailable.' }}</div>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data" action="{{ form_action }}" id="wbForm{{ uid }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if selected_doc %}<input type="hidden" name="doc" value="{{ selected_doc.id }}">{% endif %}
+    {% if not selected_doc %}
+    <div class="dropzone" id="dz{{ uid }}">
+        <input type="file" name="file" id="file{{ uid }}" accept="{{ accept or '.png,.jpg,.jpeg' }}" required aria-label="{{ 'اختر صورة' if ar else 'Choose an image' }}">
+        <div class="dz-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+        <div class="dz-title">{{ 'اسحب الصورة هنا أو انقر للاختيار' if ar else 'Drop the image here or click to choose' }}</div>
+        <div class="dz-sub">{{ hint_ar if ar and hint_ar else hint or ('PNG · JPG · JPEG' if not ar else 'PNG · JPG · JPEG') }}</div>
+        <div class="dz-file" id="dzFile{{ uid }}"></div>
+    </div>
+    <div class="dz-preview" id="dzPrev{{ uid }}"><img alt="" id="dzImg{{ uid }}"></div>
+    {% endif %}
+    <div class="wb-actions">
+        <button class="ai-btn" type="submit" {% if not available %}disabled{% endif %}><span class="ai-spark">✦</span> {{ submit_label_ar if ar else submit_label }}</button>
+        {% if camera and not selected_doc %}
+        <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="camOpen{{ uid }}"><i class="fas fa-camera"></i> {{ 'التقاط من الكاميرا' if ar else 'Capture from camera' }}</button>
+        {% endif %}
+        <span class="cell-muted" style="font-size:.72rem">{{ 'لا تُحفظ الصورة في ملف المريض إلا بقرار الطبيب.' if ar else 'Nothing is written to the chart; a clinician confirms every finding.' }}</span>
+    </div>
+    {% if camera and not selected_doc %}
+    <div class="card-premium mt-3" id="camCard{{ uid }}" hidden>
+        <div class="card-body" style="text-align:center">
+            <video id="camVideo{{ uid }}" autoplay playsinline muted style="max-width:100%;max-height:280px;border-radius:12px;background:#000"></video>
+            <canvas id="camCanvas{{ uid }}" hidden></canvas>
+            <img id="camPreview{{ uid }}" alt="capture" hidden style="max-width:100%;max-height:280px;border-radius:12px">
+            <div class="mt-2 d-flex gap-2 justify-content-center flex-wrap">
+                <button type="button" class="btn-ihs btn-ihs-primary btn-ihs-sm" id="camShot{{ uid }}"><i class="fas fa-camera-retro"></i> {{ 'التقاط' if ar else 'Capture' }}</button>
+                <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="camRetake{{ uid }}" hidden><i class="fas fa-rotate-left"></i> {{ 'إعادة' if ar else 'Retake' }}</button>
+                <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" id="camClose{{ uid }}"><i class="fas fa-times"></i> {{ 'إغلاق' if ar else 'Close' }}</button>
+            </div>
+            <p class="cell-muted mb-0 mt-2" style="font-size:.72rem">{{ 'صوّر من مسافة قريبة مع إضاءة جيدة.' if ar else 'Photograph up close with good lighting.' }}</p>
+        </div>
+    </div>
+    {% endif %}
+</form>
+<script>
+(function () {
+    var id = '{{ uid }}';
+    var input = document.getElementById('file' + id), dz = document.getElementById('dz' + id);
+    if (input && dz) {
+        var lbl = document.getElementById('dzFile' + id), prev = document.getElementById('dzPrev' + id), img = document.getElementById('dzImg' + id);
+        function show(f) {
+            if (!f) { dz.classList.remove('has-file'); prev.classList.remove('show'); return; }
+            dz.classList.add('has-file'); lbl.textContent = f.name + ' · ' + Math.round(f.size / 1024) + ' KB';
+            try { img.src = URL.createObjectURL(f); prev.classList.add('show'); } catch (e) { /* no preview */ }
+        }
+        input.addEventListener('change', function () { show(input.files && input.files[0]); });
+        ['dragenter', 'dragover'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('is-drag'); }); });
+        ['dragleave', 'drop'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('is-drag'); }); });
+        dz.addEventListener('drop', function (e) {
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                try { input.files = e.dataTransfer.files; show(input.files[0]); } catch (err) { /* unsupported */ }
+            }
+        });
+    }
+    var open = document.getElementById('camOpen' + id);
+    if (open && input) {
+        var card = document.getElementById('camCard' + id), video = document.getElementById('camVideo' + id), canvas = document.getElementById('camCanvas' + id),
+            preview = document.getElementById('camPreview' + id), shot = document.getElementById('camShot' + id), retake = document.getElementById('camRetake' + id),
+            close = document.getElementById('camClose' + id), stream = null;
+        function stop() { if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; } }
+        open.addEventListener('click', function () {
+            card.hidden = false; video.hidden = false; preview.hidden = true; shot.hidden = false; retake.hidden = true;
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { shot.hidden = true; return; }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(function (s) { stream = s; video.srcObject = s; video.play(); })
+                .catch(function () { shot.hidden = true; });
+        });
+        shot.addEventListener('click', function () {
+            if (!video.videoWidth) return;
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(function (blob) {
+                if (!blob) return;
+                preview.src = URL.createObjectURL(blob); video.hidden = true; preview.hidden = false; shot.hidden = true; retake.hidden = false;
+                try {
+                    var f = new File([blob], 'clinic_capture_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                    var dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                } catch (e) { /* DataTransfer unsupported */ }
+            }, 'image/jpeg', 0.92);
+        });
+        retake.addEventListener('click', function () { input.value = ''; video.hidden = false; preview.hidden = true; shot.hidden = false; retake.hidden = true; video.play(); });
+        close.addEventListener('click', function () { stop(); card.hidden = true; });
+    }
+})();
+</script>

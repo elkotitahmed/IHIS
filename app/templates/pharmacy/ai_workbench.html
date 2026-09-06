@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="page-title"><i class="fas fa-user-doctor" style="color:var(--ihis-primary);margin-right:var(--sp-2)"></i>{{ 'منصة الصيدلاني السريري' if g.lang == 'ar' else 'Clinical Pharmacist AI Workbench' }}</h1>
-        <p class="page-subtitle">{{ 'مراجعة العلاج الدوائي بمساعدة الذكاء الاصطناعي (Gemini)' if g.lang == 'ar' else 'AI-assisted medication therapy review (Gemini)' }}</p>
-    </div>
-    <div class="page-actions">
-        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.drug_check') }}"><i class="fas fa-dna"></i> {{ 'فحص التفاعلات' if g.lang == 'ar' else 'Drug Interaction Check' }}</a>
-    </div>
-</div>
+{% with wb_title='Clinical Pharmacist AI', wb_title_ar='الصيدلاني السريري الذكي',
+        wb_desc='Medication therapy review for pending prescriptions: interactions, duplicates and dose checks by rules first, with an AI summary of what to verify.',
+        wb_desc_ar='مراجعة العلاج الدوائي للوصفات المعلقة: التداخلات والتكرار وفحص الجرعات بالقواعد أولًا، مع ملخص ذكي لما يجب التحقق منه.',
+        wb_icon='fa-user-doctor', wb_facts=[('fa-list-check', 'Rules are authoritative', 'القواعد هي المرجع'), ('fa-wand-magic-sparkles', 'AI summarises on request', 'الذكاء يلخّص عند الطلب'), ('fa-user-check', 'Pharmacist decides', 'الصيدلاني يقرر')],
+        wb_back_url=url_for('pharmacy.drug_check'), wb_back_label='Interaction check', wb_back_label_ar='فحص التفاعلات' %}
+{% include 'ai/_workbench_hero.html' %}
+{% endwith %}
 
 <div class="kpi-grid mb-4">
     <div class="kpi-card">

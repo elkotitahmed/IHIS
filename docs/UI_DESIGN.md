@@ -57,6 +57,43 @@ Admissions) and **WORK** holds the rest, collapsed.
 Dark mode and RTL are handled by the same tokens; the layout uses logical
 properties (`inset-inline-*`, `margin-inline-*`) so Arabic mirrors correctly.
 
+## v4.1 — every page on the system, AI workbenches
+
+- **Global polish** (`ui.css`, "v4.1" block): the few remaining Bootstrap-only
+  classes (`badge bg-*`, `alert-*`, `table`, bare `h1` in a page header) are
+  mapped onto the design system, so pages that were never hand-styled still
+  look native.
+- **AI workbench pattern** for every model page: `ai/_workbench_hero.html`
+  (title, AI tag, computed status, model facts, provider pill, Back / AI Hub)
+  and `ai/_image_input.html` (drop zone with preview, optional camera, selected
+  patient document). Results use `.verdict` (danger / ok / info), `.compare`
+  (original vs AI image), `.meter-row`, `.review-box`, `.kv`.
+  Used by Fracture Detection, Tooth Segmentation, Skin Lesion Detection,
+  Clinical Alert Engine, Health Insights, Radiology AI, Clinical Pharmacist AI,
+  ICD-10 Coding Assistant, Appointment Optimisation, Hospital Analytics.
+- **AI strip on every role home** (`_ai_strip.html` + `ai_quick_tools()`):
+  Copilot entry plus up to four AI tools the role can reach, with their real
+  status. Nursing, pharmacy, lab, radiology, reception, billing, dentistry,
+  physiotherapy, admin, admissions.
+- **Quota discipline:** legacy pages (Health Insights, AI Patient Summary,
+  Lab Interpretation) render the deterministic result on a plain load and call
+  Gemini only from an explicit "✦ Explain with AI" click (`?ai=1`). Crawlers,
+  smoke walks and page refreshes no longer spend the free quota.
+
+## AI models — verified end to end (2026-09-06)
+
+| Capability | Engine | Check | Result |
+|-----------|--------|-------|--------|
+| Dermatology (skin lesion) | ResNet-50 + EfficientNet-B0, PyTorch | real photo through `/ai/skin-lesion-detection` | verdict, Grad-CAM served, review form |
+| Fracture detection | YOLOv8-nano | fractured-leg X-ray through `/ai/fracture-detection` | "Fracture suspected", annotated image served |
+| Tooth segmentation | U-Net (Keras) | panoramic X-ray through `/ai/tooth-segmentation` | mask served, coverage shown |
+| Radiology critical findings | rules + local classifier | positive / negated texts, real signed report | flags positive, ignores negation |
+| Clinical Copilot | local sections + Gemini | one provider call | narrative returned, cached |
+| Clinical alert engine, risk, coding, scheduling, analytics, pharmacist review, dental summary, ICD lookup, inbox priority, patient education | rules | direct service calls | all return results |
+
+One bug found and fixed on the way: Dentistry AI ordered procedures by a
+column that does not exist (`created_at` → `performed_at`).
+
 ## Verified (2026-09-06)
 
 - 333 unit/integration tests pass; the all-routes smoke walk (2,756

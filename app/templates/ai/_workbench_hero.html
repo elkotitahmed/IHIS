@@ -1,0 +1,22 @@
+{# AI workbench hero. Expects: wb_title, wb_title_ar, wb_desc, wb_desc_ar, wb_icon,
+   wb_facts (list of (icon, text, text_ar)), wb_back_url, wb_back_label, available (bool). #}
+{% set ar = g.lang == 'ar' %}
+<div class="wb-hero ai-surface">
+    <div>
+        <h1><span class="hub-card-icon model" style="width:38px;height:38px"><i class="fas {{ wb_icon }}"></i></span> {{ wb_title_ar if ar else wb_title }}
+            <span class="ai-tag">AI</span>
+            {% if available is defined %}<span class="hub-status hub-status-{{ 'available' if available else 'soon' }}">{{ ('متاح' if available else 'النموذج غير مثبّت') if ar else ('AVAILABLE' if available else 'MODEL NOT INSTALLED') }}</span>{% endif %}
+        </h1>
+        <p>{{ wb_desc_ar if ar else wb_desc }}</p>
+        {% if wb_facts %}
+        <div class="wb-facts">{% for ic, en, a in wb_facts %}<span><i class="fas {{ ic }}"></i> {{ a if ar else en }}</span>{% endfor %}</div>
+        {% endif %}
+    </div>
+    <div class="wb-hero-side">
+        {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'الذكاء جاهز' if ar and ai_status.state == 'READY' else 'AI ' ~ ai_status.state.replace('_',' ') }}</span>{% endif %}
+        <div class="d-flex gap-2 flex-wrap justify-content-end">
+            {% if wb_back_url %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ wb_back_url }}"><i class="fas fa-arrow-{{ 'right' if ar else 'left' }}"></i> {{ wb_back_label_ar if ar and wb_back_label_ar else wb_back_label or ('رجوع' if ar else 'Back') }}</a>{% endif %}
+            <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('ai.ai_hub') }}"><i class="fas fa-layer-group"></i> {{ 'مركز الذكاء' if ar else 'AI Hub' }}</a>
+        </div>
+    </div>
+</div>
