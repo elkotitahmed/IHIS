@@ -10,7 +10,7 @@ from app.models import (
     ImagingDoseRecord, ContrastAdministration,
 )
 from app.routes.decorators import roles_required, log_activity, save_upload
-from app.utils import has_appointment_conflict
+from app.utils import has_appointment_conflict, utcnow
 
 patient_bp = Blueprint('patient', __name__)
 ALLOWED = ['Patient', 'Doctor', 'Admin', 'SuperAdmin']
@@ -185,7 +185,7 @@ def book_appointment():
         if has_appointment_conflict(doctor.id, scheduled_at, duration):
             flash('This doctor already has an appointment at that time. Please choose another slot.', 'warning')
             return redirect(url_for('patient.book_appointment'))
-        if scheduled_at < datetime.now():
+        if scheduled_at < utcnow():
             flash('Please choose a future date and time.', 'warning')
             return redirect(url_for('patient.book_appointment'))
         appt = Appointment(

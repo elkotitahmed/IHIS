@@ -343,7 +343,7 @@ def session_start(session_id):
         flash('Only a scheduled session can be started.', 'warning')
         return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
     session.status = 'InProgress'
-    session.started_at = datetime.now()
+    session.started_at = utcnow()
     session.pain_before = request.form.get('pain_before', type=int)
     log_activity('START_THERAPY_SESSION', 'therapy_session', session.id,
                  f'patient_id={session.patient_id}')
@@ -362,7 +362,7 @@ def session_complete(session_id):
         flash('Only an in-progress session can be completed.', 'warning')
         return redirect(url_for('physiotherapy.session', plan_id=session.plan_id))
     session.status = 'Completed'
-    session.settled_at = datetime.now()
+    session.settled_at = utcnow()
     session.pain_after = request.form.get('pain_after', type=int)
     session.exercises_performed = request.form.get('exercises_performed')
     session.modalities = request.form.get('modalities')
@@ -377,7 +377,7 @@ def session_complete(session_id):
                  source_type='therapy_session', source_id=session.id,
                  department='Rehabilitation')
     if not session.started_at:
-        session.started_at = datetime.now()
+        session.started_at = utcnow()
     log_activity('COMPLETE_THERAPY_SESSION', 'therapy_session', session.id,
                  f'patient_id={session.patient_id}')
     from app.services.billing import ensure_bill_for_physio

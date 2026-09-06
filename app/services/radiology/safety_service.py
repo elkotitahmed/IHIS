@@ -9,6 +9,8 @@ Design principles:
 """
 from datetime import datetime, date
 
+from app.utils import utcnow
+
 from app import db
 from app.models import (Patient, PatientImagingSafetyProfile, MRIImplantRegistry,
                         ImagingSafetyScreening, RadiologyOrder, ImagingType,
@@ -379,7 +381,7 @@ class RadiologySafetyService:
             if hasattr(screening, k):
                 setattr(screening, k, v)
         screening.screening_completed_by = user_id
-        screening.screening_completed_at = datetime.now()
+        screening.screening_completed_at = utcnow()
         screening.screening_status = 'Cleared'
         db.session.commit()
         return screening

@@ -151,7 +151,7 @@ def run_preventive_sweep(now=None):
                          'follow_up', fu.id):
             continue
         from app.services.notifications import notify_patient
-        patient = Patient.query.get(fu.patient_id)
+        patient = fu.patient
         if patient is None:
             continue
         try:

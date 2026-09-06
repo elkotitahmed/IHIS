@@ -84,8 +84,10 @@ def _human_label(resource):
 def patient_index():
     from app.access import accessible_patient_ids
     pids = accessible_patient_ids(current_user)
+    from sqlalchemy.orm import joinedload
     patients = (Patient.query
                 .filter(Patient.id.in_(pids or [-1]))
+                .options(joinedload(Patient.user))
                 .order_by(Patient.id.desc()).limit(200).all())
     entries = [fhir_patient(p) for p in patients]
     payload = {

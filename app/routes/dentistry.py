@@ -200,7 +200,7 @@ def procedures(patient_id):
             notes=request.form.get('notes'),
         )
         if procedure.status == 'Completed':
-            procedure.completed_at = datetime.now()
+            procedure.completed_at = utcnow()
         db.session.add(procedure)
         db.session.flush()
         record_event(patient.id, 'DENTISTRY', f'Dental procedure: {procedure.procedure_name}',
@@ -424,9 +424,9 @@ def procedure_status(procedure_id):
         procedure.status = new_status
         if new_status == 'Scheduled':
             procedure.scheduled_at = _parse_datetime(request.form.get('scheduled_at')) or \
-                procedure.scheduled_at or datetime.now()
+                procedure.scheduled_at or utcnow()
         elif new_status == 'Completed':
-            procedure.completed_at = datetime.now()
+            procedure.completed_at = utcnow()
             record_event(procedure.patient_id, 'DENTISTRY',
                          f'Procedure completed: {procedure.procedure_name}',
                          f'Tooth {procedure.tooth_number}' if procedure.tooth_number else None,

@@ -108,14 +108,26 @@ def _drug_pairs(active):
     return pairs
 
 
-def _interaction_for_pair(a, b):
-    return (DrugInteraction.query
-            .filter(db.or_(
-                (DrugInteraction.medication_a_id == a.id) &
-                (DrugInteraction.medication_b_id == b.id),
-                (DrugInteraction.medication_a_id == b.id) &
-                (DrugInteraction.medication_b_id == a.id),
-            )).first())
+def _interactions_among(meds):
+    """Map of frozenset({med_a_id, med_b_id}) -> DrugInteraction for every
+    documented interaction among ``meds`` — a single query instead of one per
+    pair (which was O(n²) round-trips on long medication lists)."""
+    ids = {m.id for m in meds if m is not None}
+    if len(ids) < 2:
+        return {}
+    rows = (DrugInteraction.query
+            .filter(DrugInteraction.medication_a_id.in_(ids),
+                    DrugInteraction.medication_b_id.in_(ids)).all())
+    found = {}
+    for row in rows:
+        found.setdefault(frozenset((row.medication_a_id, row.medication_b_id)), row)
+    return found
+
+
+def _interaction_for_pair(a, b, lookup=None):
+    if lookup is None:
+        lookup = _interactions_among([a, b])
+    return lookup.get(frozenset((a.id, b.id)))
 
 
 def run_reconciliation(patient_id, pharmacist_id=None, home_medications=None,
@@ -211,11 +223,12 @@ def _find_discrepancies(reconciliation_id, patient_id, home, active):
                 'LOW', 'Verify the intended strength.'))
 
     # --- Drug-drug interactions among active meds ------------------------
+    lookup = _interactions_among([e['medication'] for e in active if e.get('medication')])
     for a, b in _drug_pairs(active):
-        interaction = _interaction_for_pair(a, b)
+        interaction = _interaction_for_pair(a, b, lookup)
         if interaction is None:
             continue
-        severity = interaction.severity or 'Moderate'
+        severity = _SEVERITY_MAP.get((interaction.severity or '').strip().lower(), 'MODERATE')
         findings.append(_disc(
             reconciliation_id, a.id, 'INTERACTION',
             f"Interaction '{interaction.label}': {interaction.description or ''}",
@@ -245,10 +258,21 @@ def _find_discrepancies(reconciliation_id, patient_id, home, active):
     return findings
 
 
+# Interaction rows use Minor/Moderate/Major/Contraindicated; discrepancy rows
+# use LOW/MODERATE/HIGH/CRITICAL (what the reconciliation UI colours by).
+_SEVERITY_MAP = {
+    'minor': 'LOW', 'low': 'LOW',
+    'moderate': 'MODERATE', 'medium': 'MODERATE',
+    'major': 'HIGH', 'high': 'HIGH', 'severe': 'HIGH',
+    'contraindicated': 'CRITICAL', 'critical': 'CRITICAL',
+}
+
+
 def _disc(reconciliation_id, medication_id, dtype, description,
           severity='MODERATE', recommended_action=''):
     if dtype not in VALID_DISCREPANCY_TYPES:
         dtype = 'DISCREPANCY'
+    severity = _SEVERITY_MAP.get((severity or '').strip().lower(), 'MODERATE')
     return ReconciliationDiscrepancy(
         reconciliation_id=reconciliation_id,
         medication_id=medication_id,

@@ -610,3 +610,27 @@ class UiActionWiringTests(AuditBase):
         self.assertIn(b'/auth/profile', r.data)
         self.assertIn(b'/super-admin/preventive-sweep', r.data)
         self.assertIn(b'/fhir/patients', r.data)
+
+
+class ReconciliationSeverityTests(AuditBase):
+    """Interaction rows use Minor/Moderate/Major/Contraindicated; discrepancy
+    rows are coloured by LOW/MODERATE/HIGH/CRITICAL. Both must map onto one
+    vocabulary, and the interaction lookup must be a single query."""
+
+    def test_interaction_severity_is_canonical_and_batched(self):
+        from app.models import DrugInteraction
+        from app.services import reconciliation as R
+        a = Medication(generic_name='Warfarin')
+        b = Medication(generic_name='Aspirin')
+        db.session.add_all([a, b])
+        db.session.flush()
+        db.session.add(DrugInteraction(medication_a_id=a.id, medication_b_id=b.id,
+                                       severity='Major', description='Bleeding risk'))
+        db.session.commit()
+        lookup = R._interactions_among([a, b])
+        self.assertEqual(len(lookup), 1)
+        self.assertIsNotNone(R._interaction_for_pair(b, a, lookup))
+        d = R._disc(1, a.id, 'INTERACTION', 'x', 'Major')
+        self.assertEqual(d.severity, 'HIGH')
+        self.assertEqual(R._disc(1, a.id, 'INTERACTION', 'x', 'Contraindicated').severity, 'CRITICAL')
+        self.assertEqual(R._disc(1, a.id, 'ALLERGY', 'x', 'HIGH').severity, 'HIGH')

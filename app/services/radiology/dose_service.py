@@ -9,6 +9,8 @@ Design principles:
 - Maintains calculation provenance
 """
 from datetime import datetime, date
+
+from app.utils import utcnow
 from sqlalchemy import func
 from sqlalchemy import extract as sa_extract, and_
 
@@ -249,7 +251,7 @@ class RadiationDoseService:
         recent_ct = ImagingDoseRecord.query.filter(
             ImagingDoseRecord.patient_id == patient_id,
             ImagingDoseRecord.modality == 'CT',
-            ImagingDoseRecord.study_date >= datetime.now().replace(
+            ImagingDoseRecord.study_date >= utcnow().replace(
                 month=1, day=1)).count()
         if recent_ct >= 2:
             alerts.append({
@@ -299,7 +301,7 @@ class RadiationDoseService:
                                 days=30):
         """Check for duplicate/recent imaging of the same type."""
         from datetime import timedelta
-        cutoff = datetime.now() - timedelta(days=days)
+        cutoff = utcnow() - timedelta(days=days)
         recent = RadiologyOrder.query.filter(
             RadiologyOrder.patient_id == patient_id,
             RadiologyOrder.order_date >= cutoff,
@@ -313,7 +315,7 @@ class RadiationDoseService:
             return {
                 'duplicate_found': True,
                 'previous_order': latest,
-                'days_ago': (datetime.now() - latest.order_date).days if latest.order_date else None,
+                'days_ago': (utcnow() - latest.order_date).days if latest.order_date else None,
                 'study_type': latest.imaging_type.name if latest.imaging_type else modality,
                 'message': (f'A {latest.imaging_type.name if latest.imaging_type else modality} '
                             f'was performed {self._days_ago_text(latest.order_date)} ago.'),
@@ -323,7 +325,7 @@ class RadiationDoseService:
     def _days_ago_text(self, dt):
         if not dt:
             return 'previously'
-        days = (datetime.now() - dt).days
+        days = (utcnow() - dt).days
         if days == 0:
             return 'today'
         elif days == 1:
@@ -351,6 +353,6 @@ class RadiationDoseService:
         record.is_corrected = True
         record.correction_reason = reason
         record.corrected_by = user_id
-        record.corrected_at = datetime.now()
+        record.corrected_at = utcnow()
         db.session.commit()
         return record

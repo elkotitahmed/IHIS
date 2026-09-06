@@ -69,7 +69,7 @@ def dashboard():
                 .order_by(Patient.id.desc()).limit(100).all())
     admitted = {a.patient_id: a for a in Admission.query.filter(
         Admission.status == 'Admitted', Admission.patient_id.in_(id_list)).all()}
-    now = datetime.now()
+    now = utcnow()
     due_doses = (MedicationAdministration.query
                  .filter(MedicationAdministration.patient_id.in_(id_list),
                          MedicationAdministration.status.in_(['Scheduled', 'Due']))
@@ -164,7 +164,7 @@ def vitals(patient_id):
             alert_svc.ensure_open_alert(
                 patient.id, 'ABNORMAL_VITALS', severity='LOW',
                 title=f'Abnormal vitals: {", ".join(abnormal)}',
-                message=f'Recorded at {datetime.now().strftime("%H:%M")} · {summary}',
+                message=f'Recorded at {utcnow().strftime("%H:%M")} · {summary}',
                 source_type='vital_sign', source_id=vital.id)
         log_activity('CREATE_VITAL_SIGN', 'patient', patient.id,
                      f'Nurse {current_user.id} recorded vital signs')
@@ -347,7 +347,7 @@ def mar(patient_id):
         MedicationAdministration.status.notin_(['Scheduled', 'Due']),
     ).order_by(MedicationAdministration.scheduled_time.desc().nulls_last(),
                MedicationAdministration.id.desc()).all()
-    now = datetime.now()
+    now = utcnow()
     return render_template('nursing/mar.html', title='Medication Administration Record',
                            patient=patient, active_rx=active_rx,
                            pending=pending, history=history, now=now,
@@ -376,7 +376,7 @@ def administration_outcome(admin_id):
         return redirect(url_for('nursing.mar', patient_id=admin.patient_id))
     admin.status = outcome
     admin.nurse_id = current_user.id
-    admin.administered_at = datetime.now()
+    admin.administered_at = utcnow()
     admin.reason = request.form.get('reason') if outcome != 'Administered' else None
     admin.notes = request.form.get('notes') or None
     med_label = (admin.medication.generic_name if admin.medication else admin.dose_given) or 'medication'

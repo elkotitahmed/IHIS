@@ -126,7 +126,7 @@ legacy download path.
 
 | Check | Result |
 |-------|--------|
-| Test suite | 257 tests pass (`python -m pytest tests -q`) |
+| Test suite | 258 tests pass (`python -m pytest tests -q`) |
 | Route smoke | 2,587 role/route combinations, 0 white pages, 0 500s |
 | Query profile | all hot pages within budget |
 | Migration chain | single head `b7c2e9d41f05`, applies to an empty DB |
@@ -135,13 +135,23 @@ legacy download path.
 | Live deployment | **not performed** (no target environment in this session) |
 | PostgreSQL | **not exercised live**; schema proven via migration chain on SQLite |
 
+## Closed in the final pass (2026-09-06)
+
+- Reconciliation: interaction lookup is one query for the whole medication
+  list (was one per pair), and discrepancy severity is normalised to
+  LOW/MODERATE/HIGH/CRITICAL.
+- FHIR patient index eager-loads users; the preventive sweep uses the
+  follow-up relationship instead of a query per row.
+- One clock: nursing, physiotherapy, dentistry, patient booking, dose and
+  safety services now stamp and compare with `utcnow()` like the models and
+  reception, so MAR due windows and session timestamps no longer drift by the
+  server's UTC offset.
+
 ## Known remaining items (non-blocking)
 
-- Reconciliation service mixes severity casing and runs O(n²) interaction
-  checks on large medication lists.
-- FHIR bundle and preventive sweep issue N+1 queries on very large datasets.
-- Some services call `datetime.now()` instead of `utcnow()`.
-- `safety_service.get_or_create` and a few `_log_*` helpers commit during GET.
+- AI tools persist their recommendation audit row when generated, including
+  on GET, and the radiology safety profile is created on first view. Both
+  are intentional idempotent writes.
 - Baseline migration has unnamed unique constraints (harmless on SQLite,
-  awkward to drop on PostgreSQL).
+  awkward to drop on PostgreSQL; leave until a PostgreSQL target exists).
 - Password complexity policy and a formal WCAG audit remain policy decisions.
