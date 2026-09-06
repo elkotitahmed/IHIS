@@ -1,4 +1,4 @@
-# iHIS — production container (Hugging Face Docker Space, Cloud Run, Render,
+# iHIS — production container (Hugging Face Docker Space, Render, Cloud Run,
 # any Docker host). Listens on $PORT (default 7860, the Hugging Face port).
 FROM python:3.12-slim
 
@@ -17,10 +17,20 @@ RUN apt-get update \
 RUN useradd -m -u 1000 ihis
 WORKDIR /app
 
-# CPU-only torch first (the default index pulls multi-GB CUDA wheels).
-COPY requirements.txt .
-RUN pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2" "torchvision>=0.17" \
-    && pip install -r requirements.txt \
+# IHIS_ML=1 (default): full image with the image-AI stack (CPU-only torch first,
+# because the default index pulls multi-GB CUDA wheels).
+# IHIS_ML=0: light image (~400 MB) for 512 MB hosts such as Render's free tier —
+# image-AI pages degrade gracefully; Copilot, radiology rules/classifier and
+# Gemini all work.
+ARG IHIS_ML=1
+COPY requirements.txt requirements-dev.txt ./
+RUN if [ "$IHIS_ML" = "1" ]; then \
+        pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2" "torchvision>=0.17" \
+        && pip install -r requirements.txt ; \
+    else \
+        grep -viE "pytest" requirements-dev.txt > /tmp/req-light.txt \
+        && pip install -r /tmp/req-light.txt gunicorn==23.0.0 "scikit-learn>=1.3" "pandas>=2.0" "joblib>=1.3" "a2wsgi>=1.10" ; \
+    fi \
     && pip install "huggingface_hub>=0.24"
 
 COPY --chown=ihis:ihis . .

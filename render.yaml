@@ -1,0 +1,31 @@
+# Render.com Blueprint — free web service (no credit card required).
+# Uses the light image (no torch/TensorFlow) so it fits the 512 MB free tier;
+# image-AI pages degrade gracefully, everything else (Copilot, radiology
+# critical-finding engine, Gemini) works. Ephemeral SQLite demo by default;
+# add DATABASE_URL (free Neon Postgres) for persistent records.
+services:
+  - type: web
+    name: ihis
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh deployment/entrypoint.sh
+    healthCheckPath: /health/live
+    envVars:
+      - key: IHIS_ML
+        value: "0"
+      - key: IHIS_EPHEMERAL_DEMO
+        value: "1"
+      - key: IHIS_DEMO_SEED
+        value: "1"
+      - key: IHIS_BEHIND_PROXY
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

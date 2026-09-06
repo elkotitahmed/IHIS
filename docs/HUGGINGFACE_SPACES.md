@@ -7,6 +7,16 @@ Two routes, depending on the account:
 | **A. Gradio SDK on ZeroGPU** (free personal account: verified e-mail, account ≥ 30 days, max 2 ZeroGPU Spaces) | Free | `README.md` front matter (`sdk: gradio`), `hf_space_app.py`, `requirements.txt`, `deployment/bootstrap.py` |
 | **B. Docker Space** (PRO / Team) or any Docker host (Cloud Run, Oracle Always-Free VM, Render…) | Paid on HF, free elsewhere | `Dockerfile`, `.dockerignore`, `deployment/entrypoint.sh`, `deployment/bootstrap.py` |
 
+**Verified 2026-09-06 on account `elkotit1` (free, created < 30 days ago):**
+creating a Space with `--flavor zero-a10g` *and* with `cpu-basic` both return
+`402 Payment Required` — "Static Spaces are free for everyone, but hosting
+Gradio and Docker Spaces on free cpu-basic requires a PRO subscription" /
+"If you recently created your account, please wait 30 days or request a
+community grant". So on a new free account the HF routes below work only
+after the account is 30 days old (ZeroGPU) or with a community grant / PRO.
+Until then use `render.yaml` (Render free tier, light image, no card) or the
+PythonAnywhere free tier (`docs/PYTHONANYWHERE_DEPLOYMENT.md`).
+
 Both routes run the **same** Flask application. Hugging Face's own guidance
 (`huggingface-spaces` skill, 2026): "Gradio and Docker Spaces run on compute
 and require a paid plan to create … free personal accounts can host up to 2
@@ -37,7 +47,7 @@ ZeroGPU Spaces". Route A is therefore the free path; the Space's mandatory
 | `GEMINI_API_KEY` | optional | enables the AI Copilot's Gemini features (free tier); everything degrades to local tools without it |
 | `IHIS_EPHEMERAL_DEMO` | `1` for a demo without a database | |
 | `IHIS_DEMO_SEED` | `1` to load the synthetic demo hospital | never on a real deployment |
-| `IHIS_MODELS_REPO` | optional | e.g. `elkotit/ihis-ai-models` |
+| `IHIS_MODELS_REPO` | optional | e.g. `elkotit1/ihis-ai-models` |
 | `HF_TOKEN` | only if the model repo is private | |
 | `AI_MAX_REQUESTS_PER_DAY` … | optional | see `docs/AI_CLINICAL_COPILOT.md` |
 
@@ -45,24 +55,24 @@ ZeroGPU Spaces". Route A is therefore the free path; the Space's mandatory
 
 ```bash
 hf auth login
-hf repos create elkotit/ihis-ai-models --type model --private
-hf upload elkotit/ihis-ai-models app/static/ai_models . --repo-type model --include "*.pt" --include "*.pth" --include "*.keras"
+hf repos create elkotit1/ihis-ai-models --type model --private
+hf upload elkotit1/ihis-ai-models app/static/ai_models . --repo-type model --include "*.pt" --include "*.pth" --include "*.keras"
 ```
 
 ## Route A — free ZeroGPU Space
 
 ```bash
 hf auth login
-hf repos create elkotit/ihis --type space --space-sdk gradio --flavor zero-a10g --public \
+hf repos create elkotit1/ihis --type space --space-sdk gradio --flavor zero-a10g --public \
    --secrets SECRET_KEY=<64-hex> --secrets GEMINI_API_KEY=<key> \
-   --env IHIS_EPHEMERAL_DEMO=1 --env IHIS_DEMO_SEED=1 --env IHIS_MODELS_REPO=elkotit/ihis-ai-models
-hf upload elkotit/ihis . --repo-type space --exclude "**/__pycache__/**" --exclude "venv/**" \
+   --env IHIS_EPHEMERAL_DEMO=1 --env IHIS_DEMO_SEED=1 --env IHIS_MODELS_REPO=elkotit1/ihis-ai-models
+hf upload elkotit1/ihis . --repo-type space --exclude "**/__pycache__/**" --exclude "venv/**" \
    --exclude "database/**" --exclude "AI apps/**" --exclude "app/static/ai_models/*.p*" \
    --exclude "app/static/ai_models/*.keras" --exclude "logs/**" --exclude "var/**" --exclude ".git/**"
-hf spaces logs elkotit/ihis --follow
+hf spaces logs elkotit1/ihis --follow
 ```
 
-The app is served at `https://elkotit-ihis.hf.space/ihis/` (landing page at
+The app is served at `https://elkotit1-ihis.hf.space/ihis/` (landing page at
 `/`). Add `--secrets DATABASE_URL=…` for a persistent Neon database.
 
 ## Route B — Docker
@@ -83,3 +93,12 @@ On Hugging Face (PRO): change the front matter to `sdk: docker` and
   Neon database for records; for durable files mount external storage.
 - The free Gemini tier is rate-limited; the platform's budget, cache and
   fallback keep the app usable when the provider is busy.
+
+## Route C — Render free tier (no credit card)
+
+`render.yaml` is a Blueprint: New → Blueprint → connect the GitHub repo. It
+builds the light image (`IHIS_ML=0`, no torch/TensorFlow, fits 512 MB),
+generates `SECRET_KEY`, runs the bootstrap (ephemeral SQLite demo + demo seed)
+and serves on the Render URL. Add `GEMINI_API_KEY` and, for persistent data,
+`DATABASE_URL` (free Neon Postgres) in the service's Environment tab. Free
+services sleep after 15 min idle and wake on the next request.
