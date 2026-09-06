@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+{% if patient %}{% include 'clinical/_patient_header.html' %}{% endif %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><span class="ai-spark">✦</span> {{ 'ذكاء الأسنان' if g.lang == 'ar' else 'Dentistry AI' }}</h1>
+        <p class="page-subtitle">{{ 'ملخص المخطط، النتائج، مسودة خطة العلاج، تثقيف المريض ومساعدة الشذوذات — يبقى طبيب الأسنان مسؤولًا' if g.lang == 'ar' else 'Chart summary, findings, treatment-plan draft, patient education and abnormality assistance — the dentist remains responsible' }}</p>
+    </div>
+    <div class="page-actions">
+        <span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">AI {{ ai_status.state.replace('_',' ') }}</span>
+        {% if patient %}
+        <a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-tooth"></i> {{ 'المخطط' if g.lang == 'ar' else 'Dental chart' }}</a>
+        <a href="{{ url_for('ai.tooth_segmentation') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-wand-magic-sparkles"></i> {{ 'تقسيم الأسنان' if g.lang == 'ar' else 'Tooth segmentation' }} {% if not tooth_available %}<span class="ai-soon">{{ 'محدود' if g.lang == 'ar' else 'MODEL MISSING' }}</span>{% endif %}</a>
+        <a href="{{ url_for('copilot.dentistry_ai') }}" class="btn-ihs btn-ihs-ghost">{{ 'مريض آخر' if g.lang == 'ar' else 'Another patient' }}</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if not patient %}
+<div class="card-premium">
+    <div class="card-header"><div class="card-title"><i class="fas fa-user-injured" style="color:var(--ihis-primary)"></i> {{ 'اختر مريضًا' if g.lang == 'ar' else 'Choose a patient' }}</div></div>
+    <div class="card-body flush"><div class="list-compact">
+        {% for p in patients %}
+        <a class="list-item" href="{{ url_for('copilot.dentistry_ai', patient_id=p.id) }}" style="text-decoration:none;color:inherit">
+            <i class="fas fa-user" style="color:var(--ihis-primary)"></i>
+            <div style="flex:1"><div style="font-size:0.8125rem;font-weight:500">{{ p.user.full_name if p.user else 'Patient #' ~ p.id }}</div><div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ (p.mrn or '-')|mrn_label }}</div></div>
+            <i class="fas fa-arrow-right"></i>
+        </a>
+        {% else %}
+        <div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا يوجد مرضى ضمن نطاقك' if g.lang == 'ar' else 'No patients in your scope' }}</div>
+        {% endfor %}
+    </div></div>
+</div>
+{% else %}
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><span class="ai-label ai-label-verified">{{ 'بيانات موثقة' if g.lang == 'ar' else 'VERIFIED CHART DATA' }}</span></div></div>
+            <div class="card-body">
+                {% for sec in summary.sections %}
+                <div class="ai-sec"><div class="ai-sec-title">{{ sec.title }}</div><ul>{% for i in sec['items'] %}<li>{{ i }}</li>{% endfor %}</ul></div>
+                {% endfor %}
+                {% if summary.context.images %}
+                <div class="ai-sec"><div class="ai-sec-title">{{ 'صور الأسنان' if g.lang == 'ar' else 'Dental images' }}</div><ul>{% for im in summary.context.images %}<li><a href="{{ url_for('ai.tooth_segmentation', doc=im.id) }}">{{ im.title or 'Image' }}</a> <span class="cell-muted">{{ im.date }}</span></li>{% endfor %}</ul></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card-premium" style="border-color:var(--ihis-purple-light)">
+            <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'إجراءات الذكاء' if g.lang == 'ar' else 'AI actions' }} <span class="ai-label ai-label-ai">AI ASSISTED</span></div></div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 mb-3" id="dentAiActions" data-patient="{{ patient.id }}">
+                    {% for key, en, ar in [('summary','Chart summary','ملخص المخطط'),('findings','Finding summary','ملخص النتائج'),('plan','Treatment-plan draft','مسودة خطة العلاج'),('education','Patient education','تثقيف المريض'),('abnormality','Abnormality assistance','مساعدة الشذوذات')] %}
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-dent-action="{{ key }}"><span class="ai-spark">✦</span> {{ ar if g.lang == 'ar' else en }}</button>
+                    {% endfor %}
+                </div>
+                <div id="dentAiOut" aria-live="polite"><div class="ai-note ai-note-muted">{{ 'اختر إجراءً. لا يُكتب شيء في السجل.' if g.lang == 'ar' else 'Choose an action. Nothing is written to the record.' }}</div></div>
+                <div class="ai-footer">{{ 'تحليل بمساعدة الذكاء لطبيب أسنان مرخّص؛ ليس تشخيصًا.' if g.lang == 'ar' else 'AI-assisted analysis for a licensed dentist; not a diagnosis.' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var wrap = document.getElementById('dentAiActions'), out = document.getElementById('dentAiOut');
+    if (!wrap) return;
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+    wrap.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-dent-action]'); if (!b) return;
+        out.innerHTML = '<div class="ai-loading"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        var m = document.querySelector('meta[name="csrf-token"]');
+        fetch('/ai/copilot/dentistry/' + wrap.getAttribute('data-patient') + '/run', {method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': m ? m.content : ''},
+            body: JSON.stringify({action: b.getAttribute('data-dent-action')})})
+        .then(function (r) { return r.json(); }).then(function (d) {
+            var h = '';
+            if (d.ai && (d.ai.status === 'ok' || d.ai.status === 'cached')) {
+                h += '<div class="ai-block"><div class="ai-block-head"><span class="ai-label ai-label-ai">✦ AI DRAFT</span>' + (d.ai.cached ? '<span class="ai-label ai-label-muted">cached</span>' : '') + '</div><div class="ai-text">' + esc(d.ai.text).replace(/\n/g, '<br>') + '</div></div>';
+            } else {
+                h += '<div class="ai-note ai-note-muted">' + esc((d.ai && d.ai.message) || d.error || 'AI unavailable; verified chart data on the left remains valid.') + '</div>';
+            }
+            out.innerHTML = h;
+        }).catch(function () { out.innerHTML = '<div class="ai-note ai-note-warn">Request failed.</div>'; });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

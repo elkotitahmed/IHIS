@@ -117,6 +117,8 @@ def create_app(config_name=None):
     app.register_blueprint(clinical_bp, url_prefix='/clinical')
     app.register_blueprint(search_bp, url_prefix='/search')
     app.register_blueprint(fhir_bp, url_prefix='/fhir')
+    from app.routes.copilot import copilot_bp
+    app.register_blueprint(copilot_bp)
 
     # In production the schema is owned by Alembic migrations (`flask db
     # upgrade`). For local development the convenience of auto-creating missing
@@ -601,6 +603,52 @@ def register_context_processors(app):
         ).count()
 
     app.context_processor(lambda: {'pending_tasks': pending_task_count()})
+
+    STAFF_AI_ROLES = {'Doctor', 'Nurse', 'Pharmacist', 'Dentist', 'Physiotherapist',
+                      'Radiologist', 'RadiologyTechnician', 'Admin', 'SuperAdmin'}
+
+    def copilot_context():
+        """One AI entry point + immediate critical-alert visibility. Computed
+        once per request; never calls the AI provider."""
+        from flask import session
+        from flask_login import current_user
+        empty = {'copilot_enabled': False, 'ai_status': None, 'critical_alerts': []}
+        if not current_user.is_authenticated:
+            return empty
+        # Cached on the request object (not ``g``: under a long-lived app
+        # context, e.g. the test client, ``g`` would leak between requests).
+        from flask import request
+        cached = getattr(request, '_copilot_ctx', None)
+        if cached is not None:
+            return cached
+        roles = {r.name for r in current_user.roles}
+        preview = session.get('preview_role')
+        if preview:
+            roles = {preview}
+        enabled = bool(roles & STAFF_AI_ROLES) and current_user.has_permission('AI_USE')
+        ai_status = None
+        if enabled:
+            try:
+                from app.services.ai.platform import status as ai_status_fn
+                ai_status = ai_status_fn()
+            except Exception:  # noqa: BLE001 - never break a page for the pill
+                ai_status = None
+        critical = []
+        if enabled and roles & {'Doctor', 'Admin', 'SuperAdmin'}:
+            try:
+                from app.models import ClinicalAlert
+                q = ClinicalAlert.query.filter(ClinicalAlert.status == 'OPEN',
+                                               ClinicalAlert.severity.in_(('CRITICAL', 'HIGH')))
+                if not roles & {'Admin', 'SuperAdmin'}:
+                    q = q.filter(ClinicalAlert.assigned_to == current_user.id)
+                critical = q.order_by(ClinicalAlert.created_at.desc()).limit(5).all()
+            except Exception:  # noqa: BLE001
+                critical = []
+        request._copilot_ctx = {'copilot_enabled': enabled, 'ai_status': ai_status,
+                                'critical_alerts': critical}
+        return request._copilot_ctx
+
+    app.context_processor(copilot_context)
 
     @app.before_request
     def set_language():

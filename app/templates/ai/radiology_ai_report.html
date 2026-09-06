@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'clinical/_patient_header.html' %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><span class="ai-spark">✦</span> {{ 'المساعدة السريرية بالذكاء — الأشعة' if g.lang == 'ar' else 'AI Clinical Assistance — Radiology' }}</h1>
+        <p class="page-subtitle">{{ order.imaging_type.name if order.imaging_type else 'Study' }} · {{ 'طلب' if g.lang == 'ar' else 'Order' }} #{{ order.id }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-file-medical"></i> {{ 'التقرير' if g.lang == 'ar' else 'Report page' }}</a>
+        <a href="{{ url_for('clinical.patient_360', patient_id=order.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> Patient 360</a>
+        <a href="{{ url_for('copilot.radiology_ai') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card-premium h-100">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-user-doctor" style="color:var(--ihis-primary)"></i> {{ 'تقرير أخصائي الأشعة' if g.lang == 'ar' else 'Radiologist Report' }}</div>
+                {% if report %}<span class="status-badge s-{{ report.status|lower }}">{{ report.status }}</span>{% endif %}
+            </div>
+            <div class="card-body">
+                {% if report %}
+                <div class="ai-sec"><div class="ai-sec-title">{{ 'النتائج' if g.lang == 'ar' else 'Findings' }}</div><p style="white-space:pre-wrap">{{ report.findings or '—' }}</p></div>
+                <div class="ai-sec"><div class="ai-sec-title">{{ 'الانطباع' if g.lang == 'ar' else 'Impression' }}</div><p style="white-space:pre-wrap;font-weight:600">{{ report.impression or '—' }}</p></div>
+                {% if report.recommendation %}<div class="ai-sec"><div class="ai-sec-title">{{ 'التوصية' if g.lang == 'ar' else 'Recommendation' }}</div><p>{{ report.recommendation }}</p></div>{% endif %}
+                <div class="cell-muted" style="font-size:0.75rem">{{ 'بواسطة' if g.lang == 'ar' else 'By' }} {{ report.reporter.full_name if report.reporter else '—' }} · {{ report.report_date.strftime('%d %b %Y %H:%M') if report.report_date else '' }}</div>
+                {% else %}
+                <div class="empty-state"><div class="empty-desc">{{ 'لم يُدخل تقرير بعد' if g.lang == 'ar' else 'No report entered yet' }}</div></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-premium h-100" style="border-color:var(--ihis-purple-light)">
+            <div class="card-header">
+                <div class="card-title"><span class="ai-spark">✦</span> {{ 'المساعدة السريرية بالذكاء' if g.lang == 'ar' else 'AI Clinical Assistance' }} <span class="ai-label ai-label-ai">{{ 'تحليل بمساعدة الذكاء' if g.lang == 'ar' else 'AI ANALYSIS' }}</span></div>
+                <span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">AI {{ ai_status.state.replace('_',' ') }}</span>
+            </div>
+            <div class="card-body">
+                {% if evaluation %}
+                <div class="ai-sec">
+                    <div class="ai-sec-title">{{ 'نتائج محتملة (القواعد + النموذج المحلي)' if g.lang == 'ar' else 'Potential findings (rules + local model)' }}</div>
+                    {% if evaluation.findings %}
+                    <div class="table-wrapper"><table class="table-ihs">
+                        <thead><tr><th>{{ 'النتيجة' if g.lang == 'ar' else 'Finding' }}</th><th>{{ 'الخطورة' if g.lang == 'ar' else 'Severity' }}</th><th>{{ 'القوة' if g.lang == 'ar' else 'Strength' }}</th><th>{{ 'الإجراء الموصى به' if g.lang == 'ar' else 'Recommended review action' }}</th></tr></thead>
+                        <tbody>
+                        {% for f in evaluation.findings %}
+                        <tr>
+                            <td class="cell-primary">{{ f.finding }}<div class="cell-muted" style="font-size:0.7rem">{{ 'سبب الإشارة' if g.lang == 'ar' else 'Why flagged' }}: {{ f.rationale }}</div></td>
+                            <td><span class="ai-label {{ 'ai-label-danger' if f.severity in ('CRITICAL','HIGH') else 'ai-label-warn' if f.severity == 'MODERATE' else 'ai-label-muted' }}">{{ f.severity }}</span></td>
+                            <td>{% if f.confidence %}{{ (f.confidence * 100)|round(0)|int }}%{% else %}{{ 'قاعدة' if g.lang == 'ar' else 'rule' if f.source == 'rule' else f.source }}{% endif %}</td>
+                            <td class="cell-secondary">{{ f.action }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody></table></div>
+                    {% else %}
+                    <p class="cell-muted">{{ 'لم تُشِر القواعد أو النموذج إلى نتيجة حرجة.' if g.lang == 'ar' else 'Neither the rules nor the local model flagged a critical finding.' }}</p>
+                    {% endif %}
+                </div>
+                <div class="ai-sec">
+                    <div class="ai-sec-title">{{ 'سير عمل التنبيه' if g.lang == 'ar' else 'Alert workflow' }}</div>
+                    {% if alert %}
+                    <div class="list-item" style="padding:8px 0">
+                        <div style="flex:1">
+                            <span class="ai-label {{ 'ai-label-danger' if alert.severity in ('CRITICAL','HIGH') else 'ai-label-warn' }}">{{ alert.severity }}</span>
+                            <span class="status-badge s-{{ 'pending' if alert.status == 'OPEN' else 'active' if alert.status in ('ACKNOWLEDGED','IN_PROGRESS') else 'completed' }}">{{ alert.status }}</span>
+                            {% if alert.ai_assisted %}<span class="ai-label ai-label-ai">{{ 'بمساعدة الذكاء' if g.lang == 'ar' else 'AI ASSISTED' }}</span>{% endif %}
+                            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'أُنشئ' if g.lang == 'ar' else 'Created' }} {{ alert.created_at.strftime('%d %b %H:%M') }}{% if alert.acknowledged_at %} · {{ 'أُقرّ' if g.lang == 'ar' else 'acknowledged' }} {{ alert.acknowledged_at.strftime('%d %b %H:%M') }}{% endif %}{% if task %} · {{ 'مهمة' if g.lang == 'ar' else 'task' }} #{{ task.id }} {{ task.status }}{% endif %}</div>
+                        </div>
+                        <a class="btn-ihs btn-ihs-primary btn-ihs-sm" href="{{ url_for('clinical.alert_detail', alert_id=alert.id) }}"><i class="fas fa-bell"></i> {{ 'فتح التنبيه' if g.lang == 'ar' else 'Open alert' }}</a>
+                    </div>
+                    {% else %}
+                    <p class="cell-muted">{{ 'لا يوجد تنبيه لهذا التقرير.' if g.lang == 'ar' else 'No alert exists for this report.' }}</p>
+                    {% endif %}
+                </div>
+                <div class="ai-sec">
+                    <div class="ai-sec-title">{{ 'شرح Gemini (اختياري)' if g.lang == 'ar' else 'Gemini explanation (optional)' }}</div>
+                    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="radAiExplain" data-order="{{ order.id }}"><span class="ai-spark">✦</span> {{ 'تحليل بالذكاء' if g.lang == 'ar' else 'Analyze with AI' }}</button>
+                    <div id="radAiOut" class="mt-2" aria-live="polite"></div>
+                </div>
+                {% else %}
+                <p class="cell-muted">{{ 'أدخل التقرير أولًا.' if g.lang == 'ar' else 'Enter the report first.' }}</p>
+                {% endif %}
+                <div class="ai-footer">{{ 'مساعدة الذكاء لا تمثّل التفسير الرسمي لأخصائي الأشعة ولا تُغيّر التقرير.' if g.lang == 'ar' else 'AI assistance is not the official radiologist interpretation and never changes the report.' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var b = document.getElementById('radAiExplain'), out = document.getElementById('radAiOut');
+    if (!b) return;
+    b.addEventListener('click', function () {
+        b.disabled = true; out.innerHTML = '<div class="ai-loading"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        var m = document.querySelector('meta[name="csrf-token"]');
+        fetch('/ai/copilot/result-review', {method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': m ? m.content : ''},
+            body: JSON.stringify({kind: 'radiology', id: b.getAttribute('data-order')})})
+        .then(function (r) { return r.json(); }).then(function (d) {
+            b.disabled = false;
+            var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+            if (d.ai && (d.ai.status === 'ok' || d.ai.status === 'cached')) {
+                out.innerHTML = '<div class="ai-block"><div class="ai-block-head"><span class="ai-label ai-label-ai">✦ AI ASSISTED</span>' + (d.ai.cached ? '<span class="ai-label ai-label-muted">cached</span>' : '') + '</div><div class="ai-text">' + esc(d.ai.text).replace(/\n/g, '<br>') + '</div></div>';
+            } else {
+                out.innerHTML = '<div class="ai-note ai-note-muted">' + esc((d.ai && d.ai.message) || d.error || 'AI unavailable; the rule and model results above remain valid.') + '</div>';
+            }
+        }).catch(function () { b.disabled = false; out.innerHTML = '<div class="ai-note ai-note-warn">Request failed.</div>'; });
+    });
+});
+</script>
+{% endblock %}

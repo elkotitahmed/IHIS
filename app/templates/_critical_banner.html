@@ -1,0 +1,39 @@
+{# Immediate, visible critical-finding notification for the responsible physician
+   (and supervisors). Never hidden inside the notification centre only. #}
+{% if critical_alerts %}
+<div class="critical-banner" role="alert" aria-live="assertive">
+    <i class="fas fa-triangle-exclamation"></i>
+    <strong>{{ 'نتيجة حرجة تتطلب الإقرار' if g.lang == 'ar' else 'CRITICAL FINDING — ACKNOWLEDGEMENT REQUIRED' }}</strong>
+    <span>{{ critical_alerts|length }} {{ 'تنبيه مفتوح' if g.lang == 'ar' else 'open alert(s)' }}</span>
+    <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" id="criticalBannerToggle" aria-expanded="false" aria-controls="criticalDrawer">
+        <i class="fas fa-list"></i> {{ 'عرض' if g.lang == 'ar' else 'Show' }}
+    </button>
+    <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.alerts_all') }}?severity=critical">{{ 'كل التنبيهات' if g.lang == 'ar' else 'All alerts' }}</a>
+</div>
+<div class="critical-drawer" id="criticalDrawer" hidden>
+    {% for a in critical_alerts %}
+    <div class="list-item">
+        <span class="ai-label {{ 'ai-label-danger' if a.severity == 'CRITICAL' else 'ai-label-warn' }}">{{ a.severity }}</span>
+        {% if a.ai_assisted %}<span class="ai-label ai-label-ai">✦ {{ 'بمساعدة الذكاء' if g.lang == 'ar' else 'AI ASSISTED' }}</span>{% endif %}
+        <div style="flex:1;min-width:200px">
+            <div style="font-weight:600;font-size:0.8125rem">{{ a.title }}</div>
+            <div style="font-size:0.75rem;color:var(--ihis-text-muted)">
+                {{ 'المريض' if g.lang == 'ar' else 'Patient' }}: {{ a.patient.user.full_name if a.patient and a.patient.user else '#' ~ a.patient_id }}
+                · {{ 'المصدر' if g.lang == 'ar' else 'Source' }}: {{ (a.source_type or '')|replace('_', ' ') }}
+                · {{ a.created_at.strftime('%d %b %H:%M') }}
+            </div>
+        </div>
+        {% if a.source_type == 'radiology_report' %}
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('copilot.radiology_ai') }}"><i class="fas fa-x-ray"></i> {{ 'مراجعة التقرير' if g.lang == 'ar' else 'Review report' }}</a>
+        {% endif %}
+        <form method="post" action="{{ url_for('clinical.alert_detail', alert_id=a.id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="acknowledge">
+            <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'إقرار' if g.lang == 'ar' else 'Acknowledge' }}</button>
+        </form>
+        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.alert_detail', alert_id=a.id) }}">{{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</a>
+        <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=a.patient_id) }}">Patient 360</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

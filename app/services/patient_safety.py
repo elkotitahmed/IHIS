@@ -51,7 +51,15 @@ def _active_meds(patient_id, limit=6):
 
 
 def patient_safety_context(patient_id):
-    """Return a dict of safety data safe to splat into render_template."""
+    """Return a dict of safety data safe to splat into render_template.
+
+    Also records the patient on ``g`` so the AI Copilot opens in context."""
+    try:
+        from flask import has_request_context, request
+        if has_request_context():
+            request.copilot_patient_id = patient_id
+    except Exception:  # noqa: BLE001
+        pass
     return {
         'allergies': _active_allergies(patient_id),
         'problems': _active_problems(patient_id),

@@ -333,48 +333,13 @@ def enter_report(order_id):
                      f'Impression: {impression or ""}',
                      source_type='radiology_order', source_id=order.id,
                      department='Radiology')
-        ai_result = None
-        try:
-            from app.services.radiology_critical_ai import RadiologyCriticalAI
-            ai_result = RadiologyCriticalAI().analyze(
-                findings=findings,
-                impression=impression,
-                study_type=order.imaging_type.name if order.imaging_type else '')
-        except Exception as exc:  # noqa: BLE001 - the report must never be lost to an AI failure
-            current_app.logger.warning('Radiology critical AI unavailable: %s: %s',
-                                       type(exc).__name__, exc)
-
+        # Critical-finding engine: rules (authoritative) + local classifier +
+        # radiologist flag -> alert, urgent task, notifications, audit.
+        from app.services import radiology_critical as rc
         manual_critical = bool(request.form.get('critical_finding'))
-        if (ai_result and ai_result.get('critical_finding')) or manual_critical:
-            priority = (ai_result or {}).get('priority', 'CRITICAL' if manual_critical else 'URGENT')
-            severity = 'CRITICAL' if priority == 'CRITICAL' else 'HIGH'
-            finding_text = (request.form.get('critical_finding_text') or
-                            (ai_result or {}).get('finding_type') or 'Critical finding')
-            alert_svc.ensure_open_alert(
-                order.patient_id, 'CRITICAL_RADIOLOGY', severity=severity,
-                title=f'{priority.title()} finding on {order.imaging_type.name if order.imaging_type else "study"}',
-                message=(f'Order #{order.id} — {finding_text}. '
-                         + (f'AI confidence: {ai_result.get("confidence", 0) * 100:.1f}%. '
-                            f'{ai_result.get("message", "")}' if ai_result else 'Flagged by the radiologist.')),
-                source_type='radiology_order', source_id=order.id)
-            # Structured critical-result communication record (escalation trail).
-            existing = CriticalFindingNotification.query.filter_by(
-                order_id=order.id, acknowledged=False).first()
-            if existing is None:
-                responsible = order.doctor.user_id if order.doctor else None
-                db.session.add(CriticalFindingNotification(
-                    order_id=order.id, finding=finding_text,
-                    severity='Critical' if severity == 'CRITICAL' else 'Urgent',
-                    identified_by=current_user.id,
-                    responsible_clinician_id=responsible,
-                    notification_method='EMR Message', notification_time=utcnow(),
-                    recipient_name=(order.doctor.user.full_name
-                                    if order.doctor and order.doctor.user else None)))
-                notify_ordering_clinicians(
-                    order, f'CRITICAL radiology finding — order #{order.id}',
-                    f'{finding_text}. Immediate review and acknowledgement required.',
-                    notification_type='critical', entity_type='radiology_order',
-                    entity_id=order.id)
+        evaluation = rc.evaluate_report(order, report, manual_text=request.form.get('critical_finding_text'),
+                                        manual=manual_critical)
+        rc.raise_alert(order, report, evaluation, actor_id=current_user.id)
         db.session.commit()
         return redirect(url_for('radiology.orders'))
 
@@ -416,6 +381,10 @@ def sign_report(order_id):
                                entity_type='radiology_order', entity_id=order.id)
     task_svc.complete_for_resource('radiology_order', order.id, 'Report signed')
     task_svc.complete_for_resource('radiology_report_task', order.id, 'Report signed')
+    # Re-evaluate at signing so an amended/signed report can never bypass the
+    # critical-finding workflow (idempotent per report).
+    from app.services import radiology_critical as rc
+    rc.raise_alert(order, report, rc.evaluate_report(order, report), actor_id=current_user.id)
     db.session.commit()
     flash('Radiology report signed and locked.', 'success')
     return redirect(url_for('radiology.enter_report', order_id=order.id))

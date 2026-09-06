@@ -1,0 +1,10 @@
+{# AI Clinical Copilot: the single AI entry point. Rendered for staff roles with AI_USE.
+   The panel is empty until opened — no AI request happens on page load. #}
+<div class="ai-panel-backdrop" id="copilotBackdrop"></div>
+<aside class="ai-panel" id="copilotPanel" role="dialog" aria-modal="true" aria-labelledby="copilotTitle" aria-hidden="true">
+    <div class="ai-panel-head">
+        <div id="copilotTitle" class="ai-panel-title"><span class="ai-spark">✦</span> {{ 'المساعد السريري الذكي' if g.lang == 'ar' else 'AI Clinical Copilot' }}</div>
+        <button type="button" class="btn-icon" data-ai-close aria-label="{{ 'إغلاق' if g.lang == 'ar' else 'Close' }}" title="Esc"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="ai-panel-body"></div>
+</aside>

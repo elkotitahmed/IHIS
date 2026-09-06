@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><span class="ai-spark">✦</span> {{ 'ذكاء الأشعة' if g.lang == 'ar' else 'Radiology AI' }}</h1>
+        <p class="page-subtitle">{{ 'تحليل التقارير بمساعدة الذكاء الاصطناعي: اكتشاف النتائج الحرجة، التنبيه، المهمة، الإشعار، الإقرار، التدقيق' if g.lang == 'ar' else 'AI-assisted report analysis: critical finding → alert → urgent task → notification → acknowledgement → audit' }}</p>
+    </div>
+    <div class="page-actions">
+        <span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">AI {{ ai_status.state.replace('_', ' ') }}</span>
+        <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-bell"></i> {{ 'التنبيهات' if g.lang == 'ar' else 'Clinical Alerts' }}</a>
+    </div>
+</div>
+
+<div class="ai-note ai-note-muted mb-3">
+    {{ 'القواعد الحتمية والنموذج المحلي هما المرجع؛ يشرح Gemini فقط عند الطلب. لا يُعدَّل تقرير أخصائي الأشعة أبدًا.' if g.lang == 'ar' else 'Deterministic rules and the local classifier are authoritative; Gemini only explains on request. The radiologist\'s report is never modified.' }}
+</div>
+
+<div class="card-premium">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-x-ray" style="color:var(--ihis-primary)"></i> {{ 'التقارير الأخيرة' if g.lang == 'ar' else 'Recent Reports' }}</div>
+        <span class="status-badge s-pending" style="font-size:0.6875rem">{{ rows|length }}</span>
+    </div>
+    <div class="card-body flush">
+        <div class="table-wrapper">
+            <table class="table-ihs">
+                <thead><tr>
+                    <th>{{ 'التاريخ' if g.lang == 'ar' else 'Date' }}</th>
+                    <th>{{ 'المريض' if g.lang == 'ar' else 'Patient' }}</th>
+                    <th>{{ 'الدراسة' if g.lang == 'ar' else 'Study' }}</th>
+                    <th>{{ 'الانطباع' if g.lang == 'ar' else 'Impression' }}</th>
+                    <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                    <th>{{ 'تنبيه' if g.lang == 'ar' else 'Alert' }}</th>
+                    <th></th>
+                </tr></thead>
+                <tbody>
+                {% for r in rows %}
+                    <tr>
+                        <td class="cell-secondary">{{ r.report.report_date.strftime('%d %b %Y') if r.report.report_date else '-' }}</td>
+                        <td class="cell-primary">{{ r.order.patient.user.full_name if r.order.patient and r.order.patient.user else '#' ~ r.order.patient_id }}</td>
+                        <td>{{ r.order.imaging_type.name if r.order.imaging_type else '-' }}</td>
+                        <td class="cell-secondary" style="max-width:320px">{{ (r.report.impression or '')[:110] }}{% if (r.report.impression or '')|length > 110 %}…{% endif %}</td>
+                        <td><span class="status-badge s-{{ r.report.status|lower }}">{{ r.report.status }}</span></td>
+                        <td>{% if r.alert %}<span class="ai-label {{ 'ai-label-danger' if r.alert.severity in ('CRITICAL','HIGH') else 'ai-label-warn' }}">{{ r.alert.severity }} · {{ r.alert.status }}</span>{% else %}<span class="cell-muted">—</span>{% endif %}</td>
+                        <td><a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('copilot.radiology_ai_report', order_id=r.order.id) }}"><span class="ai-spark">✦</span> {{ 'تحليل' if g.lang == 'ar' else 'AI assistance' }}</a></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7"><div class="empty-state" style="padding:1.5rem"><div class="empty-desc">{{ 'لا توجد تقارير ضمن نطاقك' if g.lang == 'ar' else 'No reports in your scope' }}</div></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

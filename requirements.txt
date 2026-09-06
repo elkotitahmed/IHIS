@@ -26,3 +26,7 @@ timm>=1.0.0
 opencv-python-headless>=4.8.0
 Pillow>=10.0.0
 numpy>=1.24.0
+# Radiology critical-results classifier (AI apps/RadiologyAI_Integration_Package)
+scikit-learn>=1.3
+pandas>=2.0
+joblib>=1.3

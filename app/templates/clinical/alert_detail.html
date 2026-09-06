@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'clinical/_patient_header.html' %}
+{% set sev_cls = 'ai-label-danger' if alert.severity in ('CRITICAL','HIGH') else 'ai-label-warn' if alert.severity == 'MODERATE' else 'ai-label-muted' %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-bell" style="color:var(--ihis-danger)"></i> {{ alert.title }}</h1>
+        <p class="page-subtitle">
+            <span class="ai-label {{ sev_cls }}">{{ alert.severity }}</span>
+            <span class="status-badge s-{{ 'pending' if alert.status == 'OPEN' else 'active' if alert.status in ('ACKNOWLEDGED','IN_PROGRESS') else 'completed' if alert.status == 'RESOLVED' else 'cancelled' }}">{{ alert.status.replace('_',' ') }}</span>
+            {% if alert.ai_assisted %}<span class="ai-label ai-label-ai">✦ {{ 'بمساعدة الذكاء' if g.lang == 'ar' else 'AI ASSISTED' }}</span>{% endif %}
+            {% if alert.escalated_at %}<span class="ai-label ai-label-danger">{{ 'مُصعَّد' if g.lang == 'ar' else 'ESCALATED' }}</span>{% endif %}
+            · {{ (alert.alert_type or '')|replace('_',' ') }} · {{ alert.created_at.strftime('%d %b %Y %H:%M') }}
+        </p>
+    </div>
+    <div class="page-actions">
+        {% if report %}<a href="{{ url_for('copilot.radiology_ai_report', order_id=report.order_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-x-ray"></i> {{ 'مراجعة التقرير' if g.lang == 'ar' else 'Review report' }}</a>{% endif %}
+        <a href="{{ url_for('clinical.patient_360', patient_id=alert.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> Patient 360</a>
+        <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'كل التنبيهات' if g.lang == 'ar' else 'All alerts' }}</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-circle-info" style="color:var(--ihis-info)"></i> {{ 'النتيجة' if g.lang == 'ar' else 'Finding' }}</div></div>
+            <div class="card-body">
+                <p style="white-space:pre-wrap">{{ alert.message }}</p>
+                {% if alert.rationale %}
+                <div class="ai-sec"><div class="ai-sec-title">{{ 'سبب الإشارة' if g.lang == 'ar' else 'Why it was flagged' }}</div><p style="white-space:pre-wrap;font-size:0.8rem">{{ alert.rationale }}</p></div>
+                {% endif %}
+                {% if alert.confidence %}<div class="cell-muted" style="font-size:0.75rem">{{ 'قوة النموذج' if g.lang == 'ar' else 'Model confidence' }}: {{ (alert.confidence * 100)|round(0)|int }}% — {{ 'مؤشر وليس يقينًا' if g.lang == 'ar' else 'an indicator, not certainty' }}</div>{% endif %}
+                {% if report %}
+                <div class="ai-sec mt-3"><div class="ai-sec-title">{{ 'تقرير أخصائي الأشعة (المصدر)' if g.lang == 'ar' else 'Radiologist report (source)' }}</div>
+                    <p style="white-space:pre-wrap;font-size:0.8rem"><strong>{{ 'الانطباع' if g.lang == 'ar' else 'Impression' }}:</strong> {{ report.impression or '—' }}</p>
+                    <p style="white-space:pre-wrap;font-size:0.8rem"><strong>{{ 'النتائج' if g.lang == 'ar' else 'Findings' }}:</strong> {{ report.findings or '—' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-list-check" style="color:var(--ihis-primary)"></i> {{ 'دورة حياة التنبيه' if g.lang == 'ar' else 'Alert lifecycle' }}</div></div>
+            <div class="card-body">
+                <ol class="ai-lifecycle" style="display:flex;gap:6px;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 12px;font-size:0.7rem;font-weight:700">
+                    {% for st in ['OPEN','ACKNOWLEDGED','IN_PROGRESS','RESOLVED'] %}
+                    {% set done = (['OPEN','ACKNOWLEDGED','IN_PROGRESS','RESOLVED'].index(alert.status) if alert.status in ['OPEN','ACKNOWLEDGED','IN_PROGRESS','RESOLVED'] else -1) >= loop.index0 %}
+                    <li class="status-badge {{ 's-completed' if done else 's-draft' }}">{{ st.replace('_',' ') }}</li>
+                    {% endfor %}
+                    {% if alert.status == 'DISMISSED' %}<li class="status-badge s-cancelled">DISMISSED</li>{% endif %}
+                </ol>
+                <dl class="row" style="font-size:0.8rem">
+                    <dt class="col-4">{{ 'المسؤول' if g.lang == 'ar' else 'Responsible physician' }}</dt><dd class="col-8">{% if alert.assigned_to %}{{ alert.acknowledger.full_name if alert.acknowledger and alert.acknowledged_by == alert.assigned_to else (receipts[0].user.full_name if receipts and receipts[0].user and receipts[0].user_id == alert.assigned_to else 'User #' ~ alert.assigned_to) }}{% else %}—{% endif %}</dd>
+                    <dt class="col-4">{{ 'أُقرّ بواسطة' if g.lang == 'ar' else 'Acknowledged by' }}</dt><dd class="col-8">{{ alert.acknowledger.full_name if alert.acknowledger else '—' }} {% if alert.acknowledged_at %}<span class="cell-muted">{{ alert.acknowledged_at.strftime('%d %b %H:%M') }}</span>{% endif %}</dd>
+                    {% if alert.started_at %}<dt class="col-4">{{ 'بدأ العمل' if g.lang == 'ar' else 'In progress since' }}</dt><dd class="col-8">{{ alert.started_at.strftime('%d %b %H:%M') }}</dd>{% endif %}
+                    {% if alert.action_taken %}<dt class="col-4">{{ 'الإجراء المتخذ' if g.lang == 'ar' else 'Action taken' }}</dt><dd class="col-8">{{ alert.action_taken }}</dd>{% endif %}
+                    {% if alert.resolved_at %}<dt class="col-4">{{ 'أُغلق بواسطة' if g.lang == 'ar' else 'Closed by' }}</dt><dd class="col-8">{{ alert.resolver.full_name if alert.resolver else '—' }} <span class="cell-muted">{{ alert.resolved_at.strftime('%d %b %H:%M') }}</span>{% if alert.resolved_note %} — {{ alert.resolved_note }}{% endif %}</dd>{% endif %}
+                    {% if alert.escalated_at %}<dt class="col-4">{{ 'التصعيد' if g.lang == 'ar' else 'Escalation' }}</dt><dd class="col-8">{{ alert.escalated_at.strftime('%d %b %H:%M') }} — {{ alert.escalation_note }}</dd>{% endif %}
+                </dl>
+
+                {% if current_user.has_permission('ALERT_ACK') and alert.status in ('OPEN','ACKNOWLEDGED','IN_PROGRESS') %}
+                <div class="d-flex flex-wrap gap-2 align-items-start">
+                    {% if alert.status == 'OPEN' %}
+                    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="acknowledge">
+                        <button class="btn-ihs btn-ihs-primary"><i class="fas fa-check"></i> {{ 'إقرار' if g.lang == 'ar' else 'Acknowledge' }}</button></form>
+                    {% endif %}
+                    {% if alert.status in ('OPEN','ACKNOWLEDGED') %}
+                    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="start">
+                        <button class="btn-ihs btn-ihs-outline"><i class="fas fa-play"></i> {{ 'بدء العمل' if g.lang == 'ar' else 'Start action' }}</button></form>
+                    {% endif %}
+                </div>
+                <form method="post" class="mt-3" style="border-top:1px solid var(--ihis-border-light);padding-top:10px">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="resolve">
+                    <label class="form-label small fw-semibold">{{ 'الإجراء السريري المتخذ (إلزامي للحالات الحرجة)' if g.lang == 'ar' else 'Clinical action taken (required for high-severity alerts)' }}</label>
+                    <textarea name="action_taken" class="form-control form-control-sm" rows="2" data-ac="plan" placeholder="{{ 'مثال: تمت مراجعة المريض سريريًا، أُدخل أنبوب صدري…' if g.lang == 'ar' else 'e.g. Patient reviewed at bedside; chest drain inserted; family informed' }}"></textarea>
+                    <input type="text" name="note" class="form-control form-control-sm mt-2" placeholder="{{ 'ملاحظة الإغلاق (اختياري)' if g.lang == 'ar' else 'Resolution note (optional)' }}">
+                    <button class="btn-ihs btn-ihs-success mt-2"><i class="fas fa-circle-check"></i> {{ 'إغلاق التنبيه' if g.lang == 'ar' else 'Resolve alert' }}</button>
+                </form>
+                <form method="post" class="mt-2" onsubmit="return this.note.value.trim() || {{ 'false' if alert.severity in ('CRITICAL','HIGH') else 'true' }} || (alert('{{ 'السبب مطلوب' if g.lang == 'ar' else 'A reason is required' }}'), false);">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="dismiss">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="note" class="form-control" placeholder="{{ 'سبب الرفض' if g.lang == 'ar' else 'Reason for dismissal' }}{% if alert.severity in ('CRITICAL','HIGH') %} ({{ 'إلزامي' if g.lang == 'ar' else 'required' }}){% endif %}">
+                        <button class="btn-ihs btn-ihs-outline" style="color:var(--ihis-danger);border-color:var(--ihis-danger)"><i class="fas fa-ban"></i> {{ 'رفض' if g.lang == 'ar' else 'Dismiss' }}</button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-paper-plane" style="color:var(--ihis-info)"></i> {{ 'من تلقّى التنبيه' if g.lang == 'ar' else 'Who was notified' }}</div><span class="status-badge s-pending" style="font-size:0.6875rem">{{ receipts|length }}</span></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for n in receipts %}
+                <div class="list-item"><i class="fas fa-user" style="color:var(--ihis-primary)"></i><div style="flex:1"><div style="font-size:0.8125rem">{{ n.user.full_name if n.user else 'User #' ~ n.user_id }}</div><div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ n.created_at.strftime('%d %b %H:%M') }} · {{ 'مقروء' if g.lang == 'ar' and n.is_read else 'read' if n.is_read else 'غير مقروء' if g.lang == 'ar' else 'unread' }}</div></div></div>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا إشعارات' if g.lang == 'ar' else 'No notifications recorded' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-warning)"></i> {{ 'المهام' if g.lang == 'ar' else 'Tasks' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for t in tasks %}
+                <a class="list-item" href="{{ url_for('tasks.detail', task_id=t.id) }}" style="text-decoration:none;color:inherit"><span class="status-badge s-{{ 'pending' if t.status in ('NEW','ASSIGNED') else 'active' if t.status == 'IN_PROGRESS' else 'completed' if t.status == 'COMPLETED' else 'cancelled' }}">{{ t.status }}</span><div style="flex:1;font-size:0.8125rem">{{ t.title }}<div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ t.priority }} · {{ t.assignee.full_name if t.assignee else t.assigned_role or '—' }}</div></div></a>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا مهام' if g.lang == 'ar' else 'No tasks' }}</div>{% endfor %}
+            </div></div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-clock-rotate-left" style="color:var(--ihis-text-muted)"></i> {{ 'سجل التدقيق' if g.lang == 'ar' else 'Audit trail' }}</div></div>
+            <div class="card-body flush"><div class="list-compact">
+                {% for e in audit %}
+                <div class="list-item"><div style="flex:1;font-size:0.75rem"><strong>{{ e.action }}</strong> — {{ e.user_name }} <span class="cell-muted">{{ e.created_at.strftime('%d %b %H:%M') }}</span>{% if e.details %}<div class="cell-muted">{{ e.details }}</div>{% endif %}</div></div>
+                {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">—</div>{% endfor %}
+            </div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

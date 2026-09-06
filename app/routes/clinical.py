@@ -8,13 +8,13 @@ patient at all times.
 """
 import json
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
 from app import db
 from app.access import (accessible_patient_ids, patient_access_required,
                         require_patient_access)
-from app.models import (Admission, Allergy, CareTeam, CareTeamMember, ClinicalAlert,
+from app.models import (AuditLog, Admission, Allergy, CareTeam, CareTeamMember, ClinicalAlert,
                         ClinicianTemplate, ClinicalReminder, Department, Doctor,
                         FollowUp, ImagingType, ImmunizationRecord, LabOrder, LabResult,
                         LabTestCatalog, MedicalRecord, Medication, OrderSet,
@@ -110,11 +110,84 @@ def workbench():
 @permissions_required(ALERT_VIEW)
 def alerts_all():
     pids = accessible_patient_ids(current_user)
-    alerts = (ClinicalAlert.query
-              .filter(ClinicalAlert.patient_id.in_(pids or [-1]))
-              .order_by(ClinicalAlert.created_at.desc()).limit(100).all())
+    q = ClinicalAlert.query.filter(ClinicalAlert.patient_id.in_(pids or [-1]))
+    f_sev = (request.args.get('severity') or '').upper()
+    f_status = (request.args.get('status') or '').upper()
+    if f_sev == 'CRITICAL':
+        q = q.filter(ClinicalAlert.severity.in_(('CRITICAL', 'HIGH')))
+    elif f_sev in alert_svc.SEVERITIES:
+        q = q.filter(ClinicalAlert.severity == f_sev)
+    if f_status == 'ACTIVE':
+        q = q.filter(ClinicalAlert.status.in_(alert_svc.ACTIVE_STATUSES))
+    elif f_status in alert_svc.STATUSES:
+        q = q.filter(ClinicalAlert.status == f_status)
+    alerts = q.order_by(ClinicalAlert.created_at.desc()).limit(100).all()
     return render_template('clinical/alerts.html', title='Clinical Alerts',
-                           alerts=alerts)
+                           alerts=alerts, f_sev=f_sev, f_status=f_status)
+
+
+@clinical_bp.route('/alerts/<int:alert_id>', methods=['GET', 'POST'])
+@login_required
+@permissions_required(ALERT_VIEW)
+def alert_detail(alert_id):
+    """Critical-alert lifecycle: OPEN -> ACKNOWLEDGED -> IN_PROGRESS -> RESOLVED
+    (or DISMISSED with a mandatory reason for high severity). Every step is
+    audited; the receipt trail (who was notified) is shown alongside."""
+    from app.models import Notification, Task, RadiologyReport
+    alert = ClinicalAlert.query.get_or_404(alert_id)
+    require_patient_access(alert.patient)
+    if request.method == 'POST':
+        if not current_user.has_permission('ALERT_ACK'):
+            abort(403)
+        action = request.form.get('action')
+        note = (request.form.get('note') or '').strip() or None
+        action_taken = (request.form.get('action_taken') or '').strip() or None
+        try:
+            if action == 'acknowledge':
+                alert_svc.acknowledge(alert)
+                log_activity('ALERT_ACK', 'clinical_alert', alert.id)
+            elif action == 'start':
+                alert_svc.start_progress(alert)
+                log_activity('ALERT_IN_PROGRESS', 'clinical_alert', alert.id)
+            elif action == 'resolve':
+                alert_svc.resolve(alert, note, action_taken=action_taken)
+                log_activity('ALERT_RESOLVE', 'clinical_alert', alert.id, action_taken or note)
+                from app.services import tasks as task_svc
+                task_svc.complete_for_resource('clinical_alert', alert.id, 'Alert resolved')
+                record_event(alert.patient_id, 'ALERT', f'Alert resolved: {alert.title}',
+                             action_taken or note, source_type='clinical_alert', source_id=alert.id,
+                             department='Clinical')
+            elif action == 'dismiss':
+                alert_svc.dismiss(alert, note)
+                log_activity('ALERT_DISMISS', 'clinical_alert', alert.id, note)
+                from app.services import tasks as task_svc
+                task_svc.cancel_for_resource('clinical_alert', alert.id, 'Alert dismissed')
+            else:
+                flash('Unknown alert action.', 'warning')
+                return redirect(url_for('clinical.alert_detail', alert_id=alert.id))
+            db.session.commit()
+            flash('Alert updated.', 'success')
+        except ValueError as e:
+            db.session.rollback()
+            flash(str(e), 'warning')
+        return redirect(url_for('clinical.alert_detail', alert_id=alert.id))
+    receipts = (Notification.query.filter_by(entity_type='clinical_alert', entity_id=alert.id)
+                .order_by(Notification.created_at.asc()).all())
+    tasks = (Task.query.filter_by(related_resource_type='clinical_alert', related_resource_id=alert.id)
+             .order_by(Task.created_at.desc()).all())
+    report = None
+    if alert.source_type == 'radiology_report' and alert.source_id:
+        report = RadiologyReport.query.get(alert.source_id)
+    from app.models import AuditLog, User
+    audit = []
+    for e in (AuditLog.query.filter_by(resource='clinical_alert', resource_id=alert.id)
+              .order_by(AuditLog.created_at.asc()).all()):
+        u = db.session.get(User, e.user_id) if e.user_id else None
+        audit.append({'action': e.action, 'details': e.details, 'created_at': e.created_at,
+                      'user_name': u.full_name if u else 'system'})
+    return render_template('clinical/alert_detail.html', title='Clinical Alert', alert=alert,
+                           receipts=receipts, tasks=tasks, report=report, audit=audit,
+                           patient=alert.patient, **patient_safety_context(alert.patient_id))
 
 
 @clinical_bp.route('/patient/<int:patient_id>')

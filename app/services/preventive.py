@@ -93,7 +93,15 @@ def run_preventive_sweep(now=None):
     now = now or utcnow()
     today = now.date() if hasattr(now, 'date') else now
     result = {'overdue_followup': 0, 'missed_appointment': 0,
-              'vaccine_due': 0, 'upcoming_followup_reminder': 0}
+              'vaccine_due': 0, 'upcoming_followup_reminder': 0,
+              'escalated_alerts': 0}
+
+    # --- Unacknowledged critical/high alerts -> escalation --------------------
+    try:
+        from app.services.alerts import escalate_overdue
+        result['escalated_alerts'] = len(escalate_overdue(now))
+    except Exception:  # noqa: BLE001 - the sweep must finish its other duties
+        result['escalated_alerts'] = 0
 
     # --- Overdue follow-ups ------------------------------------------------
     for fu in _overdue_follow_ups(now):
