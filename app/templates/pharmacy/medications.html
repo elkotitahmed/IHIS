@@ -30,6 +30,7 @@
                                 <th>{{ 'الاسم التجاري' if g.lang == 'ar' else 'Brand Name' }}</th>
                                 <th>{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</th>
                                 <th>{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</th>
+                                <th>{{ 'المرجع' if g.lang == 'ar' else 'Reference' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -46,10 +47,11 @@
                                         <span class="status-badge s-cancelled">{{ 'غير نشط' if g.lang == 'ar' else 'Inactive' }}</span>
                                     {% endif %}
                                 </td>
+                                <td><a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('pharmacy.medication_reference', med_id=med.id) }}"><i class="fas fa-book-medical"></i> {{ 'النشرة' if g.lang == 'ar' else 'Label' }}</a></td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div class="empty-state" style="padding:2rem">
                                         <div class="empty-icon"><i class="fas fa-pills"></i></div>
                                         <div class="empty-title">{{ 'لا توجد أدوية' if g.lang == 'ar' else 'No medications found' }}</div>

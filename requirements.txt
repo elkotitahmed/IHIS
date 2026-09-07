@@ -32,3 +32,6 @@ pandas>=2.0
 joblib>=1.3
 # ASGI<->WSGI bridge used by hf_space_app.py (Hugging Face Gradio-SDK Space wrapper)
 a2wsgi>=1.10
+# Chest X-ray screening (DenseNet-121, ~29 MB weights fetched once) and local dictation (faster-whisper base int8, ~75 MB)
+torchxrayvision>=1.5
+faster-whisper>=1.0

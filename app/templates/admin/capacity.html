@@ -19,6 +19,23 @@
     <div class="tile {{ 'tile-danger' if totals.over }}"><span class="tile-label"><i class="fas fa-gauge-high"></i> {{ 'عيادات فوق 85%' if ar else 'Clinics above 85%' }}</span><span class="tile-value">{{ totals.over }}</span><span class="tile-sub">{{ 'تحتاج جلسات إضافية' if ar else 'need extra sessions' }}</span></div>
 </div>
 
+<div class="card-premium mb-3">
+    <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'توقع الغياب (7 أيام)' if ar else 'Predicted no-shows (next 7 days)' }} <span class="ai-tag">AI</span></div>
+        <span class="cell-muted" style="font-size:.72rem">{% if noshow.trained %}{{ 'مدرَّب على' if ar else 'trained on' }} {{ noshow.rows }} {{ 'موعدًا' if ar else 'visits' }}{% if noshow.auc %} · AUC {{ noshow.auc }}{% endif %} · {{ 'معدل الغياب' if ar else 'base rate' }} {{ (noshow.base_rate * 100)|round(0)|int }}%{% else %}{{ 'بيانات غير كافية' if ar else 'insufficient history' }}: {{ noshow.rows }}/{{ noshow.min_rows }} {{ 'زيارات منتهية' if ar else 'completed visits' }}{% endif %}</span></div>
+    <div class="card-body" style="font-size:.8125rem">
+        {% if not noshow.trained %}
+        <div class="empty-state" style="padding:1rem"><div class="empty-title">{{ 'لا توقع بعد' if ar else 'No prediction yet' }}</div><div class="empty-desc">{{ 'يتدرّب النموذج على سجل المواعيد المحلي عندما يتوفر' if ar else 'The model trains on this hospital\'s own appointment history once there are' }} {{ noshow.min_rows }} {{ 'زيارة منتهية على الأقل؛ لا أرقام مخمّنة.' if ar else 'completed visits; nothing is guessed before that.' }}</div></div>
+        {% elif at_risk %}
+        <div class="list-compact">
+            {% for a in at_risk %}
+            <div class="list-item"><span class="ai-label {{ 'ai-label-danger' if risk[a.id] >= 0.7 else 'ai-label-warn' }}">{{ (risk[a.id] * 100)|round(0)|int }}%</span><div style="flex:1"><div style="font-weight:600">{{ a.patient.user.full_name if a.patient and a.patient.user else '—' }}</div><div class="cell-muted" style="font-size:.72rem">{{ a.scheduled_at.strftime('%a %d %b %H:%M') }} · {{ a.doctor.user.full_name if a.doctor and a.doctor.user else '' }}</div></div><span class="cell-muted" style="font-size:.72rem">{{ 'اتصال تأكيد مقترح' if ar else 'confirmation call suggested' }}</span></div>
+            {% endfor %}
+        </div>
+        {% else %}<div class="cell-muted">{{ 'لا مواعيد عالية الخطورة في الأسبوع القادم' if ar else 'No high-risk appointments in the next 7 days' }}</div>{% endif %}
+        <div class="ai-footer">{{ 'انحدار لوجستي على اليوم والساعة ومدة الحجز ونوع الزيارة وسابقة غياب المريض. يعيد التدريب كل ساعة.' if ar else 'Logistic regression on weekday, hour, lead time, visit type and the patient\'s own no-show history. Retrains hourly.' }}</div>
+    </div>
+</div>
+
 <div class="card-premium">
     <div class="card-header"><div class="card-title"><i class="fas fa-people-group" style="color:var(--ihis-primary)"></i> {{ 'حسب الطبيب' if ar else 'By physician' }}</div><span class="cell-muted" style="font-size:.72rem">{{ 'السعة المفترضة: 8 ساعات × أيام العمل (الأحد–الخميس)' if ar else 'Assumed capacity: 8 h × working days (Sun–Thu)' }}</span></div>
     <div class="card-body flush">

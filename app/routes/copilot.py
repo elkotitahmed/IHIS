@@ -169,6 +169,28 @@ def autocomplete_ai():
 # ---------------------------------------------------------------------------
 # Smart diagnosis entry
 # ---------------------------------------------------------------------------
+@copilot_bp.route('/transcribe', methods=['POST'])
+@login_required
+@permissions_required(AI_USE)
+@limiter.limit('20/minute')
+def transcribe():
+    """Local speech-to-text for dictation (faster-whisper on this server). The audio
+    clip is processed in a temporary file and deleted; only the text is returned."""
+    from app.services.ai.dictation import dictation_available, transcribe as _transcribe
+    if not dictation_available():
+        return _json_error('Dictation is not installed on this server.', 503)
+    f = request.files.get('audio')
+    if f is None:
+        return _json_error('No audio received.')
+    lang = (request.form.get('language') or '')[:5] or None
+    out = _transcribe(f, language=lang if lang in ('en', 'ar') else None)
+    if 'error' in out:
+        return _json_error(out['error'], 500)
+    platform.record_usage('dictation.transcribe', 'ok', provider='local', commit=True,
+                          detail=f"{out.get('duration')}s {out.get('language')}")
+    return jsonify({'ok': True, **out})
+
+
 @copilot_bp.route('/diagnosis-lookup')
 @login_required
 def diagnosis_lookup():

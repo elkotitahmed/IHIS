@@ -20,6 +20,7 @@ from seed import ROLES
 ZERO_ARG_ROUTES = {
     '/ai/hub': {'SuperAdmin', 'Admin', 'Doctor', 'Pharmacist', 'Nurse', 'Physiotherapist',
                 'Radiologist', 'Dentist', 'LabTechnician', 'Receptionist', 'Patient'},
+    '/ai/chest-xray': {'Radiologist', 'Doctor', 'Admin', 'SuperAdmin'},
     '/ai/fracture-detection': {'Radiologist', 'Doctor', 'Nurse',
                                'Physiotherapist', 'Dentist', 'Admin',
                                'SuperAdmin'},

@@ -48,11 +48,15 @@ def build(role_names, has_permission=None):
     st = platform.status()
     gem_status, gem_note = _gemini_status(st['state'])
 
+    from app.services.ai.chest_xray import chest_model_available
+    from app.services.ai.dictation import dictation_available
     from app.services.ai.fracture_detection import fracture_model_available
     from app.services.ai.skin_lesion_classification import skin_model_available
     from app.services.ai.tooth_segmentation import tooth_model_available
 
     fracture = _safe(fracture_model_available)
+    chest = _safe(chest_model_available)
+    dictation = _safe(dictation_available)
     skin = _safe(skin_model_available)
     tooth = _safe(tooth_model_available)
     predictive = {p['key']: p for p in predictive_catalogue(roles)}
@@ -105,6 +109,16 @@ def build(role_names, has_permission=None):
             'status': rad['status'] if rad['status'] == 'AVAILABLE' else 'LIMITED',
             'note': '' if rad['status'] == 'AVAILABLE' else 'Rules run; the local classifier package is missing.',
             'url': url_for('copilot.radiology_ai'),
+        })
+    if roles & ({'Radiologist', 'RadiologyTechnician', 'Doctor'} | ADMIN):
+        pred_items.append({
+            'key': 'chest', 'label': 'Chest X-ray Screening', 'label_ar': 'فحص أشعة الصدر',
+            'desc': '18 findings on a frontal chest X-ray (pneumothorax, effusion, pneumonia, cardiomegaly, nodule…); confident critical findings raise an alert.',
+            'desc_ar': '18 نتيجة في أشعة الصدر الأمامية (استرواح صدري، انصباب، التهاب رئوي، تضخم قلب، عقيدة…)؛ النتائج الحرجة الواثقة تُنشئ تنبيهًا.',
+            'icon': 'fa-lungs', 'engine': 'model',
+            'status': 'AVAILABLE' if chest else 'COMING SOON',
+            'note': '' if chest else 'torchxrayvision is not installed on this server.',
+            'url': url_for('ai.chest_xray'),
         })
     if roles & ({'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist', 'Dentist'} | ADMIN):
         pred_items.append({
@@ -176,7 +190,7 @@ def build(role_names, has_permission=None):
             'desc': 'NEWS2 on every vital-sign entry, qSOFA sepsis screen and LACE readmission risk at discharge. Standard, deterministic, explainable.',
             'desc_ar': 'NEWS2 عند كل قياس للعلامات الحيوية، qSOFA لفحص الإنتان، وLACE لخطر إعادة الدخول عند الخروج. معيارية وحتمية وقابلة للتفسير.',
             'icon': 'fa-heart-pulse', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
-            'url': url_for('nursing.dashboard') if roles & {'Nurse'} | ADMIN else url_for('clinical.alerts_all'),
+            'url': url_for('nursing.dashboard') if 'Nurse' in roles else (url_for('clinical.alerts_all') if perm('ALERT_VIEW') else None),
         })
     if roles & CLINICAL and perm('INBOX_VIEW'):
         safety.append({
@@ -197,6 +211,15 @@ def build(role_names, has_permission=None):
     # 4. Documentation & coding ----------------------------------------------
     docs = []
     if roles & ({'Doctor', 'Dentist', 'Nurse'} | ADMIN):
+        docs.append({
+            'key': 'dictation', 'label': 'Clinical dictation', 'label_ar': 'الإملاء السريري',
+            'desc': 'Microphone button on every note field: local speech-to-text (faster-whisper, ~75 MB); audio never leaves the server. Then "Structure note (SOAP)" in the Copilot.',
+            'desc_ar': 'زر ميكروفون على كل حقل ملاحظات: تحويل كلام لنص محليًا (faster-whisper، ~75 ميجا)؛ الصوت لا يغادر الخادم. ثم "هيكلة الملاحظة" في المساعد.',
+            'icon': 'fa-microphone', 'engine': 'model',
+            'status': 'AVAILABLE' if dictation else 'COMING SOON',
+            'note': '' if dictation else 'faster-whisper is not installed on this server.',
+            'url': None, 'inline': 'Inside note fields',
+        })
         docs.append({
             'key': 'autocomplete', 'label': 'Smart autocomplete', 'label_ar': 'الإكمال الذكي',
             'desc': 'Clinical phrases as you type in notes (local first, AI when ready). Tab accepts, Esc dismisses.',
@@ -221,6 +244,14 @@ def build(role_names, has_permission=None):
 
     # 5. Pharmacy ------------------------------------------------------------
     pharm = []
+    if roles & ({'Pharmacist'} | ADMIN):
+        pharm.append({
+            'key': 'drug_reference', 'label': 'Official drug reference', 'label_ar': 'المرجع الدوائي الرسمي',
+            'desc': 'FDA-approved labelling (openFDA), RxNorm identifiers and documented interaction partners for every catalogue medication.',
+            'desc_ar': 'النشرة المعتمدة (openFDA) ومعرّفات RxNorm والتداخلات الموثقة لكل دواء في الدليل.',
+            'icon': 'fa-book-medical', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
+            'url': url_for('pharmacy.medications'),
+        })
     if roles & ({'Pharmacist'} | ADMIN) and perm('MEDICATION_REVIEW'):
         pharm.append({
             'key': 'pharmacist_ai', 'label': 'Clinical Pharmacist AI', 'label_ar': 'الصيدلاني السريري الذكي',
@@ -239,6 +270,14 @@ def build(role_names, has_permission=None):
 
     # 6. Operations & governance ---------------------------------------------
     ops = []
+    if roles & ADMIN:
+        ops.append({
+            'key': 'noshow', 'label': 'No-show prediction', 'label_ar': 'توقع الغياب',
+            'desc': 'Logistic model trained on this hospital\'s own appointment history; refuses to predict below 150 completed visits.',
+            'desc_ar': 'نموذج لوجستي مدرَّب على سجل مواعيد المستشفى نفسه؛ يرفض التوقع تحت 150 زيارة منتهية.',
+            'icon': 'fa-user-slash', 'engine': 'model', 'status': 'AVAILABLE', 'note': '',
+            'url': url_for('admin.capacity'),
+        })
     if 'SuperAdmin' in roles:
         ops.append({
             'key': 'control', 'label': 'AI Control Center', 'label_ar': 'مركز التحكم بالذكاء',

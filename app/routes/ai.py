@@ -112,6 +112,16 @@ def _alert_on_positive_finding(result, patient, doc=None):
                      f'Clinical review of the imaging is required.'),
             severity='HIGH', source_type='ai_tool', source_id=source_id)
         db.session.commit()
+    elif result.get('feature') == 'chest' and result.get('critical'):
+        found = ', '.join(f"{c['name']} ({c['percent']}%)" for c in result['critical'])
+        worst = max(c['probability'] for c in result['critical'])
+        alert_svc.ensure_open_alert(
+            patient.id, 'AI_CHEST_XRAY_FINDING',
+            title=f"Possible critical chest finding: {result['critical'][0]['name']}",
+            message=(f'Chest X-ray screening flagged {found}. Radiologist review of the image is required; '
+                     f'the model output is not a diagnosis.'),
+            severity='CRITICAL' if worst >= 0.85 else 'HIGH', source_type='ai_tool', source_id=source_id)
+        db.session.commit()
     elif result.get('feature') == 'skin' and result.get('is_melanoma'):
         alert_svc.ensure_open_alert(
             patient.id, 'AI_MELANOMA_SUSPECTED',
@@ -357,6 +367,42 @@ def tooth_segmentation():
         selected_doc=doc, **safety, today=utcnow().date())
 
 
+@ai_bp.route('/chest-xray', methods=['GET', 'POST'])
+@login_required
+@roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin')
+def chest_xray():
+    """TorchXRayVision DenseNet-121 screening of a frontal chest X-ray (18 findings)."""
+    from app.services.ai.chest_xray import analyze_chest_xray, chest_model_available, weights_ready
+    result = None
+    error = None
+    patient = None
+    if request.method == 'POST':
+        storage, patient, doc, error = _resolve_image_input()
+        if storage is not None:
+            try:
+                result = analyze_chest_xray(storage)
+                if 'error' in result:
+                    error = result.pop('error', None)
+                else:
+                    from app.services.ai import platform as _platform
+                    result['usage_id'] = _platform.record_usage(
+                        'chest_xray.screen', 'ok', provider='local',
+                        patient_id=patient.id if patient else None,
+                        detail=', '.join(f"{c['label']} {c['percent']}%" for c in result['critical']) or 'no critical finding')
+                    _alert_on_positive_finding(result, patient, doc)
+                    log_activity('AI_CHEST_XRAY', 'radiology_order', patient.id if patient else 0,
+                                 'Chest X-ray screening run')
+            finally:
+                _close_storage(storage)
+    available = chest_model_available()
+    doc = _load_doc(request.args.get('doc'))
+    patient = patient or (doc.patient if doc else None)
+    safety = patient_safety_context(patient.id) if patient else {}
+    return render_template('ai/chest_xray.html', title='AI Chest X-ray Screening',
+                           result=result, error=error, available=available, weights=weights_ready(),
+                           patient=patient, selected_doc=doc, **safety, today=utcnow().date())
+
+
 @ai_bp.route('/skin-lesion-detection', methods=['GET', 'POST'])
 @login_required
 @roles_required('Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin')
@@ -424,7 +470,7 @@ def ai_media(feature, kind, filename):
     ``kind`` is 'uploads' for the original image and 'results'/'masks' for the
     generated annotation/segmentation output.
     """
-    if feature not in ('fracture', 'tooth', 'skin'):
+    if feature not in ('fracture', 'tooth', 'skin', 'chest'):
         abort(404)
     base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
     feature_dir = {'fracture': os.path.join(base, 'ai', 'fracture'),

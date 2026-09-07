@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+{% set ar = g.lang == 'ar' %}
+{% with wb_title='Chest X-ray Screening', wb_title_ar='فحص أشعة الصدر',
+        wb_desc='Screens a frontal chest X-ray for 18 findings (pneumothorax, effusion, pneumonia, cardiomegaly, nodule, mass…) and returns a probability for each. Confident critical findings reach the critical-finding engine. A radiologist confirms.',
+        wb_desc_ar='يفحص أشعة الصدر الأمامية بحثًا عن 18 نتيجة (استرواح صدري، انصباب، التهاب رئوي، تضخم قلب، عقيدة، كتلة…) ويعطي احتمالًا لكل منها. النتائج الحرجة الواثقة تصل لمحرك النتائج الحرجة. أخصائي الأشعة يؤكد.',
+        wb_icon='fa-lungs',
+        wb_facts=[('fa-microchip', 'TorchXRayVision DenseNet-121 (~30 MB), MIT licence', 'TorchXRayVision DenseNet-121 (~30 ميجا)، رخصة MIT'), ('fa-database', 'Trained on CheXpert, NIH, PadChest, MIMIC-CXR, RSNA', 'مدرَّب على CheXpert وNIH وPadChest وMIMIC-CXR وRSNA'), ('fa-server', 'Runs locally on CPU in about a second', 'يعمل محليًا على المعالج في نحو ثانية'), ('fa-bell', 'Critical findings → alert → radiologist', 'النتائج الحرجة ← تنبيه ← أخصائي الأشعة')],
+        wb_back_url=(url_for('radiology.orders') if current_user.has_any_role('Radiologist','RadiologyTechnician','Doctor','Admin','SuperAdmin') else url_for('main.dashboard')), wb_back_label='Worklist', wb_back_label_ar='قائمة العمل' %}
+{% include 'ai/_workbench_hero.html' %}
+{% endwith %}
+
+{% include 'clinical/_patient_header.html' %}
+
+{% if error %}<div class="alert alert-danger"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>{% endif %}
+{% if available and not weights %}<div class="alert alert-info"><i class="fas fa-download"></i> {{ 'أوزان النموذج (~30 ميجا) تُنزَّل تلقائيًا عند أول تحليل؛ يلزم اتصال بالإنترنت مرة واحدة.' if ar else 'The model weights (~30 MB) download automatically on the first analysis; internet is needed once.' }}</div>{% endif %}
+
+<div class="wb-grid">
+    <div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-lungs" style="color:var(--ai-1)"></i> {{ ('تحليل أشعة المريض' if selected_doc else 'أشعة صدر أمامية') if ar else ('Analyze the patient X-ray' if selected_doc else 'Frontal chest X-ray') }}</div></div>
+            <div class="card-body">
+                {% with form_action=url_for('ai.chest_xray'), submit_label='Screen X-ray', submit_label_ar='فحص الأشعة', accept='.png,.jpg,.jpeg', camera=false, hint='PA / AP chest X-ray · PNG / JPG · max 16 MB', hint_ar='أشعة صدر PA/AP · PNG / JPG · حتى 16 ميجابايت' %}
+                {% include 'ai/_image_input.html' %}
+                {% endwith %}
+            </div>
+        </div>
+
+        {% if result and result.error is not defined %}
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'نتيجة الفحص' if ar else 'Screening result' }} <span class="ai-label ai-label-ai">{{ 'بمساعدة الذكاء' if ar else 'AI-ASSISTED' }}</span> <span class="ai-label ai-label-warn">{{ 'ليس تشخيصًا نهائيًا' if ar else 'NOT A FINAL DIAGNOSIS' }}</span></div></div>
+            <div class="card-body">
+                {% if result.critical %}
+                <div class="verdict verdict-danger">
+                    <span class="verdict-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                    <div><div class="verdict-title">{{ 'نتيجة حرجة محتملة' if ar else 'Possible critical finding' }}</div><div class="verdict-sub">{% for c in result.critical %}{{ c.name }} {{ c.percent }}%{% if not loop.last %} · {% endif %}{% endfor %} — {{ 'يتطلب مراجعة أخصائي الأشعة فورًا' if ar else 'immediate radiologist review required' }}</div></div>
+                    <div class="verdict-side"><div class="big">{{ result.critical[0].percent }}%</div><div class="small-lbl">{{ result.critical[0].label }}</div></div>
+                </div>
+                {% else %}
+                <div class="verdict verdict-ok">
+                    <span class="verdict-icon"><i class="fas fa-check"></i></span>
+                    <div><div class="verdict-title">{{ 'لا نتيجة حرجة واثقة' if ar else 'No confident critical finding' }}</div><div class="verdict-sub">{{ 'الاحتمالات الفردية أدناه؛ نتيجة سلبية من النموذج لا تستبعد المرض.' if ar else 'Individual probabilities below; a negative model result does not exclude disease.' }}</div></div>
+                </div>
+                {% endif %}
+                <div class="compare mb-3">
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة' if ar else 'X-ray' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="Chest X-ray"></figure>
+                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'أعلى 5 نتائج' if ar else 'Top 5 findings' }}</figcaption>
+                        <div class="d-flex flex-column gap-2">
+                        {% for f in result.top %}
+                        <div class="meter-row"><span style="min-width:150px;font-size:.8rem;font-weight:600">{{ f.name }}{% if f.flag %} <span class="ai-label ai-label-danger">!</span>{% endif %}</span><div class="meter"><span style="width:{{ f.percent }}%;{% if f.flag %}background:var(--ihis-danger){% endif %}"></span></div><span class="t-num">{{ f.percent }}%</span></div>
+                        {% endfor %}
+                        </div>
+                    </figure>
+                </div>
+                <details class="section-details"><summary>{{ 'كل النتائج (18)' if ar else 'All 18 findings' }}</summary>
+                    <div class="section-body p-3">
+                        <div class="row g-2">{% for f in result.findings %}<div class="col-md-6"><div class="meter-row"><span style="min-width:170px;font-size:.78rem">{{ f.name }}</span><div class="meter"><span style="width:{{ f.percent }}%"></span></div><span class="t-num">{{ f.percent }}%</span></div></div>{% endfor %}</div>
+                    </div>
+                </details>
+                <div class="ai-footer">{{ result.note }} {{ 'النموذج:' if ar else 'Model:' }} {{ result.model }}. {{ 'مخرجات دعم قرار؛ التأكيد قرار أخصائي الأشعة.' if ar else 'Decision-support output; confirmation is the radiologist\'s decision.' }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-book-open" style="color:var(--ihis-primary)"></i> {{ 'كيف تقرأ النتيجة' if ar else 'How to read the result' }}</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                <ul class="mb-0" style="padding-inline-start:18px;display:flex;flex-direction:column;gap:6px">
+                    <li>{{ 'النسبة هي مخرج النموذج، ليست خطرًا سريريًا مُعايرًا؛ قارنها بالصورة نفسها.' if ar else 'The percentage is the model output, not a calibrated clinical risk; compare it with the image itself.' }}</li>
+                    <li>{{ 'استرواح صدري أو انصباب أو التهاب رئوي فوق العتبة يُنشئ تنبيهًا حرجًا تلقائيًا عندما تكون الصورة مرتبطة بمريض.' if ar else 'Pneumothorax, effusion or pneumonia above the threshold raises a critical alert automatically when the image belongs to a patient.' }}</li>
+                    <li>{{ 'الصور الجانبية أو المقصوصة أو المنخفضة الجودة تعطي نتائج غير موثوقة.' if ar else 'Lateral, cropped or low-quality images give unreliable results.' }}</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'الحوكمة' if ar else 'Governance' }}</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                <dl class="kv">
+                    <dt>{{ 'المحرك' if ar else 'Engine' }}</dt><dd>{{ 'نموذج محلي (DenseNet-121)' if ar else 'Local model (DenseNet-121)' }}</dd>
+                    <dt>{{ 'البيانات' if ar else 'Data' }}</dt><dd>{{ 'تبقى على الخادم' if ar else 'Stays on the server' }}</dd>
+                    <dt>{{ 'الحالة' if ar else 'Status' }}</dt><dd><span class="hub-status hub-status-{{ 'available' if available else 'soon' }}">{{ ('متاح' if available else 'غير مثبّت') if ar else ('AVAILABLE' if available else 'NOT INSTALLED') }}</span></dd>
+                </dl>
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    {% if current_user.has_any_role('Radiologist','RadiologyTechnician','Doctor','Admin','SuperAdmin') %}<a href="{{ url_for('copilot.radiology_ai') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><span class="ai-spark">✦</span> {{ 'محرك النتائج الحرجة' if ar else 'Critical-finding engine' }}</a>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

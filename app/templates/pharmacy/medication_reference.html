@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+{% set ar = g.lang == 'ar' %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ med.generic_name }}{% if med.brand_name %} <span class="cell-muted" style="font-size:1rem">({{ med.brand_name }})</span>{% endif %}</h1>
+        <p class="page-subtitle">{{ 'النشرة الرسمية (openFDA) وتوحيد الاسم (RxNorm) والتداخلات الموثقة (DDInter). مرجع للقراءة؛ لا يدخل في القواعد تلقائيًا.' if ar else 'Official labelling (openFDA), name normalisation (RxNorm) and documented interactions (DDInter). Reference reading; it does not feed the rules automatically.' }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('pharmacy.medications') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-arrow-{{ 'right' if ar else 'left' }}"></i> {{ 'دليل الأدوية' if ar else 'Catalogue' }}</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'النشرة الرسمية المعتمدة' if ar else 'FDA-approved labelling' }}</div>{% if label %}<span class="cell-muted" style="font-size:.72rem">{{ label.brand }}{% if label.manufacturer %} · {{ label.manufacturer }}{% endif %}{% if label.effective_time %} · {{ label.effective_time[:4] }}{% endif %}</span>{% endif %}</div>
+            <div class="card-body" style="font-size:.8125rem">
+                {% if label %}
+                    {% for title, text in label.sections %}
+                    <details class="section-details" {% if loop.index <= 2 %}open{% endif %}><summary>{{ title }}</summary><div class="section-body p-3" style="white-space:pre-wrap">{{ text }}</div></details>
+                    {% endfor %}
+                    <div class="ai-footer">{{ 'المصدر: openFDA drug label API (نص النشرة كما هو).' if ar else 'Source: openFDA drug label API (label text as published).' }}</div>
+                {% else %}
+                    <div class="empty-state"><div class="empty-title">{{ 'لا توجد نشرة متاحة' if ar else 'No label available' }}</div><div class="empty-desc">{{ 'لم يُعثر على نشرة بهذا الاسم العلمي، أو الخادم بلا إنترنت الآن.' if ar else 'No label was found for this generic name, or the server is offline right now.' }}</div></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-fingerprint" style="color:var(--ihis-primary)"></i> RxNorm</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                {% if rx %}<dl class="kv"><dt>RxCUI</dt><dd class="cell-mono">{{ rx.rxcui }}</dd><dt>{{ 'الاسم' if ar else 'Name' }}</dt><dd>{{ rx.name }}</dd></dl>{% else %}<span class="cell-muted">{{ 'غير متاح' if ar else 'Not available' }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'التداخلات الموثقة' if ar else 'Documented interactions' }}</div><span class="ai-count">{{ ddi|length }}</span></div>
+            <div class="card-body flush">
+                <div class="list-compact">
+                    {% for r in ddi %}
+                    <div class="list-item"><span class="ai-label {{ 'ai-label-danger' if r.level == 'Major' else 'ai-label-warn' if r.level == 'Moderate' else 'ai-label-muted' }}">{{ r.level }}</span><span style="flex:1">{{ r.drug }}</span></div>
+                    {% else %}<div class="list-item cell-muted">{{ 'لا توجد بيانات في المرجع' if ar else 'No entries in the reference' }}</div>{% endfor %}
+                </div>
+                <div class="ai-footer p-3">{{ 'DDInter — CC BY-NC-SA 4.0 (استخدام غير تجاري).' if ar else 'DDInter — CC BY-NC-SA 4.0 (non-commercial use).' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

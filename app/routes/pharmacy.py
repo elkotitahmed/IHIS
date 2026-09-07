@@ -649,6 +649,19 @@ def respond_intervention(i_id):
 
 
 # ------------------------- Formulary interactions -------------------------
+@pharmacy_bp.route('/medications/<int:med_id>/reference')
+@login_required
+@roles_required('Pharmacist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')
+def medication_reference(med_id):
+    """Official labelling (openFDA), RxNorm id and DDInter partners for one medication."""
+    from app.services import drug_reference, drug_interactions
+    med = Medication.query.get_or_404(med_id)
+    return render_template('pharmacy/medication_reference.html', title=f'Reference — {med.generic_name}',
+                           med=med, label=drug_reference.fda_label(med.generic_name),
+                           rx=drug_reference.rxnorm(med.generic_name),
+                           ddi=drug_interactions.interactions_for(med.generic_name, limit=40))
+
+
 @pharmacy_bp.route('/drug-check', methods=['GET', 'POST'])
 @login_required
 @roles_required('Pharmacist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin')

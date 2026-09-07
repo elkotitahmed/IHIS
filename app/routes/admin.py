@@ -111,7 +111,15 @@ def capacity():
         totals['no_shows'] += no_shows; totals['past'] += len(past)
     totals['no_show_rate'] = round(100 * totals['no_shows'] / totals['past']) if totals['past'] else 0
     rows.sort(key=lambda r: -r['utilisation'])
-    return render_template('admin/capacity.html', title='Capacity & no-shows', rows=rows, totals=totals)
+    # Predicted no-shows for the next 7 days (own-data logistic model; honest when data is thin)
+    from app.services import noshow
+    upcoming = Appointment.query.filter(
+        Appointment.scheduled_at >= now, Appointment.scheduled_at < week_end,
+        Appointment.status.notin_(['Cancelled', 'NoShow', 'Completed'])).order_by(Appointment.scheduled_at).all()
+    risk = noshow.predict(upcoming)
+    at_risk = sorted([a for a in upcoming if risk.get(a.id, 0) >= 0.5], key=lambda a: -risk[a.id])[:20]
+    return render_template('admin/capacity.html', title='Capacity & no-shows', rows=rows, totals=totals,
+                           noshow=noshow.status(), risk=risk, at_risk=at_risk)
 
 
 @admin_bp.route('/ai/appointment-optimization')

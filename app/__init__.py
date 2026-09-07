@@ -247,6 +247,8 @@ def register_context_processors(app):
         def _ai_tools(role_set):
             """Zero-argument AI tools the given roles can reach, in display order."""
             specs = [
+                (_l('Chest X-ray Screening', 'فحص أشعة الصدر'), '/ai/chest-xray',
+                 'fa-lungs', {'Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin'}),
                 (_l('Fracture Detection', 'كشف الكسور'), '/ai/fracture-detection',
                  'fa-bone', {'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
                              'Dentist', 'Admin', 'SuperAdmin'}),   # = route decorator
@@ -672,7 +674,7 @@ def register_context_processors(app):
         once per request; never calls the AI provider."""
         from flask import session
         from flask_login import current_user
-        empty = {'copilot_enabled': False, 'ai_status': None, 'copilot_critical_alerts': []}
+        empty = {'copilot_enabled': False, 'ai_status': None, 'copilot_critical_alerts': [], 'dictation_enabled': False}
         if not current_user.is_authenticated:
             return empty
         # Cached on the request object (not ``g``: under a long-lived app
@@ -704,8 +706,13 @@ def register_context_processors(app):
                 critical = q.order_by(ClinicalAlert.created_at.desc()).limit(5).all()
             except Exception:  # noqa: BLE001
                 critical = []
+        try:
+            from app.services.ai.dictation import dictation_available
+            dictation = enabled and dictation_available()
+        except Exception:  # noqa: BLE001
+            dictation = False
         request._copilot_ctx = {'copilot_enabled': enabled, 'ai_status': ai_status,
-                                'copilot_critical_alerts': critical}
+                                'copilot_critical_alerts': critical, 'dictation_enabled': dictation}
         return request._copilot_ctx
 
     app.context_processor(copilot_context)
