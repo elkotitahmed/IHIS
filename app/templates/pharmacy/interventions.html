@@ -40,7 +40,9 @@
                 </div>
                 <div style="text-align:right;white-space:nowrap">
                     {% if i.prescription %}
+                    {% if current_user.has_any_role('Pharmacist','Admin','SuperAdmin') %}
                     <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescription_detail', rx_id=i.prescription.id) }}">{{ 'وصفة' if g.lang == 'ar' else 'Rx' }}</a>
+                    {% endif %}
                     {% endif %}
                     {% if i.status == 'OPEN' and current_user.has_permission('INTERVENTION_RESPOND') %}
                     <a href="#respond-{{ i.id }}" data-bs-toggle="collapse" class="btn-ihs btn-ihs-primary btn-ihs-sm">{{ 'رد' if g.lang == 'ar' else 'Respond' }}</a>

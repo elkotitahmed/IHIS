@@ -257,10 +257,20 @@ def imaging(patient_id):
 
     images = DentalImage.query.filter_by(patient_id=patient.id).order_by(
         DentalImage.uploaded_at.desc()).all()
-    return render_template('dentistry/imaging.html', title='Dental Imaging',
+    missing_images = {im.id for im in images if not os.path.isfile(dental_image_path(im))}
+    return render_template('dentistry/imaging.html', missing_images=missing_images, title='Dental Imaging',
                            patient=patient, images=images,
                            **patient_safety_context(patient.id),
                            today=utcnow().date())
+
+
+def dental_image_path(image):
+    """Absolute path of a stored dental image (legacy static/uploads or the private upload folder)."""
+    rel = (image.url or '').lstrip('/')
+    if rel.startswith('static/uploads/'):
+        rel = rel[len('static/uploads/'):]
+        return os.path.normpath(os.path.join(current_app.static_folder, 'uploads', rel))
+    return os.path.normpath(os.path.join(current_app.config.get('UPLOAD_FOLDER') or 'var/uploads', rel))
 
 
 @dentistry_bp.route('/images/<int:image_id>/download')
@@ -270,13 +280,7 @@ def download_image(image_id):
     """Stream a stored dental image only to users with need-to-know access."""
     image = DentalImage.query.get_or_404(image_id)
     require_patient_access(image.patient)
-    rel = (image.url or '').lstrip('/')
-    if rel.startswith('static/uploads/'):
-        rel = rel[len('static/uploads/'):]
-        path = os.path.normpath(os.path.join(current_app.static_folder, 'uploads', rel))
-    else:
-        path = os.path.normpath(os.path.join(
-            current_app.config.get('UPLOAD_FOLDER') or 'var/uploads', rel))
+    path = dental_image_path(image)
     if not os.path.isfile(path):
         abort(404)
     log_activity('DOWNLOAD_DENTAL_IMAGE', 'dental_image', image.id,

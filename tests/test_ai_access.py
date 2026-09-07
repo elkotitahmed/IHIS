@@ -184,9 +184,9 @@ class AIAccessTest(unittest.TestCase):
                 'email': 'dashdr@test.com', 'password': '123456',
             }, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            for path, marker in (('/ai/ai-dashboard', 'Skin Lesion Detection'),
+            for path, marker in (('/ai/ai-dashboard', 'Skin Lesion Detection'),   # legacy alias → /ai/hub
                                  ('/ai/clinical-alerts', 'AI Clinical Alerts')):
-                resp = client.get(path)
+                resp = client.get(path, follow_redirects=True)
                 self.assertEqual(resp.status_code, 200, path)
                 marker_lower = marker.lower()
                 self.assertIn(marker_lower, resp.get_data(as_text=True).lower(), path)

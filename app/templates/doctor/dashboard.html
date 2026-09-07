@@ -14,7 +14,6 @@
         </p>
     </div>
     <div class="page-actions">
-        <button type="button" class="ai-btn" data-copilot-open="" title="AI Clinical Copilot"><span class="ai-spark">✦</span> {{ 'المساعد الذكي' if g.lang == 'ar' else 'AI Copilot' }}</button>
         <a href="{{ url_for('clinical.inbox') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-inbox"></i> {{ 'صندوق الوارد' if g.lang == 'ar' else 'Inbox' }}</a>
         <a href="{{ url_for('doctor.patients') }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-user-injured"></i> {{ 'المرضى' if g.lang == 'ar' else 'Patients' }}</a>
     </div>
@@ -64,8 +63,7 @@
             <p>{{ 'ملخص المريض، دعم الاستدلال، مسودات التوثيق، مراجعة السلامة، وتواصل المريض. كل إجراء صريح، ومراجَع، ولا يُكتب في الملف تلقائيًا.' if g.lang == 'ar' else 'Patient summaries, reasoning support, documentation drafts, safety review and patient communication. Every action is explicit, reviewed by you, and never written to the chart automatically.' }}</p>
         </div>
         <div class="ai-actions-row">
-            <button type="button" class="ai-btn" data-copilot-open=""><span class="ai-spark">✦</span> {{ 'افتح المساعد' if g.lang == 'ar' else 'Open Copilot' }}</button>
-            <a href="{{ url_for('clinical.inbox') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><i class="fas fa-inbox"></i> {{ 'ما الذي يحتاج انتباهي أولًا؟' if g.lang == 'ar' else 'What needs my attention first?' }}</a>
+            <a href="{{ url_for('clinical.inbox') }}" class="ai-btn ai-btn-soft"><i class="fas fa-inbox"></i> {{ 'ما الذي يحتاج انتباهي أولًا؟' if g.lang == 'ar' else 'What needs my attention first?' }}</a>
             <a href="{{ url_for('ai.ai_hub') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'كل أدوات الذكاء' if g.lang == 'ar' else 'All AI tools' }} <i class="fas fa-arrow-{{ 'left' if g.lang == 'ar' else 'right' }}" style="font-size:.65rem"></i></a>
         </div>
     </div>

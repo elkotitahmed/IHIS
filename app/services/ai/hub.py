@@ -106,7 +106,7 @@ def build(role_names, has_permission=None):
             'note': '' if rad['status'] == 'AVAILABLE' else 'Rules run; the local classifier package is missing.',
             'url': url_for('copilot.radiology_ai'),
         })
-    if roles & ({'Radiologist', 'RadiologyTechnician', 'Doctor', 'Nurse', 'Physiotherapist', 'Dentist'} | ADMIN):
+    if roles & ({'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist', 'Dentist'} | ADMIN):
         pred_items.append({
             'key': 'fracture', 'label': 'Fracture Detection', 'label_ar': 'كشف الكسور',
             'desc': 'Bone X-ray fracture detection with an annotated image for the radiologist to confirm.',
@@ -125,7 +125,7 @@ def build(role_names, has_permission=None):
             'icon': 'fa-tooth', 'engine': 'hybrid', 'status': 'AVAILABLE', 'note': '',
             'url': url_for('copilot.dentistry_ai'),
         })
-    if roles & ({'Dentist', 'Radiologist', 'RadiologyTechnician', 'Nurse'} | ADMIN):
+    if roles & ({'Dentist', 'Radiologist', 'Nurse'} | ADMIN):
         pred_items.append({
             'key': 'tooth', 'label': 'Tooth Segmentation', 'label_ar': 'تجزئة الأسنان',
             'desc': 'Panoramic X-ray tooth segmentation mask for dental planning.',

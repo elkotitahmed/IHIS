@@ -9,7 +9,6 @@
         <span class="ai-strip-title" style="font-size:.95rem"><span class="ai-spark">✦</span> {{ 'الذكاء الاصطناعي في عملك' if ar else 'AI in your work' }}</span>
         {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if ar and ai_status.state == 'READY' else ai_status.state.replace('_',' ') }}</span>{% endif %}
         <span style="margin-inline-start:auto" class="d-flex gap-2 flex-wrap">
-            {% if copilot_enabled %}<button type="button" class="ai-btn" data-copilot-open=""><span class="ai-spark">✦</span> {{ 'افتح المساعد' if ar else 'Open Copilot' }}</button>{% endif %}
             <a href="{{ url_for('ai.ai_hub') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'كل الأدوات' if ar else 'All AI tools' }} <i class="fas fa-arrow-{{ 'left' if ar else 'right' }}" style="font-size:.65rem"></i></a>
         </span>
     </div>

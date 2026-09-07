@@ -113,6 +113,25 @@ Kept on purpose: `/ai/medication-review` (pharmacist deep review), `/ai/rehab`
 (physiotherapy progress), `/ai/lab/<order>` and `/ai/health-insights` (explicit
 "Explain with AI"), `/care/cases` (now linked from Referrals and the WORK menu).
 
+## Link audit (2026-09-06)
+
+A crawler (`scripts`-style, run from the test client) signs in as each of the
+13 demo roles, follows every internal link, GET form and static asset on every
+reachable page and reports anything that is not 2xx. Result after the fixes:
+**0 broken links** over ~1,500 pages per run. Rules that came out of it:
+
+- A page never renders a link its viewer cannot open: links are gated with
+  the same `has_permission(...)` / `has_any_role(...)` the target route uses
+  (report entry, lab result entry, discharge, care team, summary, alerts,
+  reminders, interventions, new bill, catalogue, AI image tools).
+- Lists only show records the viewer may open (admissions board is scoped by
+  need-to-know for non-admin roles).
+- Files that are missing on disk are shown as "file missing", never linked.
+- One Copilot entry per screen (sidebar on desktop, topbar on mobile); the
+  dashboards' quick actions no longer repeat the page-header buttons.
+- Navigation AI-tool role sets equal the route decorators (single source of truth
+  is the route; the hub and the sidebar follow it).
+
 ## Verified (2026-09-06)
 
 - 333 unit/integration tests pass; the all-routes smoke walk (2,756

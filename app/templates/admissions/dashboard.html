@@ -171,7 +171,9 @@
                         <td class="cell-secondary">{{ (a.reason or '')[:50] }}</td>
                         <td>
                             {% if current_user.has_permission('ADMISSION_DISCHARGE') %}
+                            {% if current_user.has_permission('ADMISSION_DISCHARGE') %}
                             <a href="{{ url_for('admissions.discharge', id=a.id) }}" class="btn-ihs btn-ihs-danger btn-ihs-sm">
+                            {% endif %}
                                 {{ 'خروج' if g.lang == 'ar' else 'Discharge' }}
                             </a>
                             {% endif %}

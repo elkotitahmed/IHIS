@@ -108,7 +108,7 @@
     <div>
         {% if patient %}
         <div class="card-premium mb-3">
-            <div class="card-header"><div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-primary)"></i> {{ 'سياق المريض' if ar else 'Patient context' }}</div><a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}">{{ 'الملف' if ar else 'Chart' }}</a></div>
+            <div class="card-header"><div class="card-title"><i class="fas fa-notes-medical" style="color:var(--ihis-primary)"></i> {{ 'سياق المريض' if ar else 'Patient context' }}</div></div>
             <div class="card-body" style="font-size:.8125rem">
                 <dl class="kv">
                     <dt>{{ 'الحساسية' if ar else 'Allergies' }}</dt><dd>{{ patient.allergies or ('لا يوجد' if ar else 'None recorded') }}</dd>

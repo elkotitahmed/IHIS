@@ -4,7 +4,7 @@
         wb_desc='Every signed report is screened for critical findings: rules and a local classifier flag it, an alert and an urgent task are raised, the responsible physician is notified, and the acknowledgement and action are audited.',
         wb_desc_ar='يُفحص كل تقرير موقّع بحثًا عن نتائج حرجة: القواعد والمصنّف المحلي يعلّمانه، يُنشأ تنبيه ومهمة عاجلة، ويُبلَّغ الطبيب المسؤول، ويُدقَّق الإقرار والإجراء.',
         wb_icon='fa-x-ray', wb_facts=[('fa-list-check', 'Rules with negation handling', 'قواعد مع معالجة النفي'), ('fa-microchip', 'Local text classifier', 'مصنّف نصي محلي'), ('fa-bell', 'Alert → task → notify → acknowledge → audit', 'تنبيه ← مهمة ← إشعار ← إقرار ← تدقيق')],
-        wb_back_url=url_for('clinical.alerts_all'), wb_back_label='Clinical alerts', wb_back_label_ar='التنبيهات السريرية' %}
+        wb_back_url=(url_for('clinical.alerts_all') if current_user.has_permission('ALERT_VIEW') else url_for('main.dashboard')), wb_back_label='Clinical alerts', wb_back_label_ar='التنبيهات السريرية' %}
 {% include 'ai/_workbench_hero.html' %}
 {% endwith %}
 

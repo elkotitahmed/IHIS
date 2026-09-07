@@ -41,7 +41,9 @@
             </div>
             <div class="card-body">
                 <div style="display:flex;flex-direction:column;gap:0.5rem">
+                    {% if current_user.has_permission('BILL_CREATE') %}
                     <a href="{{ url_for('billing.new_bill') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
+                    {% endif %}
                         <i class="fas fa-file-invoice" style="color:var(--ihis-success)"></i> {{ 'فاتورة جديدة' if g.lang == 'ar' else 'New Bill' }}
                     </a>
                     <a href="{{ url_for('billing.bills') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">

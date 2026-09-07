@@ -464,3 +464,6 @@ hr { border-color: var(--ihis-border); opacity: 1; }
 /* sidebar Copilot button: never wrap, tiny status pill */
 .sb-ai-btn { white-space: nowrap; }
 .sb-ai-btn .ai-pill { font-size: .52rem; padding: 2px 6px; white-space: nowrap; letter-spacing: .02em; }
+
+/* One Copilot entry point per screen: the sidebar on desktop, the topbar on mobile */
+@media (min-width: 769px) { .app-topbar #copilotBtn { display: none; } }

@@ -6,7 +6,7 @@
     <p class="page-subtitle">{{ 'إدارة الفواتير والمدفوعات' if g.lang == 'ar' else 'Manage invoices and payments' }}</p>
   </div>
   <div class="page-actions">
-    <a class="btn-ihs btn-ihs-success" href="{{ url_for('billing.new_bill') }}"><i class="fas fa-plus"></i> {{ 'فاتورة جديدة' if g.lang == 'ar' else 'New Bill' }}</a>
+    {% if current_user.has_permission('BILL_CREATE') %}<a class="btn-ihs btn-ihs-success" href="{{ url_for('billing.new_bill') }}"><i class="fas fa-plus"></i> {{ 'فاتورة جديدة' if g.lang == 'ar' else 'New Bill' }}</a>{% endif %}
   </div>
 </div>
 

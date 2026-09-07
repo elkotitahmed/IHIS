@@ -9,8 +9,10 @@
     <div class="page-actions">
         <span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">AI {{ ai_status.state.replace('_',' ') }}</span>
         {% if patient %}
+        {% if current_user.has_any_role('Dentist','Admin','SuperAdmin') %}
         <a href="{{ url_for('dentistry.chart', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-tooth"></i> {{ 'المخطط' if g.lang == 'ar' else 'Dental chart' }}</a>
-        <a href="{{ url_for('ai.tooth_segmentation') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-wand-magic-sparkles"></i> {{ 'تقسيم الأسنان' if g.lang == 'ar' else 'Tooth segmentation' }} {% if not tooth_available %}<span class="ai-soon">{{ 'محدود' if g.lang == 'ar' else 'MODEL MISSING' }}</span>{% endif %}</a>
+        {% endif %}
+        {% if current_user.has_any_role('Dentist','Radiologist','Nurse','Admin','SuperAdmin') %}<a href="{{ url_for('ai.tooth_segmentation') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-wand-magic-sparkles"></i> {{ 'تقسيم الأسنان' if g.lang == 'ar' else 'Tooth segmentation' }} {% if not tooth_available %}<span class="ai-soon">{{ 'محدود' if g.lang == 'ar' else 'MODEL MISSING' }}</span>{% endif %}</a>{% endif %}
         <a href="{{ url_for('copilot.dentistry_ai') }}" class="btn-ihs btn-ihs-ghost">{{ 'مريض آخر' if g.lang == 'ar' else 'Another patient' }}</a>
         {% endif %}
     </div>

@@ -6,7 +6,9 @@
         <p class="page-subtitle">{{ 'كشف التفاعلات الدوائية المحتملة من دليل الأدوية' if g.lang == 'ar' else 'Detect potential interactions across the formulary' }}</p>
     </div>
     <div class="page-actions">
+        {% if current_user.has_permission('MEDICATION_REVIEW') and current_user.has_any_role('Pharmacist','Admin','SuperAdmin') %}
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.ai_workbench') }}"><i class="fas fa-user-doctor"></i> {{ 'منصة الصيدلاني' if g.lang == 'ar' else 'AI Workbench' }}</a>
+        {% endif %}
     </div>
 </div>
 

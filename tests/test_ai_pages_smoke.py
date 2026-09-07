@@ -18,7 +18,8 @@ from seed import ROLES
 
 # route -> roles that are granted access by the route decorators
 ZERO_ARG_ROUTES = {
-    '/ai/ai-dashboard': {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'},
+    '/ai/hub': {'SuperAdmin', 'Admin', 'Doctor', 'Pharmacist', 'Nurse', 'Physiotherapist',
+                'Radiologist', 'Dentist', 'LabTechnician', 'Receptionist', 'Patient'},
     '/ai/fracture-detection': {'Radiologist', 'Doctor', 'Nurse',
                                'Physiotherapist', 'Dentist', 'Admin',
                                'SuperAdmin'},

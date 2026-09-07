@@ -6,7 +6,7 @@
         wb_desc_ar='يكتشف كسور العظام في صور الأشعة ويرسم المنطقة المشتبه بها ليؤكدها أخصائي الأشعة. دعم للقرار فقط ولا يحل محل التفسير الشعاعي.',
         wb_icon='fa-bone',
         wb_facts=[('fa-microchip', 'Fine-tuned YOLOv8-nano', 'YOLOv8-nano مُدرَّب خصيصًا'), ('fa-bullseye', '92.5% mAP@50 (validation)', 'دقة 92.5% mAP@50'), ('fa-server', 'Runs locally, no data leaves the server', 'يعمل محليًا ولا تغادر البيانات الخادم'), ('fa-user-doctor', 'Positive findings alert the responsible physician', 'النتائج الإيجابية تنبّه الطبيب المسؤول')],
-        wb_back_url=url_for('radiology.orders'), wb_back_label='Worklist', wb_back_label_ar='قائمة العمل' %}
+        wb_back_url=(url_for('radiology.orders') if current_user.has_any_role('Radiologist','RadiologyTechnician','Doctor','Admin','SuperAdmin') else url_for('main.dashboard')), wb_back_label='Worklist', wb_back_label_ar='قائمة العمل' %}
 {% include 'ai/_workbench_hero.html' %}
 {% endwith %}
 
@@ -87,10 +87,12 @@
                     <dt>{{ 'التدقيق' if ar else 'Audit' }}</dt><dd>{{ 'كل تشغيل يُسجَّل في سجل النشاط' if ar else 'Every run is written to the activity log' }}</dd>
                     <dt>{{ 'الحالة' if ar else 'Status' }}</dt><dd><span class="hub-status hub-status-{{ 'available' if available else 'soon' }}">{{ ('متاح' if available else 'غير مثبّت') if ar else ('AVAILABLE' if available else 'NOT INSTALLED') }}</span></dd>
                 </dl>
+                {% if current_user.has_any_role('Radiologist','RadiologyTechnician','Doctor','Admin','SuperAdmin') %}
                 <div class="mt-3 d-flex gap-2 flex-wrap">
                     <a href="{{ url_for('copilot.radiology_ai') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><span class="ai-spark">✦</span> {{ 'محرك النتائج الحرجة' if ar else 'Critical-finding engine' }}</a>
                     <a href="{{ url_for('radiology.orders') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm"><i class="fas fa-list-check"></i> {{ 'قائمة الأشعة' if ar else 'Radiology worklist' }}</a>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>

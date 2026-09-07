@@ -6,7 +6,9 @@
         <p class="page-subtitle">{{ 'إدارة طلبات الفحوصات المخبرية' if g.lang == 'ar' else 'Manage laboratory test orders' }}</p>
     </div>
     <div class="page-actions">
+        {% if current_user.has_any_role('Doctor','Admin','SuperAdmin') %}
         <a href="{{ url_for('lab.new_order') }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-plus"></i> {{ 'طلب جديد' if g.lang == 'ar' else 'New Lab Order' }}</a>
+        {% endif %}
     </div>
 </div>
 

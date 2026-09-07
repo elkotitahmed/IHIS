@@ -10,7 +10,9 @@
     </div>
     <div class="page-actions">
         <button type="button" class="ai-btn" id="inboxPriorityBtn"><span class="ai-spark">✦</span> {{ 'ما الذي يحتاج انتباهي أولًا؟' if g.lang == 'ar' else 'What needs my attention first?' }}</button>
+        {% if current_user.has_permission('REMINDER_VIEW') %}
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.reminders') }}"><i class="fas fa-bell"></i> {{ 'التذكيرات' if g.lang == 'ar' else 'Reminders' }} ({{ counts.reminders }})</a>
+        {% endif %}
     </div>
 </div>
 
@@ -144,7 +146,7 @@
 {# ---------------- PHARMACY ---------------- #}
 <section class="tab-pane-ihs" data-pane="pharmacy" hidden>
     <div class="card-premium mb-4">
-        <div class="card-header"><div class="card-title"><i class="fas fa-handshake-angle"></i> {{ 'تدخلات الصيدلة' if g.lang == 'ar' else 'Pharmacist Interventions' }} ({{ counts.interventions }})</div><a href="{{ url_for('pharmacy.interventions') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'All' }}</a></div>
+        <div class="card-header"><div class="card-title"><i class="fas fa-handshake-angle"></i> {{ 'تدخلات الصيدلة' if g.lang == 'ar' else 'Pharmacist Interventions' }} ({{ counts.interventions }})</div>{% if current_user.has_permission('INTERVENTION_VIEW') and current_user.has_any_role('Pharmacist','Doctor','Admin','SuperAdmin') %}<a href="{{ url_for('pharmacy.interventions') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الكل' if g.lang == 'ar' else 'All' }}</a>{% endif %}</div>
         <div class="card-body flush"><div class="list-compact">
             {% for iv in interventions %}
             <div class="list-item">
@@ -182,7 +184,7 @@
                     <div class="list-item">
                         <i class="fas fa-file-medical" style="color:var(--ihis-warning)"></i>
                         <div style="flex:1;min-width:0"><div style="font-size:0.8125rem;font-weight:500">{{ d.patient.user.full_name if d.patient and d.patient.user else 'Patient' }}</div><div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ d.diagnosis or '' }} · {{ d.visit_date.strftime('%d %b %Y') if d.visit_date }}</div></div>
-                        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.patient_detail', patient_id=d.patient_id) }}">{{ 'توقيع' if g.lang == 'ar' else 'Sign' }}</a>
+                        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.patient_detail', patient_id=d.patient_id) if current_user.has_any_role('Doctor','Admin','SuperAdmin') else url_for('clinical.patient_360', patient_id=d.patient_id) }}">{{ 'توقيع' if g.lang == 'ar' else 'Sign' }}</a>
                     </div>
                     {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا سجلات غير موقعة.' if g.lang == 'ar' else 'No unsigned records.' }}</div>{% endfor %}
                 </div></div>

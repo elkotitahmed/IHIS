@@ -248,10 +248,10 @@ def register_context_processors(app):
             """Zero-argument AI tools the given roles can reach, in display order."""
             specs = [
                 (_l('Fracture Detection', 'كشف الكسور'), '/ai/fracture-detection',
-                 'fa-bone', {'Radiologist', 'RadiologyTechnician', 'Doctor', 'Nurse', 'Physiotherapist',
-                             'Dentist', 'Admin', 'SuperAdmin'}),
+                 'fa-bone', {'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
+                             'Dentist', 'Admin', 'SuperAdmin'}),   # = route decorator
                 (_l('Tooth Segmentation', 'تجزئة الأسنان'), '/ai/tooth-segmentation',
-                 'fa-tooth', {'Dentist', 'Radiologist', 'RadiologyTechnician', 'Nurse', 'Admin', 'SuperAdmin'}),
+                 'fa-tooth', {'Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin'}),   # = route decorator
                 (_l('Skin Lesion Detection', 'كشف آفات الجلد'), '/ai/skin-lesion-detection',
                  'fa-person-circle-question', {'Doctor', 'Dentist', 'Nurse',
                                                'Admin', 'SuperAdmin'}),

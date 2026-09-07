@@ -49,12 +49,6 @@
             </div>
             <div class="card-body">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
-                    <a href="{{ url_for('reception.register') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-user-plus"></i> {{ t('register_patient') }}
-                    </a>
-                    <a href="{{ url_for('reception.book_appointment') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-calendar-plus"></i> {{ t('book_appointment') }}
-                    </a>
                     <a href="{{ url_for('reception.appointments') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
                         <i class="fas fa-list"></i> {{ t('appointments') }}
                     </a>

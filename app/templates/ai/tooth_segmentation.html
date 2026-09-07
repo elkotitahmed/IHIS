@@ -6,7 +6,7 @@
         wb_desc_ar='يجزّئ الأسنان في الأشعة البانورامية لدعم التقييم السني وتخطيط العلاج. يساعد طبيب الأسنان ولا يحل محل حكمه السريري.',
         wb_icon='fa-tooth',
         wb_facts=[('fa-microchip', 'U-Net, trained on the TUFTS panoramic dataset', 'U-Net مدرَّب على بيانات TUFTS البانورامية'), ('fa-server', 'Runs locally on this server', 'يعمل محليًا على هذا الخادم'), ('fa-user-doctor', 'Dentist reviews every mask', 'يراجع طبيب الأسنان كل قناع')],
-        wb_back_url=url_for('dentistry.patients'), wb_back_label='Dental patients', wb_back_label_ar='مرضى الأسنان' %}
+        wb_back_url=(url_for('dentistry.patients') if current_user.has_any_role('Dentist','Admin','SuperAdmin') else url_for('main.dashboard')), wb_back_label='Dental patients', wb_back_label_ar='مرضى الأسنان' %}
 {% include 'ai/_workbench_hero.html' %}
 {% endwith %}
 
@@ -54,7 +54,9 @@
                     <li>{{ 'لتحليل المخطط والنتائج استخدم ذكاء الأسنان.' if ar else 'For chart analysis and findings use Dentistry AI.' }}</li>
                 </ul>
                 <div class="mt-3 d-flex gap-2 flex-wrap">
+                    {% if current_user.has_any_role('Dentist','Doctor','Admin','SuperAdmin') %}
                     <a href="{{ url_for('copilot.dentistry_ai') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><span class="ai-spark">✦</span> {{ 'ذكاء الأسنان' if ar else 'Dentistry AI' }}</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

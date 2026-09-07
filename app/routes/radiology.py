@@ -78,7 +78,8 @@ def orders():
         doc = current_user.doctor_profile
         q = q.filter(RadiologyOrder.doctor_id == (doc.id if doc else -1))
     all_orders = q.order_by(RadiologyOrder.order_date.desc()).limit(300).all()
-    can_report = current_user.has_any_role('Radiologist', 'Admin', 'SuperAdmin')
+    can_report = (current_user.has_any_role('Radiologist', 'Admin', 'SuperAdmin')
+                  and current_user.has_permission('RADIOLOGY_CREATE'))
     can_perform = current_user.has_any_role(*RAD_STAFF)
     return render_template('radiology/orders.html', title='Radiology Orders',
                            orders=all_orders, status_badge=_status_badge,

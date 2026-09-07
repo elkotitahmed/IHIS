@@ -25,14 +25,18 @@
             <a href="{{ url_for('clinical.workbench') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
                 <i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}
             </a>
+            {% if current_user.has_permission('CLINICAL_SUMMARY_VIEW') %}
             <a href="{{ url_for('clinical.patient_summary', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
+            {% endif %}
                 <i class="fas fa-file-medical"></i> {{ 'الملخص الطبي' if g.lang == 'ar' else 'Summary' }}
             </a>
             <a href="{{ url_for('fhir.patient_view', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
                 <i class="fas fa-cloud-arrow-down"></i> FHIR
             </a>
             {% if active_admission %}
+            {% if current_user.has_permission('ADMISSION_VIEW') %}
             <a href="{{ url_for('admissions.view', id=active_admission.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+            {% endif %}
                 <i class="fas fa-bed-pulse"></i> {{ 'متابعة الاستشفاء' if g.lang == 'ar' else 'View Admission' }}
             </a>
             {% endif %}
@@ -498,7 +502,7 @@
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.lab_order', patient_id=patient.id) }}"><i class="fas fa-flask"></i> {{ 'مختبر' if g.lang == 'ar' else 'Order Lab' }}</a>
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('doctor.radiology_order', patient_id=patient.id) }}"><i class="fas fa-x-ray"></i> {{ 'تصوير' if g.lang == 'ar' else 'Order Imaging' }}</a>
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.referrals') }}"><i class="fas fa-share-nodes"></i> {{ 'إحالة' if g.lang == 'ar' else 'Refer' }}</a>
-        <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.team', patient_id=patient.id) }}"><i class="fas fa-users"></i> {{ 'فريق الرعاية' if g.lang == 'ar' else 'Care Team' }}</a>
+        {% if current_user.has_any_role('Doctor','Nurse','Physiotherapist','Dentist','LabTechnician','Radiologist','Pharmacist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('care.team', patient_id=patient.id) }}"><i class="fas fa-users"></i> {{ 'فريق الرعاية' if g.lang == 'ar' else 'Care Team' }}</a>{% endif %}
         <button type="button" class="ai-btn ai-btn-soft btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="patient.summary"><span class="ai-spark">✦</span> {{ 'ملخص ذكي' if g.lang == 'ar' else 'AI summary' }}</button>
         {% if active_admission and current_user.has_permission('ADMISSION_DISCHARGE') %}
         <a class="btn-ihs btn-ihs-danger btn-ihs-sm" href="{{ url_for('admissions.discharge', id=active_admission.id) }}"><i class="fas fa-door-open"></i> {{ 'تخريج' if g.lang == 'ar' else 'Discharge' }}</a>
@@ -544,7 +548,7 @@
                     </div>
                     <span class="status-badge s-{{ o.status|lower }}">{{ o.status }}</span>
                     {% if o.result and o.result.status in ('Verified','Locked','Finalized') %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.lab_result', order_id=o.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>{% endif %}
-                    {% if current_user.has_any_role('LabTechnician','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('lab.enter_result', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                    {% if current_user.has_permission('LAB_RESULT_CREATE') and current_user.has_any_role('LabTechnician','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('lab.enter_result', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
                 </div>
                 {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
             </div></div>
@@ -563,7 +567,7 @@
                     </div>
                     <span class="status-badge s-{{ o.status|lower }}">{{ o.status }}</span>
                     {% if o.report and o.report.status in ('Signed','Locked','Finalized') %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.radiology_report', order_id=o.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>{% endif %}
-                    {% if current_user.has_any_role('Radiologist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.enter_report', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                    {% if current_user.has_permission('RADIOLOGY_CREATE') and current_user.has_any_role('Radiologist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.enter_report', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
                 </div>
                 {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
             </div></div>
@@ -622,7 +626,7 @@
         <div class="card-premium mb-4">
             <div class="card-header">
                 <div class="card-title"><i class="fas fa-share-nodes" style="color:var(--ihis-teal)"></i> {{ 'الإحالات وفريق الرعاية' if g.lang == 'ar' else 'Referrals & Care Team' }}</div>
-                <a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الفريق' if g.lang == 'ar' else 'Team' }}</a>
+                {% if current_user.has_any_role('Doctor','Nurse','Physiotherapist','Dentist','LabTechnician','Radiologist','Pharmacist','Admin','SuperAdmin') %}<a href="{{ url_for('care.team', patient_id=patient.id) }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'الفريق' if g.lang == 'ar' else 'Team' }}</a>{% endif %}
             </div>
             <div class="card-body flush"><div class="list-compact">
                 {% for r in referrals %}

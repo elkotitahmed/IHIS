@@ -62,10 +62,14 @@
             {% for image in images %}
             <div class="col-md-3 col-sm-6">
                 <div class="card-premium" style="overflow:hidden">
+                    {% if image.id in missing_images %}
+                    <div style="height:160px;display:flex;align-items:center;justify-content:center;background:var(--ihis-surface-inset);color:var(--ihis-text-muted);font-size:.8rem"><i class="fas fa-image-slash"></i>&nbsp;{{ 'الملف غير موجود على الخادم' if g.lang == 'ar' else 'File missing on server' }}</div>
+                    {% else %}
                     <a href="{{ url_for('dentistry.download_image', image_id=image.id) }}" target="_blank" style="display:block">
                         <img src="{{ url_for('dentistry.download_image', image_id=image.id) }}" style="width:100%;height:160px;object-fit:cover;display:block"
                              alt="Dental image {{ image.id }}">
                     </a>
+                    {% endif %}
                     <div style="padding:var(--sp-3);display:flex;align-items:center;justify-content:space-between">
                         <span class="status-badge s-active">{{ image.image_type or 'Image' }}</span>
                         <span style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ image.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</span>

@@ -569,8 +569,8 @@ def _hub_context():
 @login_required
 @roles_required('Doctor', 'Nurse', 'Admin', 'SuperAdmin')
 def ai_dashboard():
-    """Legacy AI Command Center URL: renders the AI Hub (role-filtered)."""
-    return render_template('ai/hub.html', **_hub_context())
+    """Legacy AI Command Center URL → the AI Hub."""
+    return redirect(url_for('ai.ai_hub'))
 
 
 @ai_bp.route('/hub')

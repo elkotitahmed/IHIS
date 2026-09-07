@@ -35,6 +35,11 @@ def dashboard():
     beds_available = Bed.query.filter_by(status='Available').count()
     current = Admission.query.filter_by(status='Admitted').order_by(
         Admission.admitted_at.desc()).all()
+    if not current_user.has_any_role('Admin', 'SuperAdmin'):
+        # need-to-know: only admissions the user may open (no links that 403)
+        from app.access import accessible_patient_ids
+        allowed = accessible_patient_ids(current_user)
+        current = [a for a in current if a.patient_id in allowed]
 
     # ---- Ward census (per-ward occupancy board) ----
     ward_census = []

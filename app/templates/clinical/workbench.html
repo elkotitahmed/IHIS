@@ -15,7 +15,9 @@
     <i class="fas fa-triangle-exclamation me-2"></i>
     <strong>{{ open_alert_count }}</strong>
     {{ 'إنذار مفتوح عبر مرضاك.' if g.lang == 'ar' else 'open alerts across your patients.' }}
+    {% if current_user.has_permission('ALERT_VIEW') %}
     <a href="{{ url_for('clinical.alerts_all') }}" style="float:right;font-weight:600">
+    {% endif %}
         {{ 'عرض الكل' if g.lang == 'ar' else 'View all' }} <i class="fas fa-arrow-right"></i>
     </a>
 </div>

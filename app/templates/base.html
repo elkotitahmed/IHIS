@@ -153,7 +153,9 @@
                 </button>
                 {% endif %}
 
+                {% if not current_user.has_role('Patient') %}
                 <a href="{{ url_for('tasks.my_tasks') }}" class="btn-topbar" title="{{ 'المهام' if is_ar else 'Tasks' }}" aria-label="Tasks">
+                {% endif %}
                     <i class="fas fa-clipboard-list"></i>
                     {% if pending_tasks %}<span class="notif-badge">{{ pending_tasks }}</span>{% endif %}
                 </a>

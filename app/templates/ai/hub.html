@@ -16,7 +16,6 @@
     </div>
     <div class="hub-hero-side">
         <span class="ai-pill ai-pill-{{ 'ready' if st.state == 'READY' else 'limited' if st.state == 'LIMITED' else 'limit' if st.state == 'LIMIT_REACHED' else 'off' }}" title="{{ st.reason }}">{{ 'الذكاء جاهز' if ar and st.state == 'READY' else 'AI ' ~ st.state.replace('_', ' ') }}</span>
-        {% if copilot_enabled %}<button type="button" class="ai-btn" data-copilot-open=""><span class="ai-spark">✦</span> {{ 'افتح المساعد' if ar else 'Open AI Copilot' }}</button>{% endif %}
         {% if st.state != 'READY' and st.reason %}<div class="ai-note ai-note-muted" style="max-width:280px">{{ st.reason }}</div>{% endif %}
     </div>
 </div>

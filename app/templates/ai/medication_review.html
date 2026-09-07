@@ -7,7 +7,9 @@
     </div>
     <div class="page-actions">
         {% if patient %}
+        {% if current_user.has_any_role('Pharmacist','Admin','SuperAdmin') %}
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('pharmacy.prescriptions') }}">
+        {% endif %}
             <i class="fas fa-arrow-left"></i>{{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
         {% endif %}
     </div>
