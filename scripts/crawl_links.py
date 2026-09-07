@@ -3,7 +3,7 @@ form GET action and static asset it renders; report anything that is not 2xx/3xx
 Also flag identical (href, text) pairs repeated inside <main> on one page."""
 import os, re, sys, collections
 from html.parser import HTMLParser
-ROOT = r'D:\AI in health care\protoproject\iHIS_Project'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT); sys.path.insert(0, ROOT)
 os.environ.setdefault('FLASK_CONFIG', 'development')
 from app import create_app
