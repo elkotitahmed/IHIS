@@ -50,7 +50,7 @@
     </div>
     <div class="col-lg-7">
         <div class="card-premium" style="border-color:var(--ihis-purple-light)">
-            <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'إجراءات الذكاء' if g.lang == 'ar' else 'AI actions' }} <span class="ai-label ai-label-ai">AI ASSISTED</span></div></div>
+            <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'إجراءات الذكاء' if g.lang == 'ar' else 'AI actions' }} <span class="ai-label ai-label-ai">{{ 'بمساعدة الذكاء' if g.lang == 'ar' else 'AI ASSISTED' }}</span></div></div>
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2 mb-3" id="dentAiActions" data-patient="{{ patient.id }}">
                     {% for key, en, ar in [('summary','Chart summary','ملخص المخطط'),('findings','Finding summary','ملخص النتائج'),('plan','Treatment-plan draft','مسودة خطة العلاج'),('education','Patient education','تثقيف المريض'),('abnormality','Abnormality assistance','مساعدة الشذوذات')] %}

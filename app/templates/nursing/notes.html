@@ -53,7 +53,7 @@
                 <small class="cell-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
             </div>
             <p class="mb-0 mt-2 cell-secondary">{{ note.note }}</p>
-            <small class="cell-muted">Nurse ID <span class="t-num">{{ note.nurse_id }}</span></small>
+            <small class="cell-muted">{{ 'رقم الممرض' if g.lang == 'ar' else 'Nurse ID' }} <span class="t-num">{{ note.nurse_id }}</span></small>
         </div>
         {% else %}
         <div class="empty-state">

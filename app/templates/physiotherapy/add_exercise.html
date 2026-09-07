@@ -22,7 +22,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'التصنيف' if g.lang == 'ar' else 'Category' }}</label>
-                        <input class="form-control" name="category" placeholder="e.g. Strength, Balance, Mobility">
+                        <input class="form-control" name="category" placeholder="{{ 'مثال: قوة، توازن، حركة' if g.lang == 'ar' else 'e.g. Strength, Balance, Mobility' }}">
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>

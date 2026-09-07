@@ -53,11 +53,11 @@
         highlight();
         position(el);
         menu.hidden = false;
-        el.setAttribute('aria-expanded', 'true');
+        el.setAttribute('aria-autocomplete', 'list'); el.setAttribute('data-ac-open', 'true');
     }
     function hide() {
         if (menu) menu.hidden = true;
-        if (active) active.setAttribute('aria-expanded', 'false');
+        if (active) active.setAttribute('data-ac-open', 'false');
         index = -1;
     }
     function highlight() {
@@ -122,7 +122,7 @@
     function attach(el) {
         el.setAttribute('autocomplete', 'off');
         el.setAttribute('aria-autocomplete', 'list');
-        el.setAttribute('aria-expanded', 'false');
+        el.setAttribute('data-ac-open', 'false');
         el.addEventListener('focus', function () { active = el; });
         el.addEventListener('input', function () {
             active = el;

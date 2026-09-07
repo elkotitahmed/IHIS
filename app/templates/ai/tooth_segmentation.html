@@ -35,8 +35,8 @@
                     <div class="verdict-side"><div class="big">{{ result.coverage_percent }}%</div><div class="small-lbl">{{ 'تغطية الأسنان' if ar else 'tooth coverage' }}</div></div>
                 </div>
                 <div class="compare">
-                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة الأصلية' if ar else 'Original panoramic' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="Original"></figure>
-                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'قناع الأسنان المتوقع' if ar else 'Predicted tooth mask' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='masks', filename=result.mask_key) }}" alt="Segmentation mask"></figure>
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة الأصلية' if ar else 'Original panoramic' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="{{ 'الأصلية' if g.lang == 'ar' else 'Original' }}"></figure>
+                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'قناع الأسنان المتوقع' if ar else 'Predicted tooth mask' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='masks', filename=result.mask_key) }}" alt="{{ 'قناع التجزئة' if g.lang == 'ar' else 'Segmentation mask' }}"></figure>
                 </div>
                 <div class="ai-footer">{{ 'مخرجات دعم قرار من نموذج محلي؛ يبقى طبيب الأسنان مسؤولًا.' if ar else 'Decision-support output from a local model; the dentist remains responsible.' }}</div>
             </div>

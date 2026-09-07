@@ -39,7 +39,7 @@
                     <div style="display:flex;justify-content:space-between"><span class="text-muted">HR</span><strong>{{ latest_vitals.heart_rate or '—' }} bpm</strong></div>
                     <div style="display:flex;justify-content:space-between"><span class="text-muted">Temp</span><strong>{{ latest_vitals.temperature or '—' }} °C</strong></div>
                     <div style="display:flex;justify-content:space-between"><span class="text-muted">SpO2</span><strong>{{ latest_vitals.oxygen_saturation or '—' }}%</strong></div>
-                    <div style="display:flex;justify-content:space-between"><span class="text-muted">Weight</span><strong>{{ latest_vitals.weight_kg or '—' }} kg</strong></div>
+                    <div style="display:flex;justify-content:space-between"><span class="text-muted">{{ 'الوزن' if g.lang == 'ar' else 'Weight' }}</span><strong>{{ latest_vitals.weight_kg or '—' }} kg</strong></div>
                     <div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ latest_vitals.recorded_at.strftime('%d %b %Y %H:%M') if latest_vitals.recorded_at }}</div>
                 </div>
                 {% else %}<div style="text-align:center;padding:1.5rem;color:var(--ihis-text-muted)">{{ 'لا قياسات.' if g.lang == 'ar' else 'No vitals.' }}</div>{% endif %}
@@ -112,7 +112,7 @@
                             <div style="font-size:0.8rem">{{ res.order.test.test_name if res.order and res.order.test else 'Lab' }} <strong>{{ res.result_value }}{% if res.result_unit %} {{ res.result_unit }}{% endif %}</strong>{% if res.order and res.order.test and res.order.test.normal_range %} <span class="cell-muted">({{ 'المدى المرجعي' if g.lang == 'ar' else 'ref' }}: {{ res.order.test.normal_range }})</span>{% endif %}</div>
                             <div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ res.result_date.strftime('%d %b %Y') }} · {{ res.status }}</div>
                         </div>
-                        {% if res.is_critical %}<span class="status-badge s-cancelled">CRIT</span>{% elif res.is_abnormal %}<span class="status-badge s-pending">Abn</span>{% endif %}
+                        {% if res.is_critical %}<span class="status-badge s-cancelled">{{ 'حرج' if g.lang == 'ar' else 'CRIT' }}</span>{% elif res.is_abnormal %}<span class="status-badge s-pending">Abn</span>{% endif %}
                     </div>
                     {% endfor %}
                 </div>

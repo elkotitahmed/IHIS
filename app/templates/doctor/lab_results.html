@@ -40,7 +40,7 @@
                             <td>
                                 {% if order.result and order.result.result_value %}
                                 <span class="t-num">{{ order.result.result_value }}{{ ' ' ~ order.result.result_unit if order.result.result_unit }}</span>
-                                {% if order.result.is_critical %}<span class="status-badge s-rejected" style="font-size:0.625rem;padding:1px 6px">CRITICAL</span>{% elif order.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem;padding:1px 6px">Abn</span>{% endif %}
+                                {% if order.result.is_critical %}<span class="status-badge s-rejected" style="font-size:0.625rem;padding:1px 6px">{{ 'حرج' if g.lang == 'ar' else 'CRITICAL' }}</span>{% elif order.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem;padding:1px 6px">Abn</span>{% endif %}
                                 {% else %}
                                 <span class="cell-muted">-</span>
                                 {% endif %}

@@ -2,6 +2,7 @@
 {% block content %}
 {% set rx_partial = false %}
 {% for i in rx.items %}{% if i.dispensed_qty() > 0 and i.status != 'Dispensed' %}{% set rx_partial = true %}{% endif %}{% endfor %}
+{% include 'clinical/_patient_header.html' %}
 <div class="page-header">
     <div>
         <h1 class="page-title"><i class="fas fa-prescription" style="color:var(--ihis-primary)"></i> {{ 'الروشتة #' if g.lang == 'ar' else 'Prescription #' }}{{ rx.id }}</h1>
@@ -173,7 +174,7 @@
                 </select></div>
             <div class="col-md-3"><label class="form-label small">{{ 'الخطورة' if g.lang == 'ar' else 'Severity' }}</label>
                 <select name="severity" class="form-select form-select-sm">
-                    <option value="Minor">Minor</option><option value="Moderate" selected>Moderate</option><option value="Major">Major</option><option value="Contraindicated">Contraindicated</option>
+                    <option value="Minor">{{ 'طفيف' if g.lang == 'ar' else 'Minor' }}</option><option value="Moderate" selected>{{ 'متوسط' if g.lang == 'ar' else 'Moderate' }}</option><option value="Major">{{ 'كبير' if g.lang == 'ar' else 'Major' }}</option><option value="Contraindicated">{{ 'مضاد استطباب' if g.lang == 'ar' else 'Contraindicated' }}</option>
                 </select></div>
             <div class="col-md-6"><label class="form-label small">{{ 'المشكلة' if g.lang == 'ar' else 'Issue' }}</label><input type="text" name="issue" class="form-control form-control-sm" required placeholder="{{ 'صف المشكلة الدوائية' if g.lang == 'ar' else 'Describe the medication issue' }}"></div>
             <div class="col-md-9"><label class="form-label small">{{ 'التوصية' if g.lang == 'ar' else 'Recommendation' }}</label><input type="text" name="recommendation" class="form-control form-control-sm" placeholder="{{ 'التعديل المقترح' if g.lang == 'ar' else 'Suggested change' }}"></div>

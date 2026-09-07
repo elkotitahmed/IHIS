@@ -99,7 +99,7 @@
                         <td><span class="tag-ihs">{{ a.route or '-' }}</span></td>
                         <td class="cell-mono">
                             {{ a.scheduled_time.strftime('%Y-%m-%d %H:%M') if a.scheduled_time else '-' }}
-                            {% if a.scheduled_time and a.scheduled_time < now %}<span class="status-badge s-missed" style="margin-left:4px">Overdue</span>{% endif %}
+                            {% if a.scheduled_time and a.scheduled_time < now %}<span class="status-badge s-missed" style="margin-left:4px">{{ 'متأخر' if g.lang == 'ar' else 'Overdue' }}</span>{% endif %}
                         </td>
                         <td>
                             <form method="POST" action="{{ url_for('nursing.administration_outcome', admin_id=a.id) }}" class="d-flex align-items-start gap-1 flex-wrap">
@@ -152,11 +152,11 @@
                         <td class="cell-mono">{{ a.scheduled_time.strftime('%Y-%m-%d %H:%M') if a.scheduled_time else '-' }}</td>
                         <td class="cell-mono">{{ a.administered_at.strftime('%Y-%m-%d %H:%M') if a.administered_at else '-' }}</td>
                         <td>
-                            {% if a.status == 'Administered' %}<span class="status-badge s-completed">Administered</span>
-                            {% elif a.status == 'Held' %}<span class="status-badge s-hold">Held</span>
-                            {% elif a.status == 'Refused' %}<span class="status-badge s-cancelled">Refused</span>
-                            {% elif a.status == 'Missed' %}<span class="status-badge s-missed">Missed</span>
-                            {% elif a.status == 'Discontinued' %}<span class="status-badge s-cancelled">Discontinued</span>
+                            {% if a.status == 'Administered' %}<span class="status-badge s-completed">{{ 'أُعطي' if g.lang == 'ar' else 'Administered' }}</span>
+                            {% elif a.status == 'Held' %}<span class="status-badge s-hold">{{ 'مُوقَف' if g.lang == 'ar' else 'Held' }}</span>
+                            {% elif a.status == 'Refused' %}<span class="status-badge s-cancelled">{{ 'رفض المريض' if g.lang == 'ar' else 'Refused' }}</span>
+                            {% elif a.status == 'Missed' %}<span class="status-badge s-missed">{{ 'فائت' if g.lang == 'ar' else 'Missed' }}</span>
+                            {% elif a.status == 'Discontinued' %}<span class="status-badge s-cancelled">{{ 'مُلغى' if g.lang == 'ar' else 'Discontinued' }}</span>
                             {% else %}<span class="status-badge s-in-progress">{{ a.status }}</span>{% endif %}
                         </td>
                         <td class="cell-secondary">{{ a.reason or '-' }}</td>

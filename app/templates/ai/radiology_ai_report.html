@@ -8,7 +8,7 @@
     </div>
     <div class="page-actions">
         {% if current_user.has_permission('RADIOLOGY_CREATE') and current_user.has_any_role('Radiologist','Admin','SuperAdmin') %}<a href="{{ url_for('radiology.enter_report', order_id=order.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-file-medical"></i> {{ 'التقرير' if g.lang == 'ar' else 'Report page' }}</a>{% endif %}
-        <a href="{{ url_for('clinical.patient_360', patient_id=order.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> Patient 360</a>
+        <a href="{{ url_for('clinical.patient_360', patient_id=order.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
         <a href="{{ url_for('copilot.radiology_ai') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
     </div>
 </div>

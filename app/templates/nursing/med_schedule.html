@@ -42,11 +42,11 @@
                         <td class="cell-secondary">{{ item.record.dose_given or 'N/A' }}</td>
                         <td>
                             {% if item.record.status == 'Given' %}
-                                <span class="status-badge s-completed">Given</span>
+                                <span class="status-badge s-completed">{{ 'أُعطي' if g.lang == 'ar' else 'Given' }}</span>
                             {% elif item.record.status == 'Skipped' %}
-                                <span class="status-badge s-cancelled">Skipped</span>
+                                <span class="status-badge s-cancelled">{{ 'تخطّي' if g.lang == 'ar' else 'Skipped' }}</span>
                             {% elif item.record.status == 'Refused' %}
-                                <span class="status-badge s-rejected">Refused</span>
+                                <span class="status-badge s-rejected">{{ 'رفض المريض' if g.lang == 'ar' else 'Refused' }}</span>
                             {% else %}
                                 <span class="status-badge s-pending">{{ item.record.status }}</span>
                             {% endif %}

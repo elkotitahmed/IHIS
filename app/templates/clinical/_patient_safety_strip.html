@@ -9,7 +9,7 @@
     {% endfor %}
     {% for al in allergies %}
     <span class="safety-chip s-allergy" title="{{ al.reaction or '' }} {{ al.notes or '' }}">
-        <i class="fas fa-allergies"></i> {{ al.substance }}{% if al.severity %}<span style="opacity:.75"> · {{ al.severity }}</span>{% endif %}
+        <i class="fas fa-allergies"></i> {{ al.substance }}{% if al.severity %}<span> · {{ al.severity }}</span>{% endif %}
     </span>
     {% endfor %}
     {% for pr in problems %}

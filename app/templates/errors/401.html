@@ -2,9 +2,9 @@
 {% set _error_body %}
 <div style="max-width:600px;margin:4rem auto;text-align:center;padding:2rem">
     <h1 style="font-size:3rem;color:var(--ihis-danger);margin-bottom:1rem">401</h1>
-    <h2>Unauthorized</h2>
-    <p style="color:var(--ihis-text-muted);margin:1rem 0">Your session has expired or you are not signed in. Please log in to continue.</p>
-    <a href="{{ url_for('auth.login') }}" class="btn-ihs btn-ihs-primary">Sign In</a>
+    <h2>{{ 'غير مصرّح' if g.lang == 'ar' else 'Unauthorized' }}</h2>
+    <p style="color:var(--ihis-text-muted);margin:1rem 0">{{ 'انتهت جلستك أو لم تسجّل الدخول. سجّل الدخول للمتابعة.' if g.lang == 'ar' else 'Your session has expired or you are not signed in. Please log in to continue.' }}</p>
+    <a href="{{ url_for('auth.login') }}" class="btn-ihs btn-ihs-primary">{{ 'تسجيل الدخول' if g.lang == 'ar' else 'Sign In' }}</a>
 </div>
 {% endset %}
 {% block content %}{{ _error_body }}{% endblock %}

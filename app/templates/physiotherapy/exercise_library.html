@@ -40,7 +40,7 @@
                 </div>
                 <p class="card-text small text-muted">{{ item.description or '' }}</p>
                 <p class="small mb-1 cell-muted">
-                    <i class="fas fa-redo"></i> <span class="t-num">{{ item.repetitions or 0 }}</span> reps
+                    <i class="fas fa-redo"></i> <span class="t-num">{{ item.repetitions or 0 }}</span> {{ 'تكرارات' if g.lang == 'ar' else 'reps' }}
                     <i class="fas fa-clock" style="margin-left:0.75rem"></i> <span class="t-num">{{ item.duration_seconds or 0 }}</span> sec
                 </p>
                 {% if item.video_url %}

@@ -467,3 +467,26 @@ hr { border-color: var(--ihis-border); opacity: 1; }
 
 /* One Copilot entry point per screen: the sidebar on desktop, the topbar on mobile */
 @media (min-width: 769px) { .app-topbar #copilotBtn { display: none; } }
+
+/* ---------- Accessibility (WCAG 2.1 AA) ---------- */
+:root { --ihis-text-muted: #5f6b7c; --ihis-warning: #a04a05; --ihis-warning-dark: #7c3a04; --ihis-info: #1d4ed8; }
+[data-bs-theme="dark"] { --ihis-text-muted: #94a3b8; --ihis-warning: #fbbf24; --ihis-warning-dark: #fcd34d; }
+.ai-pill-limited, .ai-label-warn, .hub-status-limited, .status-badge.s-pending { color: var(--ihis-warning-dark) !important; }
+.ai-pill-ready, .hub-status-available, .ai-avail, .ai-label-verified { color: #0b5f56 !important; }
+[data-bs-theme="dark"] .ai-pill-ready, [data-bs-theme="dark"] .hub-status-available, [data-bs-theme="dark"] .ai-avail, [data-bs-theme="dark"] .ai-label-verified { color: #6ee7b7 !important; }
+.ai-soon, .hub-status-soon, .ai-label-muted { color: #475569 !important; }
+[data-bs-theme="dark"] .ai-soon, [data-bs-theme="dark"] .hub-status-soon, [data-bs-theme="dark"] .ai-label-muted { color: #cbd5e1 !important; }
+.hub-engine, .tile-label, .kpi-card .kpi-label, .stat-row-label, .ai-strip-card .ai-strip-label, .nav-group > summary { color: #475569; }
+[data-bs-theme="dark"] .hub-engine, [data-bs-theme="dark"] .tile-label, [data-bs-theme="dark"] .kpi-card .kpi-label, [data-bs-theme="dark"] .stat-row-label, [data-bs-theme="dark"] .ai-strip-card .ai-strip-label, [data-bs-theme="dark"] .nav-group > summary { color: #cbd5e1; }
+.topbar-search .search-text, .topbar-search kbd { color: #475569; }
+[data-bs-theme="dark"] .topbar-search .search-text, [data-bs-theme="dark"] .topbar-search kbd { color: #cbd5e1; }
+.sb-ai-btn .ai-pill { color: #fff; background: rgba(0,0,0,.22); }
+/* The closed Copilot drawer must not hold focusable elements */
+.ai-panel[aria-hidden="true"] { visibility: hidden; transition: transform .22s ease, visibility 0s linear .22s; }
+.ai-panel.open { visibility: visible; transition: transform .22s ease; }
+/* Visible focus everywhere */
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ai-2); outline-offset: 2px; }
+.table-wrapper:focus-visible { outline: 2px solid var(--ai-2); outline-offset: -2px; }
+/* "Coming soon" cards stay readable: no opacity dimming (contrast), dashed border instead */
+.hub-card.hub-card-off { opacity: 1; border-style: dashed; background: var(--ihis-surface-inset); }
+.hub-card.hub-card-off .hub-card-icon { filter: grayscale(1); opacity: .8; }

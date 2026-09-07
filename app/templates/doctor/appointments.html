@@ -30,7 +30,7 @@
                             <td class="cell-mono">{{ appt.scheduled_at.strftime('%Y-%m-%d %H:%M') if appt.scheduled_at else 'N/A' }}</td>
                             <td class="cell-primary">
                                 {% if appt.patient %}<a class="link-ihs" href="{{ url_for('doctor.patient_detail', patient_id=appt.patient_id) }}">{{ appt.patient.user.full_name if appt.patient.user else 'N/A' }}</a>
-                                {% if appt.queue_number %}<span class="tag-ihs" title="Queue">Q{{ appt.queue_number }}</span>{% endif %}
+                                {% if appt.queue_number %}<span class="tag-ihs" title="{{ 'قائمة الانتظار' if g.lang == 'ar' else 'Queue' }}">Q{{ appt.queue_number }}</span>{% endif %}
                                 {% else %}N/A{% endif %}
                             </td>
                             <td class="cell-secondary">{{ appt.reason or '-' }}</td>
@@ -47,18 +47,18 @@
                                     <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-copilot-open="{{ appt.patient_id }}" data-copilot-action="patient.previsit" title="{{ 'ملخص ما قبل الزيارة' if g.lang == 'ar' else 'Pre-visit summary' }}"><span class="ai-spark">✦</span> {{ 'قبل الزيارة' if g.lang == 'ar' else 'Pre-visit' }}</button>
                                     <form method="post" action="{{ url_for('doctor.start_consultation', appt_id=appt.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button class="btn-ihs btn-ihs-primary btn-ihs-sm" title="Start consultation and open the chart"><i class="fas fa-play"></i> {{ 'بدء الاستشارة' if g.lang == 'ar' else 'Start' }}</button>
+                                        <button class="btn-ihs btn-ihs-primary btn-ihs-sm" title="{{ 'ابدأ الاستشارة وافتح الملف' if g.lang == 'ar' else 'Start consultation and open the chart' }}"><i class="fas fa-play"></i> {{ 'بدء الاستشارة' if g.lang == 'ar' else 'Start' }}</button>
                                     </form>
                                     {% endif %}
                                     <form method="post" action="{{ url_for('doctor.complete_appointment', appt_id=appt.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="mode" value="Completed">
-                                        <button class="btn-ihs btn-ihs-success btn-ihs-sm" title="Complete visit &amp; bill consultation fee"><i class="fas fa-check"></i> {{ 'إتمام' if g.lang == 'ar' else 'Complete' }}</button>
+                                        <button class="btn-ihs btn-ihs-success btn-ihs-sm" title="{{ 'إنهاء الزيارة وفوترة رسوم الاستشارة' if g.lang == 'ar' else 'Complete visit &amp; bill consultation fee' }}"><i class="fas fa-check"></i> {{ 'إتمام' if g.lang == 'ar' else 'Complete' }}</button>
                                     </form>
                                     <form method="post" action="{{ url_for('doctor.complete_appointment', appt_id=appt.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="mode" value="NoShow">
-                                        <button class="btn-ihs btn-ihs-danger btn-ihs-sm" title="Mark as no-show"><i class="fas fa-user-slash"></i> {{ 'لم يحضر' if g.lang == 'ar' else 'No-Show' }}</button>
+                                        <button class="btn-ihs btn-ihs-danger btn-ihs-sm" title="{{ 'تسجيل كغياب' if g.lang == 'ar' else 'Mark as no-show' }}"><i class="fas fa-user-slash"></i> {{ 'لم يحضر' if g.lang == 'ar' else 'No-Show' }}</button>
                                     </form>
                                 </div>
                                 {% else %}<span class="cell-muted">—</span>{% endif %}

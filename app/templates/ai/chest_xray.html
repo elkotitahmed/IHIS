@@ -43,7 +43,7 @@
                 </div>
                 {% endif %}
                 <div class="compare mb-3">
-                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة' if ar else 'X-ray' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="Chest X-ray"></figure>
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة' if ar else 'X-ray' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="{{ 'أشعة الصدر' if g.lang == 'ar' else 'Chest X-ray' }}"></figure>
                     <figure><figcaption><span class="ai-spark">✦</span> {{ 'أعلى 5 نتائج' if ar else 'Top 5 findings' }}</figcaption>
                         <div class="d-flex flex-column gap-2">
                         {% for f in result.top %}

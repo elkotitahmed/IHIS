@@ -74,7 +74,7 @@
                                 {% endif %}
                             </form>
                             {% else %}
-                                <span class="status-badge s-in-progress" title="This is you">{{ 'أنت' if g.lang == 'ar' else 'You' }}</span>
+                                <span class="status-badge s-in-progress" title="{{ 'هذا أنت' if g.lang == 'ar' else 'This is you' }}">{{ 'أنت' if g.lang == 'ar' else 'You' }}</span>
                             {% endif %}
                         </td>
                     </tr>

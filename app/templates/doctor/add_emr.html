@@ -47,7 +47,7 @@
                 <div class="card-title"><i class="fas fa-file-medical" style="color:var(--ihis-primary)"></i> {{ 'سجل جديد لـ' if g.lang == 'ar' else 'New Record for' }} {{ patient.user.full_name if patient and patient.user else 'Patient' }}</div>
             </div>
             <div class="card-body">
-                <div class="d-flex gap-2 flex-wrap mb-3" aria-label="AI encounter assistant">
+                <div class="d-flex gap-2 flex-wrap mb-3" aria-label="{{ 'مساعد الزيارة الذكي' if g.lang == 'ar' else 'AI encounter assistant' }}">
                     <button type="button" class="ai-btn" data-copilot-open="{{ patient.id }}" data-copilot-action="patient.summary"><span class="ai-spark">✦</span> {{ 'ملخص المريض' if g.lang == 'ar' else 'Summarize history' }}</button>
                     <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="doc.hpi"><span class="ai-spark">✦</span> {{ 'مسودة HPI' if g.lang == 'ar' else 'Draft HPI' }}</button>
                     <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm" data-copilot-open="{{ patient.id }}" data-copilot-action="doc.structure"><span class="ai-spark">✦</span> {{ 'هيكلة الملاحظة' if g.lang == 'ar' else 'Organize (SOAP)' }}</button>

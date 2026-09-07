@@ -336,7 +336,8 @@ def reject(rx_id):
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def prescription_detail(rx_id):
     rx = Prescription.query.get_or_404(rx_id)
-    return render_template('pharmacy/prescription_detail.html', title='Prescription Detail', rx=rx)
+    return render_template('pharmacy/prescription_detail.html', title='Prescription Detail', rx=rx,
+                           patient=rx.patient, **patient_safety_context(rx.patient_id), today=utcnow().date())
 
 
 @pharmacy_bp.route('/inventory/<int:inv_id>/adjust', methods=['POST'])

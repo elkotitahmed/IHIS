@@ -8,7 +8,7 @@
     <div class="page-actions">
         {% if current_user.has_any_role('Pharmacist', 'Doctor', 'Nurse', 'Admin', 'SuperAdmin') %}
         <a href="{{ url_for('ai.medication_review', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline">
-            <i class="fas fa-capsules"></i> AI Medication Review
+            <i class="fas fa-capsules"></i> {{ 'مراجعة الأدوية بالذكاء' if g.lang == 'ar' else 'AI Medication Review' }}
         </a>
         {% endif %}
     </div>
@@ -113,7 +113,7 @@
                         <th>{{ 'النبض' if g.lang == 'ar' else 'Heart Rate' }}</th>
                         <th>{{ 'التنفس' if g.lang == 'ar' else 'Resp. Rate' }}</th>
                         <th>SpO2 (%)</th>
-                        <th title="National Early Warning Score 2">NEWS2</th>
+                        <th title="{{ 'مقياس الإنذار المبكر الوطني 2' if g.lang == 'ar' else 'National Early Warning Score 2' }}">NEWS2</th>
                         <th>{{ 'الطول' if g.lang == 'ar' else 'Height' }} (cm)</th>
                         <th>{{ 'الوزن' if g.lang == 'ar' else 'Weight' }} (kg)</th>
                         <th>{{ 'مسجل بواسطة' if g.lang == 'ar' else 'Recorded By' }}</th>

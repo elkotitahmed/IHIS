@@ -18,7 +18,7 @@
     <form method="get" class="row g-3 align-items-end">
       <div class="col-md-4">
         <label class="form-label-ihs">{{ 'بحث' if g.lang == 'ar' else 'Search' }} ({{ 'رقم الفاتورة / المريض' if g.lang == 'ar' else 'bill # / patient' }})</label>
-        <input class="form-control" name="q" value="{{ q }}" placeholder="INV-1001 or patient name">
+        <input class="form-control" name="q" value="{{ q }}" placeholder="{{ 'INV-1001 أو اسم المريض' if g.lang == 'ar' else 'INV-1001 or patient name' }}">
       </div>
       <div class="col-md-3">
         <label class="form-label-ihs">{{ 'الحالة' if g.lang == 'ar' else 'Status' }}</label>

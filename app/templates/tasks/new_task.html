@@ -33,7 +33,7 @@
                 <div class="col-md-4">
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'القسم' if g.lang == 'ar' else 'Department' }}</label>
-                        <input type="text" name="department" class="form-control" placeholder="e.g. Laboratory">
+                        <input type="text" name="department" class="form-control" placeholder="{{ 'مثال: المختبر' if g.lang == 'ar' else 'e.g. Laboratory' }}">
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -52,7 +52,7 @@
                     <div class="form-group">
                         <label class="form-label-ihs">{{ t('patient') }}</label>
                         <select name="patient_id" class="form-select">
-                            <option value="">-- None --</option>
+                            <option value="">{{ '-- لا شيء --' if g.lang == 'ar' else '-- None --' }}</option>
                             {% for p in patients %}
                             <option value="{{ p.id }}">{{ p.id }} - {{ p.user.full_name if p.user else '' }}</option>
                             {% endfor %}

@@ -42,7 +42,7 @@
             <div class="card-header">
                 <div class="card-title"><i class="fas {{ sc.icon }}" style="color:var(--ihis-primary)"></i> {{ loop.index }}. {{ sc.title_ar if g.lang == 'ar' else sc.title }}</div>
                 {% if sc.patient %}
-                <a href="{{ url_for('clinical.patient_360', patient_id=sc.patient.id) }}" class="tag-ihs" title="Patient 360"><i class="fas fa-user"></i> {{ sc.patient.user.full_name if sc.patient.user else 'Patient' }}{% if sc.patient.mrn %} · {{ sc.patient.mrn }}{% endif %}</a>
+                <a href="{{ url_for('clinical.patient_360', patient_id=sc.patient.id) }}" class="tag-ihs" title="{{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}"><i class="fas fa-user"></i> {{ sc.patient.user.full_name if sc.patient.user else 'Patient' }}{% if sc.patient.mrn %} · {{ sc.patient.mrn }}{% endif %}</a>
                 {% else %}
                 <span class="status-badge s-pending">{{ 'لا بيانات بعد' if g.lang == 'ar' else 'No data yet' }}</span>
                 {% endif %}

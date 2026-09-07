@@ -42,7 +42,7 @@
                         <td>
                             {% if item.result %}
                                 <span class="t-num">{{ item.result.result_value if item.result.result_value is defined else item.result }}</span>
-                                {% if item.result.is_critical %}<span class="status-badge s-rejected" style="font-size:0.625rem;padding:1px 6px">CRITICAL</span>{% elif item.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem;padding:1px 6px">Abn</span>{% endif %}
+                                {% if item.result.is_critical %}<span class="status-badge s-rejected" style="font-size:0.625rem;padding:1px 6px">{{ 'حرج' if g.lang == 'ar' else 'CRITICAL' }}</span>{% elif item.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem;padding:1px 6px">Abn</span>{% endif %}
                             {% else %}
                                 <span class="cell-muted">-</span>
                             {% endif %}

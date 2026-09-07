@@ -61,9 +61,9 @@
                         <label class="form-label small">{{ 'نوع التعقيد' if g.lang == 'ar' else 'Contrast Type' }}</label>
                         <select class="form-select form-select-sm" name="previous_contrast_type">
                             <option value="">—</option>
-                            <option value="Iodinated" {% if profile.previous_contrast_type == 'Iodinated' %}selected{% endif %}>Iodinated</option>
-                            <option value="Gadolinium" {% if profile.previous_contrast_type == 'Gadolinium' %}selected{% endif %}>Gadolinium</option>
-                            <option value="Barium" {% if profile.previous_contrast_type == 'Barium' %}selected{% endif %}>Barium</option>
+                            <option value="Iodinated" {% if profile.previous_contrast_type == 'Iodinated' %}selected{% endif %}>{{ 'يودي' if g.lang == 'ar' else 'Iodinated' }}</option>
+                            <option value="Gadolinium" {% if profile.previous_contrast_type == 'Gadolinium' %}selected{% endif %}>{{ 'جادولينيوم' if g.lang == 'ar' else 'Gadolinium' }}</option>
+                            <option value="Barium" {% if profile.previous_contrast_type == 'Barium' %}selected{% endif %}>{{ 'باريوم' if g.lang == 'ar' else 'Barium' }}</option>
                         </select>
                     </div>
                     <div>

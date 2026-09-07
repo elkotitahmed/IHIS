@@ -38,8 +38,8 @@
                         <label class="form-label-ihs">{{ 'نظام الترقيم' if g.lang == 'ar' else 'Numbering System' }}</label>
                         <select class="form-control" name="numbering_system">
                             <option value="FDI">FDI</option>
-                            <option value="Universal">Universal</option>
-                            <option value="Palmer">Palmer</option>
+                            <option value="Universal">{{ 'عالمي' if g.lang == 'ar' else 'Universal' }}</option>
+                            <option value="Palmer">{{ 'بالمر' if g.lang == 'ar' else 'Palmer' }}</option>
                         </select>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="fas fa-tooth me-1"></i>{{ 'اختيار السن' if g.lang == 'ar' else 'Select Tooth' }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'إغلاق' if g.lang == 'ar' else 'Close' }}"></button>
             </div>
             <div class="modal-body">
                 <div class="tooth-grid-ihs">

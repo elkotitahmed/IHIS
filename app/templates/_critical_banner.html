@@ -32,7 +32,7 @@
             <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'إقرار' if g.lang == 'ar' else 'Acknowledge' }}</button>
         </form>
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('clinical.alert_detail', alert_id=a.id) }}">{{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</a>
-        <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=a.patient_id) }}">Patient 360</a>
+        <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('clinical.patient_360', patient_id=a.patient_id) }}">{{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
     </div>
     {% endfor %}
 </div>

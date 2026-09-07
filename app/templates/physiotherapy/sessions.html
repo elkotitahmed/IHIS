@@ -8,7 +8,7 @@
     <div class="page-actions">
         <a class="btn-ihs btn-ihs-outline" href="{{ url_for('physiotherapy.plan', patient_id=plan.patient_id) }}"><i class="fas fa-arrow-left"></i> {{ 'الخطة' if g.lang == 'ar' else 'Plan' }}</a>
         <a class="btn-ihs btn-ihs-outline" href="{{ url_for('physiotherapy.progress', patient_id=plan.patient_id) }}"><i class="fas fa-chart-line"></i> {{ 'التقدم' if g.lang == 'ar' else 'Progress' }}</a>
-        <a class="btn-ihs btn-ihs-primary" href="{{ url_for('clinical.patient_360', patient_id=plan.patient_id) }}"><i class="fas fa-circle-nodes"></i> Patient 360</a>
+        <a class="btn-ihs btn-ihs-primary" href="{{ url_for('clinical.patient_360', patient_id=plan.patient_id) }}"><i class="fas fa-circle-nodes"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
     </div>
 </div>
 {% include 'clinical/_patient_header.html' %}
@@ -84,7 +84,7 @@
                                     {% if s.status == 'Scheduled' %}
                                     <form method="POST" action="{{ url_for('physiotherapy.session_start', session_id=s.id) }}" class="d-inline" style="display:inline-flex;gap:0.25rem;align-items:center">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="number" name="pain_before" min="0" max="10" placeholder="{{ 'ألم' if g.lang == 'ar' else 'Pain' }}" class="form-control form-control-sm" style="width:64px" title="Pain before (0-10)">
+                                        <input type="number" name="pain_before" min="0" max="10" placeholder="{{ 'ألم' if g.lang == 'ar' else 'Pain' }}" class="form-control form-control-sm" style="width:64px" title="{{ 'الألم قبل (0-10)' if g.lang == 'ar' else 'Pain before (0-10)' }}">
                                         <button class="btn-ihs btn-ihs-primary btn-icon-sm" title="{{ 'بدء الجلسة' if g.lang == 'ar' else 'Start session' }}"><i class="fas fa-play"></i></button>
                                     </form>
                                     {% endif %}
@@ -93,11 +93,11 @@
                                         <summary class="btn-ihs btn-ihs-success btn-ihs-sm">{{ 'إكمال' if g.lang == 'ar' else 'Complete' }}</summary>
                                         <form method="POST" action="{{ url_for('physiotherapy.session_complete', session_id=s.id) }}" class="mt-1">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <div class="mb-1"><input type="number" name="pain_after" min="0" max="10" placeholder="Pain after (0-10)" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="number" name="pain_after" min="0" max="10" placeholder="{{ 'الألم بعد (0-10)' if g.lang == 'ar' else 'Pain after (0-10)' }}" class="form-control form-control-sm"></div>
                                             <div class="mb-1"><input type="text" name="exercises_performed" placeholder="{{ 'تمارين منفذة' if g.lang == 'ar' else 'Exercises performed' }}" class="form-control form-control-sm"></div>
-                                            <div class="mb-1"><input type="text" name="modalities" placeholder="Modalities" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="text" name="modalities" placeholder="{{ 'الوسائل' if g.lang == 'ar' else 'Modalities' }}" class="form-control form-control-sm"></div>
                                             <div class="mb-1"><input type="text" name="patient_response" placeholder="{{ 'استجابة المريض' if g.lang == 'ar' else 'Patient response' }}" class="form-control form-control-sm"></div>
-                                            <div class="mb-1"><input type="text" name="adherence" placeholder="Adherence" class="form-control form-control-sm"></div>
+                                            <div class="mb-1"><input type="text" name="adherence" placeholder="{{ 'الالتزام' if g.lang == 'ar' else 'Adherence' }}" class="form-control form-control-sm"></div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="followup_required" id="fu{{ s.id }}"><label class="form-check-label" for="fu{{ s.id }}">{{ 'يلزم متابعة' if g.lang == 'ar' else 'Follow-up required' }}</label></div>
                                             <button class="btn-ihs btn-ihs-success btn-ihs-sm w-100">{{ 'حفظ وفوترة' if g.lang == 'ar' else 'Save & bill' }}</button>
                                         </form>
@@ -106,7 +106,7 @@
                                     {% if s.status == 'Scheduled' %}
                                     <form method="POST" action="{{ url_for('physiotherapy.session_no_show', session_id=s.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button class="btn-ihs btn-ihs-warning btn-icon-sm" title="No show"><i class="fas fa-user-slash"></i></button>
+                                        <button class="btn-ihs btn-ihs-warning btn-icon-sm" title="{{ 'لم يحضر' if g.lang == 'ar' else 'No show' }}"><i class="fas fa-user-slash"></i></button>
                                     </form>
                                     <form method="POST" action="{{ url_for('physiotherapy.session_cancel', session_id=s.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

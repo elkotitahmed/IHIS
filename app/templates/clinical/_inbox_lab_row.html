@@ -8,7 +8,7 @@
         </div>
         <div style="font-size:0.75rem;color:var(--ihis-text-muted)">
             {{ order.result.result_date.strftime('%d %b %Y %H:%M') if order.result.result_date }}
-            {% if order.result.is_critical %}<span class="status-badge s-cancelled">CRITICAL</span>{% elif order.result.is_abnormal %}<span class="status-badge s-pending">Abnormal</span>{% endif %}
+            {% if order.result.is_critical %}<span class="status-badge s-cancelled">{{ 'حرج' if g.lang == 'ar' else 'CRITICAL' }}</span>{% elif order.result.is_abnormal %}<span class="status-badge s-pending">{{ 'غير طبيعي' if g.lang == 'ar' else 'Abnormal' }}</span>{% endif %}
         </div>
     </div>
     <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" data-result-review="lab" data-result-id="{{ order.id }}" title="{{ 'تحليل بالذكاء' if g.lang == 'ar' else 'Analyze with AI' }}"><span class="ai-spark">✦</span></button>

@@ -34,7 +34,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">{{ 'الأدوار المسموح بها (مفصولة بفواصل، فارغ = الجميع)' if g.lang == 'ar' else 'Allowed roles (comma separated; empty = all)' }}</label>
-                    <input class="form-control" name="allowed_roles" value="{{ tpl.allowed_roles or '' }}" placeholder="Physician, Nurse">
+                    <input class="form-control" name="allowed_roles" value="{{ tpl.allowed_roles or '' }}" placeholder="{{ 'طبيب، ممرض' if g.lang == 'ar' else 'Physician, Nurse' }}">
                 </div>
                 <div class="col-12">
                     <label class="form-label">{{ 'الوصف' if g.lang == 'ar' else 'Description' }}</label>
@@ -58,8 +58,8 @@
                 {% if not sections %}{% set sections = [{'key':'s','label':'Subjective','type':'textarea','placeholder':''}, {'key':'o','label':'Objective','type':'textarea','placeholder':''}, {'key':'a','label':'Assessment','type':'textarea','placeholder':''}, {'key':'p','label':'Plan','type':'textarea','placeholder':''}] %}{% endif %}
                 {% for s in sections %}
                 <div class="sec-row row g-2" style="align-items:center;margin-bottom:var(--sp-2)">
-                    <div class="col-md-2"><input class="form-control" name="section_key" placeholder="Key" value="{{ s.key }}"></div>
-                    <div class="col-md-3"><input class="form-control" name="section_label" placeholder="Label" value="{{ s.label }}"></div>
+                    <div class="col-md-2"><input class="form-control" name="section_key" placeholder="{{ 'المفتاح' if g.lang == 'ar' else 'Key' }}" value="{{ s.key }}"></div>
+                    <div class="col-md-3"><input class="form-control" name="section_label" placeholder="{{ 'التسمية' if g.lang == 'ar' else 'Label' }}" value="{{ s.label }}"></div>
                     <div class="col-md-2">
                         <select class="form-control" name="section_type">
                             {% for ft in ['textarea','text','select','number','date','radio','checkbox'] %}<option value="{{ ft }}" {{ 'selected' if s.get('type','textarea') == ft }}>{{ ft }}</option>{% endfor %}
@@ -87,8 +87,8 @@
         row.className = 'sec-row row g-2';
         row.style.cssText = 'align-items:center;margin-bottom:var(--sp-2)';
         row.innerHTML =
-            '<div class="col-md-2"><input class="form-control" name="section_key" placeholder="Key" value="' + (key || '') + '"></div>' +
-            '<div class="col-md-4"><input class="form-control" name="section_label" placeholder="Label" value="' + (label || '') + '"></div>' +
+            '<div class="col-md-2"><input class="form-control" name="section_key" placeholder="{{ 'المفتاح' if g.lang == 'ar' else 'Key' }}" value="' + (key || '') + '"></div>' +
+            '<div class="col-md-4"><input class="form-control" name="section_label" placeholder="{{ 'التسمية' if g.lang == 'ar' else 'Label' }}" value="' + (label || '') + '"></div>' +
             '<div class="col-md-5"><input class="form-control" name="section_placeholder" placeholder="Placeholder" value="' + (placeholder || '') + '"></div>' +
             '<div class="col-md-1"><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm sec-remove">&times;</button></div>';
         row.querySelector('.sec-remove').addEventListener('click', function () { row.remove(); });

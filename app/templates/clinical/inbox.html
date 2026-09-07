@@ -17,7 +17,7 @@
 </div>
 
 <div id="inboxPriority" hidden class="card-premium mb-3" style="border-color:var(--ihis-purple-light)">
-    <div class="card-header"><div class="card-title"><span class="ai-label ai-label-ai">✦ {{ 'اقتراح أولوية بالذكاء' if g.lang == 'ar' else 'AI PRIORITY SUGGESTION' }}</span></div><button type="button" class="btn-icon" id="inboxPriorityClose" aria-label="Close"><i class="fas fa-times"></i></button></div>
+    <div class="card-header"><div class="card-title"><span class="ai-label ai-label-ai">✦ {{ 'اقتراح أولوية بالذكاء' if g.lang == 'ar' else 'AI PRIORITY SUGGESTION' }}</span></div><button type="button" class="btn-icon" id="inboxPriorityClose" aria-label="{{ 'إغلاق' if g.lang == 'ar' else 'Close' }}"><i class="fas fa-times"></i></button></div>
     <div class="card-body" id="inboxPriorityBody"></div>
 </div>
 
@@ -87,7 +87,7 @@
                                 <div style="font-size:0.8125rem;font-weight:500"><a href="{{ url_for('clinical.patient_360', patient_id=order.patient_id) }}" style="color:var(--ihis-primary);text-decoration:none">{{ order.patient.user.full_name if order.patient and order.patient.user else 'Patient' }}</a> — {{ order.imaging_type.name if order.imaging_type else 'Study' }}</div>
                                 <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ order.report.report_date.strftime('%d %b %Y %H:%M') if order.report.report_date }} · {{ (order.report.impression or '')[:70] }}</div>
                             </div>
-                            <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('copilot.radiology_ai_report', order_id=order.id) }}" title="AI assistance"><span class="ai-spark">✦</span></a>
+                            <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('copilot.radiology_ai_report', order_id=order.id) }}" title="{{ 'مساعدة الذكاء' if g.lang == 'ar' else 'AI assistance' }}"><span class="ai-spark">✦</span></a>
                             <form method="POST" action="{{ url_for('clinical.inbox_ack') }}" style="display:flex;gap:4px;align-items:center">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="result_type" value="RADIOLOGY"><input type="hidden" name="result_id" value="{{ order.report.id }}"><input type="hidden" name="patient_id" value="{{ order.patient_id }}">
                                 <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'أقر' if g.lang == 'ar' else 'Ack' }}</button>

@@ -33,11 +33,11 @@
                 <div class="col-md-4">
                     <label class="form-label fw-bold">{{ 'نوع الفحص' if g.lang == 'ar' else 'Screening Type' }}</label>
                     <select class="form-select" name="screening_type">
-                        <option value="General">General</option>
+                        <option value="General">{{ 'عام' if g.lang == 'ar' else 'General' }}</option>
                         <option value="CT">CT</option>
                         <option value="MRI">MRI</option>
-                        <option value="Contrast">Contrast</option>
-                        <option value="Nuclear">Nuclear Medicine</option>
+                        <option value="Contrast">{{ 'صبغة' if g.lang == 'ar' else 'Contrast' }}</option>
+                        <option value="Nuclear">{{ 'الطب النووي' if g.lang == 'ar' else 'Nuclear Medicine' }}</option>
                     </select>
                 </div>
                 <div class="col-12">

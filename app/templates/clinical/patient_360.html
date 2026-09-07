@@ -115,7 +115,7 @@
         <div class="care-body">
             <div class="care-label">{{ 'أكسجين' if g.lang == 'ar' else 'SpO2' }}</div>
             <div class="care-value">{{ v.oxygen_saturation }}%</div>
-            <div class="care-status">O2 sat</div>
+            <div class="care-status">{{ 'تشبع الأكسجين' if g.lang == 'ar' else 'O2 sat' }}</div>
         </div>
     </div>
     {% endif %}
@@ -155,7 +155,7 @@
                         </div>
                         <span class="status-badge {{ 's-cancelled' if al.severity == 'Severe' else 's-pending' }}" style="font-size:0.6875rem">{{ al.status }}</span>
                         {% if current_user.has_permission('ALLERGY_EDIT') %}
-                        <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="Edit" onclick="var f=document.getElementById('al-edit-{{ al.id }}');f.hidden=!f.hidden"><i class="fas fa-pen"></i></button>
+                        <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="{{ 'تعديل' if g.lang == 'ar' else 'Edit' }}" onclick="var f=document.getElementById('al-edit-{{ al.id }}');f.hidden=!f.hidden"><i class="fas fa-pen"></i></button>
                         {% endif %}
                     </div>
                     {% if current_user.has_permission('ALLERGY_EDIT') %}
@@ -166,7 +166,7 @@
                             <input type="text" name="reaction" class="form-control" value="{{ al.reaction or '' }}" placeholder="{{ 'رد الفعل' if g.lang == 'ar' else 'Reaction' }}">
                         </div>
                         <div class="input-group input-group-sm">
-                            <select name="severity" class="form-select" style="max-width:120px">
+                            <select name="severity" class="form-select" style="max-width:120px" aria-label="{{ 'الشدة' if g.lang == 'ar' else 'Severity' }}">
                                 {% for sv in ('Mild', 'Moderate', 'Severe') %}<option value="{{ sv }}" {{ 'selected' if al.severity == sv }}>{{ sv }}</option>{% endfor %}
                             </select>
                             <input type="text" name="notes" class="form-control" value="{{ al.notes or '' }}" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
@@ -189,8 +189,8 @@
                         <input type="text" name="onset" class="form-control" placeholder="{{ 'بداية التفاعل' if g.lang == 'ar' else 'Onset' }}">
                         <input type="text" name="notes" class="form-control" placeholder="{{ 'ملاحظات' if g.lang == 'ar' else 'Notes' }}">
                     </div>
-                    <select name="severity" class="form-select form-select-sm mb-2">
-                        <option value="Mild">Mild</option><option value="Moderate" selected>Moderate</option><option value="Severe">Severe</option>
+                    <select name="severity" class="form-select form-select-sm mb-2" aria-label="{{ 'الشدة' if g.lang == 'ar' else 'Severity' }}">
+                        <option value="Mild">{{ 'خفيف' if g.lang == 'ar' else 'Mild' }}</option><option value="Moderate" selected>{{ 'متوسط' if g.lang == 'ar' else 'Moderate' }}</option><option value="Severe">{{ 'شديد' if g.lang == 'ar' else 'Severe' }}</option>
                     </select>
                     <button class="btn-ihs btn-ihs-primary btn-ihs-sm w-100"><i class="fas fa-plus"></i> {{ 'إضافة' if g.lang == 'ar' else 'Add' }}</button>
                 </form>
@@ -218,7 +218,7 @@
                         </div>
                         <span class="status-badge {{ 's-completed' if pr.status == 'Resolved' else 's-pending' }}" style="font-size:0.6875rem">{{ pr.status }}</span>
                         {% if current_user.has_permission('PROBLEM_EDIT') %}
-                        <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="Edit" onclick="var f=document.getElementById('pr-edit-{{ pr.id }}');f.hidden=!f.hidden"><i class="fas fa-pen"></i></button>
+                        <button type="button" class="btn-ihs btn-ihs-ghost btn-ihs-sm" title="{{ 'تعديل' if g.lang == 'ar' else 'Edit' }}" onclick="var f=document.getElementById('pr-edit-{{ pr.id }}');f.hidden=!f.hidden"><i class="fas fa-pen"></i></button>
                         {% endif %}
                     </div>
                     {% if current_user.has_permission('PROBLEM_EDIT') %}
@@ -249,7 +249,7 @@
                         <input type="text" name="description" class="form-control" placeholder="{{ 'الوصف' if g.lang == 'ar' else 'Description' }}" required>
                     </div>
                     <div class="input-group input-group-sm mb-2">
-                        <select name="status" class="form-select form-select-sm" style="max-width:130px">
+                        <select name="status" class="form-select form-select-sm" style="max-width:130px" aria-label="{{ 'الحالة' if g.lang == 'ar' else 'Status' }}">
                             <option value="Active" selected>{{ 'نشط' if g.lang == 'ar' else 'Active' }}</option>
                             <option value="Inactive">{{ 'خامل' if g.lang == 'ar' else 'Inactive' }}</option>
                         </select>
@@ -289,7 +289,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="input-group input-group-sm mb-2">
                         <input type="text" name="vaccine_name" class="form-control" placeholder="{{ 'اللقاح' if g.lang == 'ar' else 'Vaccine' }}" required>
-                        <input type="number" name="dose_number" class="form-control" value="1" style="max-width:70px">
+                        <input type="number" name="dose_number" class="form-control" value="1" style="max-width:70px" aria-label="{{ 'رقم الجرعة' if g.lang == 'ar' else 'Dose number' }}">
                     </div>
                     <div class="input-group input-group-sm mb-2">
                         <input type="text" name="lot_number" class="form-control" placeholder="{{ 'رقم الدفعة' if g.lang == 'ar' else 'Lot' }}">
@@ -377,7 +377,7 @@
                         {% if f.status == 'Scheduled' and current_user.has_permission('FOLLOWUP_COMPLETE') %}
                         <form method="post" action="{{ url_for('clinical.complete_followup', patient_id=patient.id, followup_id=f.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button class="btn-ihs btn-ihs-outline btn-ihs-sm" title="Complete"><i class="fas fa-check"></i></button>
+                            <button class="btn-ihs btn-ihs-outline btn-ihs-sm" title="{{ 'إكمال' if g.lang == 'ar' else 'Complete' }}"><i class="fas fa-check"></i></button>
                         </form>
                         {% endif %}
                     </div>
@@ -389,7 +389,7 @@
                 <form method="post" action="{{ url_for('clinical.new_followup', patient_id=patient.id) }}" style="padding:var(--sp-3);border-top:1px solid var(--ihis-border)">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="input-group input-group-sm mb-2">
-                        <input type="datetime-local" name="scheduled_for" class="form-control" required>
+                        <input type="datetime-local" name="scheduled_for" class="form-control" required aria-label="{{ 'موعد التذكير' if g.lang == 'ar' else 'Scheduled for' }}">
                         <input type="text" name="reason" class="form-control" placeholder="{{ 'السبب' if g.lang == 'ar' else 'Reason' }}">
                     </div>
                     <button class="btn-ihs btn-ihs-primary btn-ihs-sm w-100"><i class="fas fa-plus"></i> {{ 'جدولة' if g.lang == 'ar' else 'Schedule' }}</button>
@@ -542,13 +542,13 @@
                     <div style="flex:1">
                         <div style="font-size:0.8125rem;font-weight:500">{{ o.test.test_name if o.test else 'Test' }}
                             {% if o.result %}<span class="cell-mono" style="font-size:0.75rem">— {{ o.result.result_value }} {{ o.result.result_unit or '' }}</span>{% endif %}
-                            {% if o.result and o.result.is_critical %}<span class="status-badge s-cancelled" style="font-size:0.625rem">CRITICAL</span>{% elif o.result and o.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem">ABN</span>{% endif %}
+                            {% if o.result and o.result.is_critical %}<span class="status-badge s-cancelled" style="font-size:0.625rem">{{ 'حرج' if g.lang == 'ar' else 'CRITICAL' }}</span>{% elif o.result and o.result.is_abnormal %}<span class="status-badge s-pending" style="font-size:0.625rem">ABN</span>{% endif %}
                         </div>
                         <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ o.accession_number or ('#' ~ o.id) }} &middot; {{ o.order_date.strftime('%d %b %Y') if o.order_date else '' }}</div>
                     </div>
                     <span class="status-badge s-{{ o.status|lower }}">{{ o.status }}</span>
                     {% if o.result and o.result.status in ('Verified','Locked','Finalized') %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.lab_result', order_id=o.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>{% endif %}
-                    {% if current_user.has_permission('LAB_RESULT_CREATE') and current_user.has_any_role('LabTechnician','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('lab.enter_result', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                    {% if current_user.has_permission('LAB_RESULT_CREATE') and current_user.has_any_role('LabTechnician','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('lab.enter_result', order_id=o.id) }}" aria-label="{{ 'إدخال النتيجة' if g.lang == 'ar' else 'Enter result' }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
                 </div>
                 {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
             </div></div>
@@ -567,7 +567,7 @@
                     </div>
                     <span class="status-badge s-{{ o.status|lower }}">{{ o.status }}</span>
                     {% if o.report and o.report.status in ('Signed','Locked','Finalized') %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" target="_blank" href="{{ url_for('reports.radiology_report', order_id=o.id) }}" title="PDF"><i class="fas fa-file-pdf"></i></a>{% endif %}
-                    {% if current_user.has_permission('RADIOLOGY_CREATE') and current_user.has_any_role('Radiologist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.enter_report', order_id=o.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                    {% if current_user.has_permission('RADIOLOGY_CREATE') and current_user.has_any_role('Radiologist','Admin','SuperAdmin') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('radiology.enter_report', order_id=o.id) }}" aria-label="{{ 'إدخال التقرير' if g.lang == 'ar' else 'Enter report' }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
                 </div>
                 {% else %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endfor %}
             </div></div>
@@ -616,7 +616,7 @@
                     <i class="fas fa-bed" style="color:var(--ihis-warning);font-size:0.75rem"></i>
                     <div style="flex:1;font-size:0.8125rem">{{ ad.admission_no }} &middot; {{ ad.ward.name if ad.ward else 'Ward' }} &middot; {{ ad.admitted_at.strftime('%d %b %Y') if ad.admitted_at else '' }}{% if ad.discharged_at %} → {{ ad.discharged_at.strftime('%d %b %Y') }}{% endif %}</div>
                     <span class="status-badge {{ 's-active' if ad.status == 'Admitted' else 's-completed' }}">{{ ad.status }}</span>
-                    {% if current_user.has_permission('ADMISSION_VIEW') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('admissions.view', id=ad.id) }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
+                    {% if current_user.has_permission('ADMISSION_VIEW') %}<a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('admissions.view', id=ad.id) }}" aria-label="{{ 'فتح الإقامة' if g.lang == 'ar' else 'Open admission' }}"><i class="fas fa-arrow-right"></i></a>{% endif %}
                 </div>
                 {% endfor %}
                 {% if not appointments and not admissions %}<div class="list-item" style="color:var(--ihis-text-muted);justify-content:center;padding:1rem">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</div>{% endif %}

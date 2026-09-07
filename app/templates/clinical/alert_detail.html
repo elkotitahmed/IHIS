@@ -15,7 +15,7 @@
     </div>
     <div class="page-actions">
         {% if report %}<a href="{{ url_for('copilot.radiology_ai_report', order_id=report.order_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-x-ray"></i> {{ 'مراجعة التقرير' if g.lang == 'ar' else 'Review report' }}</a>{% endif %}
-        <a href="{{ url_for('clinical.patient_360', patient_id=alert.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> Patient 360</a>
+        <a href="{{ url_for('clinical.patient_360', patient_id=alert.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
         <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'كل التنبيهات' if g.lang == 'ar' else 'All alerts' }}</a>
     </div>
 </div>
@@ -47,7 +47,7 @@
                     {% set done = (['OPEN','ACKNOWLEDGED','IN_PROGRESS','RESOLVED'].index(alert.status) if alert.status in ['OPEN','ACKNOWLEDGED','IN_PROGRESS','RESOLVED'] else -1) >= loop.index0 %}
                     <li class="status-badge {{ 's-completed' if done else 's-draft' }}">{{ st.replace('_',' ') }}</li>
                     {% endfor %}
-                    {% if alert.status == 'DISMISSED' %}<li class="status-badge s-cancelled">DISMISSED</li>{% endif %}
+                    {% if alert.status == 'DISMISSED' %}<li class="status-badge s-cancelled">{{ 'مرفوض' if g.lang == 'ar' else 'DISMISSED' }}</li>{% endif %}
                 </ol>
                 <dl class="row" style="font-size:0.8rem">
                     <dt class="col-4">{{ 'المسؤول' if g.lang == 'ar' else 'Responsible physician' }}</dt><dd class="col-8">{% if alert.assigned_to %}{{ alert.acknowledger.full_name if alert.acknowledger and alert.acknowledged_by == alert.assigned_to else (receipts[0].user.full_name if receipts and receipts[0].user and receipts[0].user_id == alert.assigned_to else 'User #' ~ alert.assigned_to) }}{% else %}—{% endif %}</dd>

@@ -113,6 +113,6 @@
     <a href="{{ url_for('dentistry.treatment_plans', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-list-check"></i> {{ 'خطط العلاج' if g.lang == 'ar' else 'Treatment Plans' }}</a>
     <a href="{{ url_for('dentistry.procedures', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-screwdriver-wrench"></i> {{ 'الإجراءات' if g.lang == 'ar' else 'Procedures' }}</a>
     <a href="{{ url_for('dentistry.imaging', patient_id=patient.id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-x-ray"></i> {{ 'التصوير' if g.lang == 'ar' else 'Imaging' }}</a>
-    <a href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-circle-nodes"></i> Patient 360</a>
+    <a href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}" class="btn-ihs btn-ihs-primary"><i class="fas fa-circle-nodes"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
 </div>
 {% endblock %}

@@ -43,8 +43,8 @@
                 {% endif %}
 
                 <div class="compare mb-3">
-                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة الأصلية' if ar else 'Original X-ray' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="Original"></figure>
-                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'النتيجة المعلّمة' if ar else 'AI annotated' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='results', filename=result.result_key) }}" alt="Annotated"></figure>
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة الأصلية' if ar else 'Original X-ray' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="{{ 'الأصلية' if g.lang == 'ar' else 'Original' }}"></figure>
+                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'النتيجة المعلّمة' if ar else 'AI annotated' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='results', filename=result.result_key) }}" alt="{{ 'معلّمة' if g.lang == 'ar' else 'Annotated' }}"></figure>
                 </div>
 
                 {% if result.detected %}

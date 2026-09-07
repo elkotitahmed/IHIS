@@ -24,7 +24,7 @@
     {% block head %}{% endblock %}
 </head>
 <body data-copilot-patient="{{ request.copilot_patient_id if request.copilot_patient_id is defined else '' }}"{% if copilot_enabled and dictation_enabled %} data-dictation="1"{% endif %}>
-<a href="#main-content" class="skip-link">Skip to content</a>
+<a href="#main-content" class="skip-link">{{ 'انتقل إلى المحتوى' if g.lang == 'ar' else 'Skip to content' }}</a>
 
 <div class="app-layout">
     {% if current_user.is_authenticated %}
@@ -32,7 +32,7 @@
     {% set ai_group = (nav|selectattr('key', 'equalto', 'ai')|list)|first %}
     {% set is_ar = g.lang == 'ar' %}
     <!-- ========== SIDEBAR ========== -->
-    <aside class="app-sidebar" id="appSidebar" role="navigation" aria-label="Main navigation">
+    <aside class="app-sidebar" id="appSidebar" role="navigation" aria-label="{{ 'التنقل الرئيسي' if g.lang == 'ar' else 'Main navigation' }}">
         <div class="sidebar-brand">
             <div class="brand-icon">iH</div>
             <div>
@@ -45,7 +45,7 @@
         {% if copilot_enabled or ai_group %}
         <div class="sb-ai">
             {% if copilot_enabled %}
-            <button type="button" class="sb-ai-btn" data-copilot-open="" title="AI Clinical Copilot (Ctrl+Shift+A)">
+            <button type="button" class="sb-ai-btn" data-copilot-open="" title="{{ 'المساعد السريري الذكي (Ctrl+Shift+A)' if g.lang == 'ar' else 'AI Clinical Copilot (Ctrl+Shift+A)' }}">
                 <span class="ai-spark">✦</span> {{ 'المساعد الذكي' if is_ar else 'AI Copilot' }}
                 {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if is_ar and ai_status.state == 'READY' else ai_status.state.replace('_', ' ') }}</span>{% endif %}
             </button>
@@ -112,7 +112,7 @@
             </div>
             <div class="user-actions">
                 <div class="dropup user-menu">
-                    <button class="btn-icon" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" title="{{ 'القائمة' if is_ar else 'Account menu' }}" aria-label="Account menu"><i class="fas fa-ellipsis"></i></button>
+                    <button class="btn-icon" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" title="{{ 'القائمة' if is_ar else 'Account menu' }}" aria-label="{{ 'قائمة الحساب' if g.lang == 'ar' else 'Account menu' }}"><i class="fas fa-ellipsis"></i></button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="fas fa-user-gear"></i> {{ 'ملفي الشخصي' if is_ar else 'My profile' }}</a></li>
                         <li><button class="dropdown-item" type="button" id="themeToggle"><i class="fas fa-moon"></i> {{ 'الوضع الداكن' if is_ar else 'Dark mode' }}</button></li>
@@ -130,37 +130,37 @@
     <div class="app-main">
         <!-- Topbar -->
         <header class="app-topbar" role="banner">
-            <button class="btn-topbar mobile-toggle" id="mobileToggle" aria-label="Toggle sidebar">
+            <button class="btn-topbar mobile-toggle" id="mobileToggle" aria-label="{{ 'إظهار/إخفاء القائمة' if g.lang == 'ar' else 'Toggle sidebar' }}">
                 <i class="fas fa-bars"></i>
             </button>
 
-            <div class="topbar-title" aria-label="Breadcrumb">
+            <div class="topbar-title" aria-label="{{ 'مسار التنقل' if g.lang == 'ar' else 'Breadcrumb' }}">
                 <a class="crumb-home" href="{{ url_for('main.dashboard') }}">{{ 'الرئيسية' if is_ar else 'Home' }}</a><span class="sep crumb-home"><i class="fas fa-chevron-{{ 'left' if is_ar else 'right' }}"></i></span><span>{{ title|default('Dashboard') }}</span>
             </div>
 
             <div class="topbar-spacer"></div>
 
             <div class="topbar-actions">
-                <button class="topbar-search" id="cmdTrigger" title="Ctrl+K" aria-label="Search">
+                <button class="topbar-search" id="cmdTrigger" title="Ctrl+K" aria-label="{{ 'بحث' if g.lang == 'ar' else 'Search' }}">
                     <i class="fas fa-search" style="font-size:0.75rem;color:var(--ihis-text-muted)"></i>
                     <span class="search-text">{{ 'بحث عن مريض…' if is_ar else 'Search patients…' }}</span>
                     <kbd>⌘K</kbd>
                 </button>
 
                 {% if copilot_enabled %}
-                <button type="button" class="ai-btn" id="copilotBtn" aria-controls="copilotPanel" aria-haspopup="dialog" title="AI Clinical Copilot (Ctrl+Shift+A)">
+                <button type="button" class="ai-btn" id="copilotBtn" aria-controls="copilotPanel" aria-haspopup="dialog" title="{{ 'المساعد السريري الذكي (Ctrl+Shift+A)' if g.lang == 'ar' else 'AI Clinical Copilot (Ctrl+Shift+A)' }}">
                     <span class="ai-spark">✦</span><span class="ai-btn-text">{{ 'المساعد الذكي' if is_ar else 'AI Copilot' }}</span>
                 </button>
                 {% endif %}
 
                 {% if not current_user.has_role('Patient') %}
-                <a href="{{ url_for('tasks.my_tasks') }}" class="btn-topbar" title="{{ 'المهام' if is_ar else 'Tasks' }}" aria-label="Tasks">
+                <a href="{{ url_for('tasks.my_tasks') }}" class="btn-topbar" title="{{ 'المهام' if is_ar else 'Tasks' }}" aria-label="{{ 'المهام' if g.lang == 'ar' else 'Tasks' }}">
                 {% endif %}
                     <i class="fas fa-clipboard-list"></i>
                     {% if pending_tasks %}<span class="notif-badge">{{ pending_tasks }}</span>{% endif %}
                 </a>
 
-                <a href="{{ url_for('main.notifications') }}" class="btn-topbar" title="{{ 'الإشعارات' if is_ar else 'Notifications' }}" aria-label="Notifications">
+                <a href="{{ url_for('main.notifications') }}" class="btn-topbar" title="{{ 'الإشعارات' if is_ar else 'Notifications' }}" aria-label="{{ 'الإشعارات' if g.lang == 'ar' else 'Notifications' }}">
                     <i class="fas fa-bell"></i>
                     {% if unread_notifications %}<span class="badge-dot"></span>{% endif %}
                 </a>
@@ -175,7 +175,7 @@
                 {{ 'عرض المشرف العام — أنت تشاهد بيئة المستشفى بالكامل' if is_ar else 'Global Admin View — You are viewing the entire hospital environment' }}
             </span>
             <div class="banner-actions">
-                <select id="previewRoleSelect" onchange="if(this.value)window.location.href='/super-admin/preview/'+this.value" aria-label="Preview as role">
+                <select id="previewRoleSelect" onchange="if(this.value)window.location.href='/super-admin/preview/'+this.value" aria-label="{{ 'معاينة كدور' if g.lang == 'ar' else 'Preview as role' }}">
                     <option value="">{{ 'معاينة ك...' if is_ar else 'Preview as role...' }}</option>
                     <option value="Physician">{{ 'طبيب' if is_ar else 'Physician' }}</option>
                     <option value="Nurse">{{ 'ممرض' if is_ar else 'Nurse' }}</option>
@@ -213,7 +213,7 @@
                     {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category == 'warning' else ('danger' if category == 'danger' else ('success' if category == 'success' else 'info'))) }} alert-dismissible fade show" role="alert" style="margin:0;font-size:0.8125rem">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ 'إغلاق' if g.lang == 'ar' else 'Close' }}"></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -232,7 +232,7 @@
                     {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category == 'warning' else ('danger' if category == 'danger' else ('success' if category == 'success' else 'info'))) }} alert-dismissible fade show" role="alert" style="margin:0;font-size:0.8125rem">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ 'إغلاق' if g.lang == 'ar' else 'Close' }}"></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -249,7 +249,7 @@
     <div class="cmd-palette">
         <div class="cmd-input-wrap">
             <i class="fas fa-search cmd-search-icon"></i>
-            <input class="cmd-input" id="cmdInput" type="text" placeholder="{{ 'بحث عن مريض، طبيب، وصفة...' if g.lang == 'ar' else 'Search patients, physicians, prescriptions...' }}" aria-label="Search">
+            <input class="cmd-input" id="cmdInput" type="text" placeholder="{{ 'بحث عن مريض، طبيب، وصفة...' if g.lang == 'ar' else 'Search patients, physicians, prescriptions...' }}" aria-label="{{ 'بحث' if g.lang == 'ar' else 'Search' }}">
         </div>
         <div class="cmd-results" id="cmdResults"></div>
     </div>

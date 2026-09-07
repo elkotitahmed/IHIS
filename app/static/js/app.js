@@ -58,6 +58,11 @@
             });
         })();
 
+        /* ---------- Keyboard access to horizontally scrollable tables ---------- */
+        document.querySelectorAll('.table-wrapper, .tabs-ihs, .care-strip, .scroll-area').forEach(function (el) {
+            if (el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2) { el.tabIndex = 0; if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'Scrollable table'); }
+        });
+
         /* ---------- Mobile Sidebar ---------- */
         const mobileToggle = document.getElementById('mobileToggle');
         const sidebar = document.getElementById('appSidebar');

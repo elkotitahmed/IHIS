@@ -34,7 +34,7 @@
                 <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:2px">
                         <span style="font-weight:{{ '600' if not n.is_read else '400' }};font-size:0.875rem;color:var(--ihis-text)">{{ n.title }}</span>
-                        {% if not n.is_read %}<span class="notif-badge" style="font-size:0.5625rem;min-width:14px;height:14px">new</span>{% endif %}
+                        {% if not n.is_read %}<span class="notif-badge" style="font-size:0.5625rem;min-width:14px;height:14px">{{ 'جديد' if g.lang == 'ar' else 'new' }}</span>{% endif %}
                     </div>
                     <div style="font-size:0.8125rem;color:var(--ihis-text-secondary)">{{ n.message }}</div>
                 </div>

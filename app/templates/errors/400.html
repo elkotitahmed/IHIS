@@ -2,8 +2,8 @@
 {% set _error_body %}
 <div style="max-width:600px;margin:4rem auto;text-align:center;padding:2rem">
     <h1 style="font-size:3rem;color:var(--ihis-danger);margin-bottom:1rem">400</h1>
-    <h2>Bad Request</h2>
-    <p style="color:var(--ihis-text-muted);margin:1rem 0">The request could not be understood by the server.</p>
+    <h2>{{ 'طلب غير صالح' if g.lang == 'ar' else 'Bad Request' }}</h2>
+    <p style="color:var(--ihis-text-muted);margin:1rem 0">{{ 'لم يتمكن الخادم من فهم الطلب.' if g.lang == 'ar' else 'The request could not be understood by the server.' }}</p>
     <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.home') }}" class="btn-ihs btn-ihs-primary">{{ 'العودة' if g.lang == 'ar' else 'Go Back Home' }}</a>
 </div>
 {% endset %}

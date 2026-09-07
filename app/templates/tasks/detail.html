@@ -110,8 +110,8 @@
                 <form method="post" action="{{ url_for('tasks.assign', task_id=task.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">
-                        <label class="form-label-ihs">User ID</label>
-                        <input type="text" name="assignee_id" class="form-control" placeholder="User ID" inputmode="numeric">
+                        <label class="form-label-ihs">{{ 'رقم المستخدم' if g.lang == 'ar' else 'User ID' }}</label>
+                        <input type="text" name="assignee_id" class="form-control" placeholder="{{ 'رقم المستخدم' if g.lang == 'ar' else 'User ID' }}" inputmode="numeric">
                     </div>
                     <div class="form-group">
                         <label class="form-label-ihs">{{ 'ملاحظة' if g.lang == 'ar' else 'Note' }}</label>

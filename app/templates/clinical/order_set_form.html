@@ -116,7 +116,7 @@
             '<div class="col-md-3 oset-sel oset-REFERRAL" style="display:none"><select class="form-control" name="referral_specialty_id"></select></div>' +
             '<div class="col-md-2"><select class="form-control" name="priority">' +
               '<option>Normal</option><option>Urgent</option><option>Stat</option><option>Routine</option></select></div>' +
-            '<div class="col-md-3"><input class="form-control" name="quantity" type="number" min="1" value="1" placeholder="Qty"></div>' +
+            '<div class="col-md-3"><input class="form-control" name="quantity" type="number" min="1" value="1" placeholder="{{ 'الكمية' if g.lang == 'ar' else 'Qty' }}"></div>' +
             '<div class="col-md-5"><input class="form-control" name="instructions" placeholder="Instructions"></div>' +
             '<div class="col-md-2"><input class="form-control" name="item_notes" placeholder="Notes"></div>' +
             '<div class="col-md-1"><button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm oset-remove">&times;</button></div>' +

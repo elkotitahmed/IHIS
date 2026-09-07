@@ -2,8 +2,8 @@
 {% set _error_body %}
 <div style="max-width:600px;margin:4rem auto;text-align:center;padding:2rem">
     <h1 style="font-size:3rem;color:var(--ihis-text-muted);margin-bottom:1rem">404</h1>
-    <h2>Page Not Found</h2>
-    <p style="color:var(--ihis-text-muted);margin:1rem 0">The page you are looking for does not exist.</p>
+    <h2>{{ 'الصفحة غير موجودة' if g.lang == 'ar' else 'Page Not Found' }}</h2>
+    <p style="color:var(--ihis-text-muted);margin:1rem 0">{{ 'الصفحة التي تبحث عنها غير موجودة.' if g.lang == 'ar' else 'The page you are looking for does not exist.' }}</p>
     <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.home') }}" class="btn-ihs btn-ihs-primary">{{ 'العودة' if g.lang == 'ar' else 'Go Back Home' }}</a>
 </div>
 {% endset %}

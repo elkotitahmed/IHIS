@@ -90,10 +90,10 @@
                         <div class="col"><input class="form-control form-control-sm" name="device_name" required placeholder="{{ 'اسم الجهاز' if g.lang == 'ar' else 'Device name' }}"></div>
                         <div class="col-auto">
                             <select class="form-select form-select-sm" name="mr_safety_class">
-                                <option value="Unknown">Unknown</option>
-                                <option value="MR Safe">MR Safe</option>
-                                <option value="MR Conditional">MR Conditional</option>
-                                <option value="MR Unsafe">MR Unsafe</option>
+                                <option value="Unknown">{{ 'غير معروف' if g.lang == 'ar' else 'Unknown' }}</option>
+                                <option value="MR Safe">{{ 'آمن للرنين' if g.lang == 'ar' else 'MR Safe' }}</option>
+                                <option value="MR Conditional">{{ 'مشروط للرنين' if g.lang == 'ar' else 'MR Conditional' }}</option>
+                                <option value="MR Unsafe">{{ 'غير آمن للرنين' if g.lang == 'ar' else 'MR Unsafe' }}</option>
                             </select>
                         </div>
                         <div class="col-auto"><button class="btn-ihs btn-ihs-primary btn-ihs-sm" type="submit"><i class="fas fa-plus"></i></button></div>

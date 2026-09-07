@@ -76,10 +76,10 @@
                                   action="{{ url_for('care.update_case_status', case_id=c.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <select name="status" class="form-select form-select-sm">
-                                    <option value="Open">Open</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="Resolved">Resolved</option>
-                                    <option value="Closed">Closed</option>
+                                    <option value="Open">{{ 'مفتوح' if g.lang == 'ar' else 'Open' }}</option>
+                                    <option value="In Progress">{{ 'قيد التنفيذ' if g.lang == 'ar' else 'In Progress' }}</option>
+                                    <option value="Resolved">{{ 'تم الحل' if g.lang == 'ar' else 'Resolved' }}</option>
+                                    <option value="Closed">{{ 'مغلق' if g.lang == 'ar' else 'Closed' }}</option>
                                 </select>
                                 <button class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'تحديث' if g.lang == 'ar' else 'Update' }}</button>
                             </form>

@@ -80,7 +80,7 @@
                                 <summary class="btn-ihs btn-ihs-outline btn-ihs-sm">{{ 'تعديل' if g.lang == 'ar' else 'Adjust' }}</summary>
                                 <form method="POST" action="{{ url_for('pharmacy.adjust_stock', inv_id=item.id) }}" style="display:flex;align-items:center;gap:var(--sp-1);margin-top:var(--sp-2);flex-wrap:wrap">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="number" name="delta" min="1" placeholder="+/- qty" class="form-control" style="width:80px" required>
+                                    <input type="number" name="delta" min="1" placeholder="{{ 'الكمية ±' if g.lang == 'ar' else '+/- qty' }}" class="form-control" style="width:80px" required>
                                     <select name="tx_type" class="form-control" style="width:120px">
                                         <option value="ADJUSTMENT">{{ 'تعديل' if g.lang == 'ar' else 'Adjust' }}</option>
                                         <option value="DAMAGED">{{ 'متضرر' if g.lang == 'ar' else 'Damaged' }}</option>

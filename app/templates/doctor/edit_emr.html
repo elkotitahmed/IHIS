@@ -20,9 +20,9 @@
             <div class="card-header">
                 <div class="card-title"><i class="fas fa-file-pen" style="color:var(--ihis-primary)"></i> {{ 'سجل' if g.lang == 'ar' else 'Record for' }} {{ patient.user.full_name if patient and patient.user else 'Patient' }}</div>
                 {% if record.status == 'Signed' %}
-                <span class="status-badge s-signed">Signed &amp; Locked</span>
+                <span class="status-badge s-signed">{{ 'موقّع ومقفل' if g.lang == 'ar' else 'Signed &amp; Locked' }}</span>
                 {% else %}
-                <span class="status-badge s-draft">Draft</span>
+                <span class="status-badge s-draft">{{ 'مسودة' if g.lang == 'ar' else 'Draft' }}</span>
                 {% endif %}
             </div>
             <div class="card-body">

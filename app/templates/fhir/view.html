@@ -9,7 +9,7 @@
         </p>
     </div>
     <div class="page-actions">
-        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('fhir.patient_resource', patient_id=patient.id) }}" target="_blank"><i class="fas fa-user-doctor"></i> Patient</a>
+        <a class="btn-ihs btn-ihs-outline" href="{{ url_for('fhir.patient_resource', patient_id=patient.id) }}" target="_blank"><i class="fas fa-user-doctor"></i> {{ 'المريض' if g.lang == 'ar' else 'Patient' }}</a>
         <a class="btn-ihs btn-ihs-primary" href="{{ url_for('fhir.patient_everything_route', patient_id=patient.id) }}" target="_blank"><i class="fas fa-box-archive"></i> {{ '$everything' }}</a>
     </div>
 </div>

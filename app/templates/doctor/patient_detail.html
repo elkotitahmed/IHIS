@@ -10,7 +10,7 @@
             <i class="fas fa-arrow-left"></i> {{ 'العودة للمرضى' if g.lang == 'ar' else 'Back to Patients' }}
         </a>
         <a href="{{ url_for('clinical.patient_360', patient_id=patient.id) }}" class="btn-ihs btn-ihs-primary">
-            <i class="fas fa-circle-nodes"></i> Patient 360
+            <i class="fas fa-circle-nodes"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}
         </a>
     </div>
 </div>

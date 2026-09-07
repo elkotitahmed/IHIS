@@ -14,7 +14,7 @@
 {% if evaluation and evaluation.findings %}
 <div class="card-premium mb-3" style="border-color:var(--ihis-purple-light)">
     <div class="card-header">
-        <div class="card-title"><span class="ai-spark">✦</span> {{ 'المساعدة السريرية بالذكاء' if g.lang == 'ar' else 'AI Clinical Assistance' }} <span class="ai-label ai-label-ai">AI ANALYSIS</span> <span class="cell-muted" style="font-weight:400;font-size:0.72rem">{{ 'منفصلة عن تقرير أخصائي الأشعة الرسمي' if g.lang == 'ar' else 'separate from the official radiologist report' }}</span></div>
+        <div class="card-title"><span class="ai-spark">✦</span> {{ 'المساعدة السريرية بالذكاء' if g.lang == 'ar' else 'AI Clinical Assistance' }} <span class="ai-label ai-label-ai">{{ 'تحليل الذكاء الاصطناعي' if g.lang == 'ar' else 'AI ANALYSIS' }}</span> <span class="cell-muted" style="font-weight:400;font-size:0.72rem">{{ 'منفصلة عن تقرير أخصائي الأشعة الرسمي' if g.lang == 'ar' else 'separate from the official radiologist report' }}</span></div>
         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('copilot.radiology_ai_report', order_id=order.id) }}">{{ 'التفاصيل' if g.lang == 'ar' else 'Details' }}</a>
     </div>
     <div class="card-body flush"><div class="list-compact">
@@ -132,7 +132,7 @@
             <div class="col-md-3"><label class="form-label small">{{ 'وصف الدراسة' if g.lang == 'ar' else 'Study description' }}</label><input type="text" name="study_description" class="form-control form-control-sm" value="{{ order.imaging_type.name if order.imaging_type else '' }}"></div>
             <div class="col-md-2"><label class="form-label small">{{ 'نوع القياس' if g.lang == 'ar' else 'Metric' }}</label>
                 <select name="dose_metric_type" class="form-select form-select-sm">
-                    <option value="CTDIvol">CTDIvol</option><option value="DLP">DLP</option><option value="DAP">DAP</option><option value="Effective">Effective dose</option><option value="Activity">Administered activity</option>
+                    <option value="CTDIvol">CTDIvol</option><option value="DLP">DLP</option><option value="DAP">DAP</option><option value="Effective">{{ 'الجرعة الفعّالة' if g.lang == 'ar' else 'Effective dose' }}</option><option value="Activity">{{ 'النشاط المُعطى' if g.lang == 'ar' else 'Administered activity' }}</option>
                 </select></div>
             <div class="col-md-2"><label class="form-label small">{{ 'القيمة' if g.lang == 'ar' else 'Value' }}</label><input type="number" step="0.001" min="0" name="dose_value" class="form-control form-control-sm" required></div>
             <div class="col-md-2"><label class="form-label small">{{ 'الوحدة' if g.lang == 'ar' else 'Unit' }}</label><input type="text" name="dose_unit" class="form-control form-control-sm" placeholder="mGy / mGy·cm / mSv" required></div>

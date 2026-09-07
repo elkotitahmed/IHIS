@@ -54,9 +54,9 @@
                 {% endif %}
 
                 <div class="compare mb-3">
-                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الصورة الأصلية' if ar else 'Original image' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="Original"></figure>
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الصورة الأصلية' if ar else 'Original image' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="{{ 'الأصلية' if g.lang == 'ar' else 'Original' }}"></figure>
                     {% if result.heatmap_key %}
-                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'خريطة الانتباه Grad-CAM' if ar else 'Grad-CAM attention' }} <span class="cell-muted" style="text-transform:none;letter-spacing:0">({{ result.heatmap_model }})</span></figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='results', filename=result.heatmap_key) }}" alt="Grad-CAM"></figure>
+                    <figure><figcaption><span class="ai-spark">✦</span> {{ 'خريطة الانتباه Grad-CAM' if ar else 'Grad-CAM attention' }} <span class="cell-muted" style="text-transform:none;letter-spacing:0">({{ result.heatmap_model }})</span></figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='results', filename=result.heatmap_key) }}" alt="{{ 'Grad-CAM' if g.lang == 'ar' else 'Grad-CAM' }}"></figure>
                     {% endif %}
                 </div>
 
@@ -88,7 +88,7 @@
                     <input type="hidden" name="usage_id" value="{{ result.usage_id }}">
                     <div class="review-title"><i class="fas fa-user-check" style="color:var(--ihis-primary)"></i> {{ 'مراجعة الطبيب (إلزامية قبل الاعتماد)' if ar else 'Physician review (required before this result is relied on)' }}</div>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <select name="decision" class="form-select form-select-sm" style="max-width:240px" aria-label="Review decision">
+                        <select name="decision" class="form-select form-select-sm" style="max-width:240px" aria-label="{{ 'قرار المراجعة' if g.lang == 'ar' else 'Review decision' }}">
                             <option value="agree">{{ 'أتفق مع التقييم' if ar else 'I agree with the assessment' }}</option>
                             <option value="disagree">{{ 'لا أتفق' if ar else 'I disagree' }}</option>
                             <option value="needs_biopsy">{{ 'يلزم ديرموسكوب / خزعة' if ar else 'Needs dermoscopy / biopsy' }}</option>

@@ -12,7 +12,7 @@
     <div class="page-actions">
         <a href="{{ url_for('admissions.dashboard') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-arrow-left"></i> {{ 'رجوع' if g.lang == 'ar' else 'Back' }}</a>
         {% if current_user.has_permission('TIMELINE_VIEW') %}
-        <a href="{{ url_for('clinical.patient_360', patient_id=admission.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-nodes"></i> Patient 360</a>
+        <a href="{{ url_for('clinical.patient_360', patient_id=admission.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-nodes"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
         {% endif %}
         {% if admission.status == 'Admitted' and current_user.has_permission('ADMISSION_DISCHARGE') %}
         <a href="{{ url_for('admissions.discharge', id=admission.id) }}" class="btn-ihs btn-ihs-danger"><i class="fas fa-door-open"></i> {{ 'تخريج' if g.lang == 'ar' else 'Discharge' }}</a>

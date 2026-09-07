@@ -29,10 +29,10 @@
             <div class="mb-3">
                 <label class="form-label">{{ 'النوع' if g.lang == 'ar' else 'Type' }}</label>
                 <select name="reconciliation_type" class="form-select">
-                    <option value="Admission">Admission</option>
-                    <option value="Transfer">Transfer</option>
-                    <option value="Discharge">Discharge</option>
-                    <option value="Ambulatory">Ambulatory</option>
+                    <option value="Admission">{{ 'دخول' if g.lang == 'ar' else 'Admission' }}</option>
+                    <option value="Transfer">{{ 'نقل' if g.lang == 'ar' else 'Transfer' }}</option>
+                    <option value="Discharge">{{ 'خروج' if g.lang == 'ar' else 'Discharge' }}</option>
+                    <option value="Ambulatory">{{ 'عيادات خارجية' if g.lang == 'ar' else 'Ambulatory' }}</option>
                 </select>
             </div>
             <div class="mb-3">

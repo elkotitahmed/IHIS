@@ -14,7 +14,7 @@
             <div class="patient-header-name">
                 {{ patient.user.full_name }}
                 {% if patient.blood_type %}
-                <span class="tag-ihs" title="Blood type">{{ patient.blood_type }}</span>
+                <span class="tag-ihs" title="{{ 'فصيلة الدم' if g.lang == 'ar' else 'Blood type' }}">{{ patient.blood_type }}</span>
                 {% endif %}
             </div>
             <div class="patient-header-meta">
@@ -65,7 +65,7 @@
         {% endfor %}
         {% for al in al_all %}
         <span class="safety-chip s-allergy" title="{{ al.reaction or '' }} {{ al.notes or '' }}">
-            <i class="fas fa-allergies"></i> {{ al.substance }}{% if al.severity %}<span style="opacity:.75"> · {{ al.severity }}</span>{% endif %}
+            <i class="fas fa-allergies"></i> {{ al.substance }}{% if al.severity %}<span> · {{ al.severity }}</span>{% endif %}
         </span>
         {% endfor %}
         {% for pr in pr_all %}
@@ -77,7 +77,7 @@
     {% endif %}
     {% if am_all %}
     <div class="patient-header-meds">
-        <span class="meds-label"><i class="fas fa-pills"></i> Active meds:</span>
+        <span class="meds-label"><i class="fas fa-pills"></i> {{ 'الأدوية النشطة:' if g.lang == 'ar' else 'Active meds:' }}</span>
         {% for m in am_all %}
         <span class="tag-ihs">{{ m.medication.generic_name if m.medication else '—' }}{% if m.dosage %} {{ m.dosage }}{% endif %}</span>
         {% endfor %}

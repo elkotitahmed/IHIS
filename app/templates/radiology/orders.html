@@ -91,7 +91,7 @@
                                             </a>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="cell-muted">None</span>
+                                    <span class="cell-muted">{{ 'لا يوجد' if g.lang == 'ar' else 'None' }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -145,7 +145,7 @@
                                               style="display:inline-flex;align-items:center;gap:var(--sp-2)">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="file" name="images" multiple class="form-control form-control-sm" style="width:170px;">
-                                            <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" title="Upload"><i class="fas fa-upload"></i></button>
+                                            <button type="submit" class="btn-ihs btn-ihs-outline btn-ihs-sm" title="{{ 'رفع' if g.lang == 'ar' else 'Upload' }}"><i class="fas fa-upload"></i></button>
                                         </form>
                                         {% if can_report and order.report and order.report.status not in ('Signed','Locked','Finalized') %}
                                         <form method="POST" action="{{ url_for('radiology.sign_report', order_id=order.id) }}" class="d-inline">
