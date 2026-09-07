@@ -396,6 +396,10 @@ model.
 | `/ai/clinical-alerts/scan` | POST | Full alert scan on all active patients |
 | `/ai/clinical-alerts/<id>/read` | POST | Mark alert as read |
 | `/ai/ai-dashboard` | GET | Legacy URL, renders the AI Hub (role-filtered) |
+| `/ai/chest-xray` | GET/POST | Chest X-ray screening (TorchXRayVision DenseNet-121, 18 findings; critical findings raise an alert) |
+| `/ai/copilot/transcribe` | POST | Local dictation (faster-whisper); audio processed in a temp file, never stored |
+| `/pharmacy/medications/<id>/reference` | GET | openFDA label + RxNorm + DDInter partners |
+| `/admin/capacity` | GET | Capacity, no-show rate and the own-data no-show model |
 | `/ai/hub` | GET | AI Hub: every AI capability the signed-in user can reach, with an honest AVAILABLE / LIMITED / COMING SOON status |
 
 ### New Templates (`app/templates/ai/`)

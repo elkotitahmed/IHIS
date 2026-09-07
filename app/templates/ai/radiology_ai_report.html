@@ -69,7 +69,7 @@
                             {% if alert.ai_assisted %}<span class="ai-label ai-label-ai">{{ 'بمساعدة الذكاء' if g.lang == 'ar' else 'AI ASSISTED' }}</span>{% endif %}
                             <div style="font-size:0.75rem;color:var(--ihis-text-muted)">{{ 'أُنشئ' if g.lang == 'ar' else 'Created' }} {{ alert.created_at.strftime('%d %b %H:%M') }}{% if alert.acknowledged_at %} · {{ 'أُقرّ' if g.lang == 'ar' else 'acknowledged' }} {{ alert.acknowledged_at.strftime('%d %b %H:%M') }}{% endif %}{% if task %} · {{ 'مهمة' if g.lang == 'ar' else 'task' }} #{{ task.id }} {{ task.status }}{% endif %}</div>
                         </div>
-                        <a class="btn-ihs btn-ihs-primary btn-ihs-sm" href="{{ url_for('clinical.alert_detail', alert_id=alert.id) }}"><i class="fas fa-bell"></i> {{ 'فتح التنبيه' if g.lang == 'ar' else 'Open alert' }}</a>
+                        {% if current_user.has_permission('ALERT_VIEW') %}<a class="btn-ihs btn-ihs-primary btn-ihs-sm" href="{{ url_for('clinical.alert_detail', alert_id=alert.id) }}"><i class="fas fa-bell"></i> {{ 'فتح التنبيه' if g.lang == 'ar' else 'Open alert' }}</a>{% endif %}
                     </div>
                     {% else %}
                     <p class="cell-muted">{{ 'لا يوجد تنبيه لهذا التقرير.' if g.lang == 'ar' else 'No alert exists for this report.' }}</p>

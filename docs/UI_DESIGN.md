@@ -132,6 +132,21 @@ reachable page and reports anything that is not 2xx. Result after the fixes:
 - Navigation AI-tool role sets equal the route decorators (single source of truth
   is the route; the hub and the sidebar follow it).
 
+## v4.2 — clinical data, small local models, quality gates, presentation kit (2026-09-07)
+
+Constraints agreed with the owner: local only, no Docker or deployment for now,
+no model over 500 MB.
+
+| Area | What shipped |
+|------|--------------|
+| Data | Official ICD-10-CM FY2026 behind the diagnosis lookup; DDInter interaction reference under the local formulary (`app/data/DATA_LICENSES.md`) |
+| Scores | NEWS2 on every vitals entry (+ ACVPU / oxygen inputs), qSOFA sepsis screen, LACE at discharge — alerts through the shared engine |
+| Models | Chest X-ray screening (`/ai/chest-xray`, DenseNet-121 29 MB, critical findings → alert), dictation (faster-whisper base int8, microphone on every note field), no-show model on the capacity page |
+| Reference | `/pharmacy/medications/<id>/reference`: openFDA label, RxNorm id, DDInter partners |
+| Quality | `tests/e2e`: Playwright journeys (physician, patient, pharmacist), keyboard + RTL, axe-core WCAG 2.1 AA on 11 screens in EN and AR; contrast tokens, focus rings, labels, no focusable hidden drawer |
+| Arabic | `scripts/i18n_audit.py` + `scripts/i18n_apply.py`: 168 strings translated; the remaining 90 are units, codes and identifiers |
+| Presentation | `docs/guides/`: 7 illustrated role guides, judging walkthrough (`docs/DEMO_JUDGING_AR.md`), 10-slide deck; `scripts/make_guides.py` regenerates them from the live system; `scripts/demo_reset.py` stages the scenario |
+
 ## Verified (2026-09-06)
 
 - 333 unit/integration tests pass; the all-routes smoke walk (2,756

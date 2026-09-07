@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>iHIS — الذكاء الاصطناعي مدمج في نظام معلومات المستشفى</title>
+<style>
+  @page { size: 297mm 167mm; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: #0f172a; }
+  .slide { width: 297mm; height: 167mm; padding: 16mm 18mm; page-break-after: always; position: relative; background: #fff; display: flex; flex-direction: column; }
+  .slide.cover { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #2563eb 100%); color: #fff; justify-content: center; }
+  .slide.cover h1 { font-size: 40pt; margin: 0 0 10px; letter-spacing: -0.02em; }
+  .slide.cover p { font-size: 16pt; opacity: .92; max-width: 70%; }
+  .kicker { display: inline-block; font-size: 10pt; font-weight: 700; letter-spacing: .08em; color: #5b21b6; background: #f4f1ff; border: 1px solid #ddd6fe; padding: 3px 12px; border-radius: 999px; margin-bottom: 8px; }
+  .cover .kicker { color: #fff; background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.35); }
+  h2 { font-size: 24pt; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .lead { font-size: 13pt; color: #475569; margin: 0 0 12px; }
+  .two { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; flex: 1; min-height: 0; }
+  .shot { border: 1px solid #e6e8ee; border-radius: 12px; overflow: hidden; background: #f5f6f8; display: flex; align-items: flex-start; }
+  .shot img { width: 100%; display: block; }
+  ul { margin: 0; padding-right: 20px; font-size: 13pt; line-height: 1.7; }
+  li { margin-bottom: 4px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; flex: 1; }
+  .card { border: 1px solid #e6e8ee; border-radius: 14px; padding: 14px 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 14pt; }
+  .card p { margin: 0; font-size: 11.5pt; color: #475569; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 9pt; font-weight: 700; padding: 2px 9px; border-radius: 6px; margin-left: 4px; }
+  .tag.ai { background: #f4f1ff; color: #5b21b6; } .tag.rules { background: #e7f6f0; color: #0b5f56; } .tag.model { background: #eef2ff; color: #1d4ed8; }
+  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5pt; margin: 10px 0; }
+  .flow span { border: 1px solid #ddd6fe; background: #f4f1ff; border-radius: 10px; padding: 8px 12px; }
+  .flow i { color: #94a3b8; }
+  .foot { position: absolute; bottom: 8mm; right: 18mm; left: 18mm; display: flex; justify-content: space-between; font-size: 9pt; color: #94a3b8; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5pt; } th, td { border: 1px solid #e6e8ee; padding: 6px 10px; text-align: right; } th { background: #f2f4f7; }
+  .big { font-size: 30pt; font-weight: 800; color: #0e7a5f; line-height: 1; } .small { font-size: 10pt; color: #64748b; }
+</style>
+</head>
+<body>
+
+<section class="slide cover">
+  <span class="kicker">مشروع تخرّج · 2026</span>
+  <h1>iHIS — الذكاء الاصطناعي مدمج في نظام معلومات المستشفى</h1>
+  <p>مستشفى واحد متصل، بمساعد سريري ذكي في كل خطوة، ونماذج تنبؤية محلية، ومحركات سلامة حتمية. الطبيب يقرر دائمًا.</p>
+</section>
+
+<section class="slide">
+  <span class="kicker">المشكلة</span>
+  <h2>أنظمة المستشفيات تخزّن البيانات… لكنها لا تساعد لحظة القرار</h2>
+  <p class="lead">الطبيب يقرأ عشرات النتائج، الصيدلي يفحص التداخلات يدويًا، والنتيجة الحرجة قد تنتظر في صندوق بريد.</p>
+  <div class="grid3">
+    <div class="card"><h3>وقت التوثيق</h3><p>10–15 دقيقة لكل زيارة تُكتب يدويًا، ولا مساعدة في التشخيص التفريقي أو الترميز.</p></div>
+    <div class="card"><h3>السلامة</h3><p>الحساسية والتداخلات تعتمد على ذاكرة الطبيب وقوائم صغيرة. النتائج الحرجة بلا تصعيد مضمون.</p></div>
+    <div class="card"><h3>أدوات ذكاء منفصلة</h3><p>نماذج الذكاء الطبية موجودة، لكنها خارج سير العمل، بلا حوكمة ولا تدقيق ولا مسؤولية واضحة.</p></div>
+  </div>
+  <div class="foot"><span>iHIS</span><span>2 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">الفكرة</span>
+  <h2>ندمج الذكاء داخل سير العمل نفسه، بقاعدة واحدة</h2>
+  <p class="lead">القواعد الحتمية هي المرجع · الذكاء يشرح ويلخّص ويقترح · الطبيب يقرر · كل مخرج مُعلَّم ومُدقَّق</p>
+  <div class="two">
+    <div class="shot"><img src="shots/physician_1.png" alt="لوحة الطبيب"></div>
+    <ul>
+      <li><b>مساعد سريري واحد</b> على كل صفحة: ملخص، تفريقي، توثيق، سلامة، تواصل المريض. <span class="tag ai">محلي + ذكاء</span></li>
+      <li><b>ذكاء تنبؤي محلي</b>: أشعة الصدر (18 نتيجة)، الكسور، الجلدية، الأسنان. <span class="tag model">نموذج محلي</span></li>
+      <li><b>محركات سلامة</b>: النتائج الحرجة، سلامة الأدوية (160 ألف زوج)، NEWS2/qSOFA/LACE. <span class="tag rules">قواعد</span></li>
+      <li><b>حوكمة</b>: ميزانية، كاش، تدقيق بدون نصوص مرضى، حالة صادقة لكل أداة.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>iHIS</span><span>3 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">المساعد السريري</span>
+  <h2>AI Clinical Copilot: يقرأ الملف ولا يكتب فيه</h2>
+  <div class="two">
+    <div class="shot"><img src="shots/physician_2.png" alt="المساعد الذكي"></div>
+    <ul>
+      <li>32 إجراءً مقسّمة: المريض، التشخيصات، الاستدلال، التوثيق، السلامة، التواصل.</li>
+      <li>كل إجراء يعرض أولًا <b>بيانات موثّقة محلية</b>، ثم سرد الذكاء عند الطلب.</li>
+      <li>الإملاء الصوتي محلي (faster-whisper) ← "هيكلة الملاحظة SOAP" ← مراجعة الطبيب ← حفظ.</li>
+      <li>لا يُنشئ تشخيصًا ولا وصفة ولا يعدّل الملف تلقائيًا.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>iHIS</span><span>4 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">سيناريو التحكيم</span>
+  <h2>من الأشعة إلى الوصفة في 6 خطوات</h2>
+  <div class="flow"><span>1 · المريض ومريض 360</span><i>←</i><span>2 · تقرير أشعة موقّع: استرواح صدري</span><i>←</i><span>3 · نتيجة حرجة تُكتشف بالقواعد + المصنّف</span><i>←</i><span>4 · تنبيه + مهمة عاجلة + إشعار الطبيب</span><i>←</i><span>5 · الإقرار والإجراء والتصعيد</span><i>←</i><span>6 · وصفة أموكسيسيلين تُحجب بسبب حساسية البنسلين</span></div>
+  <div class="two">
+    <div class="shot"><img src="shots/radiologist_3.png" alt="ذكاء الأشعة"></div>
+    <div class="shot"><img src="shots/physician_3.png" alt="المريض 360"></div>
+  </div>
+  <div class="foot"><span>iHIS</span><span>5 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">الذكاء التنبؤي</span>
+  <h2>نماذج محلية صغيرة، صادقة الحالة</h2>
+  <div class="two">
+    <div class="shot"><img src="shots/radiologist_4.png" alt="فحص أشعة الصدر"></div>
+    <table>
+      <tr><th>النموذج</th><th>الحجم</th><th>ما يفعله</th></tr>
+      <tr><td>أشعة الصدر — DenseNet-121</td><td>29 ميجا</td><td>18 نتيجة، النتائج الحرجة ← تنبيه</td></tr>
+      <tr><td>الكسور — YOLOv8</td><td>6 ميجا</td><td>يعلّم مناطق الكسر المحتملة</td></tr>
+      <tr><td>الجلدية — ResNet-50 + EfficientNet</td><td>~200 ميجا</td><td>نيوس/ميلانوما + Grad-CAM + مراجعة الطبيب</td></tr>
+      <tr><td>الأسنان — U-Net</td><td>~90 ميجا</td><td>تجزئة الأسنان البانورامية</td></tr>
+      <tr><td>الإملاء — faster-whisper</td><td>75 ميجا</td><td>كلام ← نص محليًا</td></tr>
+      <tr><td>الغياب — انحدار لوجستي</td><td>—</td><td>يتدرّب على بيانات المستشفى نفسه</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span>iHIS</span><span>6 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">السلامة أولًا</span>
+  <h2>القواعد لا تنام</h2>
+  <div class="grid3">
+    <div class="card"><h3>النتائج الحرجة <span class="tag rules">قواعد</span></h3><p>قواعد مع معالجة النفي + مصنّف نصي محلي على كل تقرير موقّع؛ تصعيد تلقائي بعد 30 دقيقة للحرج.</p></div>
+    <div class="card"><h3>سلامة الأدوية <span class="tag rules">قواعد</span></h3><p>حساسية وتفاعل متصالب وتداخلات من دليل المستشفى ومرجع DDInter (160 ألف زوج) لحظة الوصف.</p></div>
+    <div class="card"><h3>الإنذار المبكر <span class="tag rules">قواعد</span></h3><p>NEWS2 عند كل قياس، qSOFA للإنتان، LACE لخطر إعادة الدخول عند الخروج. معيارية وقابلة للتفسير.</p></div>
+  </div>
+  <div class="shot" style="margin-top:12px;max-height:60mm"><img src="shots/nurse_2.png" alt="العلامات الحيوية وNEWS2"></div>
+  <div class="foot"><span>iHIS</span><span>7 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">المريض</span>
+  <h2>بوابة بسيطة بلغة واضحة، والذكاء يشرح ولا يشخّص</h2>
+  <div class="two">
+    <div class="shot"><img src="shots/patient_1.png" alt="بوابة المريض"></div>
+    <ul>
+      <li>صحتي · مواعيدي · أدويتي · نتائجي · مستنداتي · رسائلي.</li>
+      <li>"اشرح لي" لكل نتيجة ودواء وموعد، على سجل المريض نفسه فقط.</li>
+      <li>لا يقول أبدًا ابدأ/أوقف/غيّر دواءً؛ يحيل للطبيب وللطوارئ عند الحاجة.</li>
+      <li>عربي وإنجليزي، ومتوافق مع قارئ الشاشة (WCAG 2.1 AA).</li>
+    </ul>
+  </div>
+  <div class="foot"><span>iHIS</span><span>8 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">الحوكمة والجودة</span>
+  <h2>ذكاء اصطناعي يمكن الوثوق به لأنه محكوم</h2>
+  <div class="grid3">
+    <div class="card"><div class="big">0</div><div class="small">روابط مكسورة عبر 13 دورًا و~1,500 صفحة (زاحف آلي)</div></div>
+    <div class="card"><div class="big">359</div><div class="small">اختبار آلي + 7 رحلات متصفح حقيقية + فحص WCAG على 11 شاشة</div></div>
+    <div class="card"><div class="big">100%</div><div class="small">من مخرجات الذكاء مُعلَّمة، مُدقَّقة، وغير مكتوبة في الملف تلقائيًا</div></div>
+  </div>
+  <div class="two" style="margin-top:12px">
+    <div class="shot"><img src="shots/superadmin_2.png" alt="مركز التحكم بالذكاء"></div>
+    <ul>
+      <li>ميزانية يومية وكاش وتهدئة عند 429: الحصة المجانية لا تُهدر.</li>
+      <li>سجل تدقيق لكل استدعاء بدون تخزين نصوص المرضى.</li>
+      <li>مركز الذكاء يعرض الحالة الحقيقية: متاح / محدود / قريبًا. لا ميزة وهمية.</li>
+      <li>الوصول بحسب الحاجة للمعرفة على كل طلب؛ لا رابط يؤدي لصفحة ممنوعة.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>iHIS</span><span>9 / 10</span></div>
+</section>
+
+<section class="slide">
+  <span class="kicker">الخلاصة</span>
+  <h2>ما الذي يميّز iHIS</h2>
+  <ul style="font-size:15pt;line-height:1.9">
+    <li>الذكاء الاصطناعي <b>داخل</b> سير العمل، لا بجانبه: زر واحد على كل صفحة.</li>
+    <li>ستة نماذج محلية صغيرة (كلها أقل من 500 ميجا) تعمل بدون سحابة، ومساعد لغوي عبر Gemini بميزانية محكومة.</li>
+    <li>القواعد الحتمية هي المرجع: النتائج الحرجة، سلامة الأدوية، الإنذار المبكر.</li>
+    <li>الصدق التصميمي: كل أداة تعرض حالتها الحقيقية، وكل مخرج يقول "ليس تشخيصًا".</li>
+    <li>جودة قابلة للقياس: 359 اختبارًا، رحلات متصفح، WCAG، صفر روابط مكسورة، عربي كامل.</li>
+  </ul>
+  <p class="lead" style="margin-top:auto">شكرًا — التجربة الحية جاهزة على الجهاز المحلي.</p>
+  <div class="foot"><span>iHIS</span><span>10 / 10</span></div>
+</section>
+
+</body>
+</html>

@@ -14,7 +14,7 @@
         </p>
     </div>
     <div class="page-actions">
-        {% if report %}<a href="{{ url_for('copilot.radiology_ai_report', order_id=report.order_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-x-ray"></i> {{ 'مراجعة التقرير' if g.lang == 'ar' else 'Review report' }}</a>{% endif %}
+        {% if report and current_user.has_any_role('Doctor','Radiologist','RadiologyTechnician','Admin','SuperAdmin') %}<a href="{{ url_for('copilot.radiology_ai_report', order_id=report.order_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-x-ray"></i> {{ 'مراجعة التقرير' if g.lang == 'ar' else 'Review report' }}</a>{% endif %}
         <a href="{{ url_for('clinical.patient_360', patient_id=alert.patient_id) }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-circle-user"></i> {{ 'المريض 360' if g.lang == 'ar' else 'Patient 360' }}</a>
         <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-ghost"><i class="fas fa-arrow-left"></i> {{ 'كل التنبيهات' if g.lang == 'ar' else 'All alerts' }}</a>
     </div>
@@ -102,7 +102,8 @@
             <div class="card-header"><div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--ihis-warning)"></i> {{ 'المهام' if g.lang == 'ar' else 'Tasks' }}</div></div>
             <div class="card-body flush"><div class="list-compact">
                 {% for t in tasks %}
-                <a class="list-item" href="{{ url_for('tasks.detail', task_id=t.id) }}" style="text-decoration:none;color:inherit"><span class="status-badge s-{{ 'pending' if t.status in ('NEW','ASSIGNED') else 'active' if t.status == 'IN_PROGRESS' else 'completed' if t.status == 'COMPLETED' else 'cancelled' }}">{{ t.status }}</span><div style="flex:1;font-size:0.8125rem">{{ t.title }}<div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ t.priority }} · {{ t.assignee.full_name if t.assignee else t.assigned_role or '—' }}</div></div></a>
+                {% set can_open = current_user.has_any_role('Admin','SuperAdmin') or t.assigned_to == current_user.id or (t.assigned_role and current_user.has_role(t.assigned_role)) or (current_user.department and t.department == current_user.department.name) %}
+                <{{ 'a' if can_open else 'div' }} class="list-item" {% if can_open %}href="{{ url_for('tasks.detail', task_id=t.id) }}"{% endif %} style="text-decoration:none;color:inherit"><span class="status-badge s-{{ 'pending' if t.status in ('NEW','ASSIGNED') else 'active' if t.status == 'IN_PROGRESS' else 'completed' if t.status == 'COMPLETED' else 'cancelled' }}">{{ t.status }}</span><div style="flex:1;font-size:0.8125rem">{{ t.title }}<div style="font-size:0.7rem;color:var(--ihis-text-muted)">{{ t.priority }} · {{ t.assignee.full_name if t.assignee else t.assigned_role or '—' }}</div></div></{{ 'a' if can_open else 'div' }}>
                 {% else %}<div class="list-item" style="justify-content:center;color:var(--ihis-text-muted)">{{ 'لا مهام' if g.lang == 'ar' else 'No tasks' }}</div>{% endfor %}
             </div></div>
         </div>

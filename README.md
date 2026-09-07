@@ -124,6 +124,25 @@ patients/admin).
 COMING SOON status, and an AI strip on the physician and command-center dashboards. Design
 rules and class names are in `docs/UI_DESIGN.md`.
 
+**Local, small AI models (all under 500 MB, no cloud):** chest X-ray screening
+(TorchXRayVision DenseNet-121, 29 MB, 18 findings), fracture detection (YOLOv8),
+skin lesion (ResNet-50 + EfficientNet-B0), tooth segmentation (U-Net), clinical
+dictation (faster-whisper base int8, 75 MB) and a no-show model trained on the
+hospital's own history. Reference data: official ICD-10-CM FY2026 (74,719
+codes), DDInter drug interactions (160k pairs, non-commercial licence) and
+NEWS2 / qSOFA / LACE scores. Every capability is listed with its real status on
+the AI Hub (`/ai/hub`).
+
+**Quality gates:** `pytest tests` (unit/integration), `IHIS_E2E=1 pytest
+tests/e2e` (Playwright journeys + WCAG 2.1 AA scan), `python
+scripts/smoke_all_routes.py`, `python scripts/crawl_links.py`,
+`python scripts/i18n_audit.py`.
+
+**Presentation kit:** `docs/guides/` (illustrated Arabic guide per role, the
+judging walkthrough and the "AI inside HIS" slides, all generated from the
+live system by `scripts/make_guides.py`); `scripts/demo_reset.py` stages the
+judging scenario.
+
 ## REST API
 
 A JSON API is mounted at `/api` (e.g. `/api/health`, `/api/doctors`,
