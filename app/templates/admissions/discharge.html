@@ -13,6 +13,15 @@
 
 <div class="row g-4">
   <div class="col-lg-5">
+    {% set lc = lace_for_admission(admission) %}
+    <div class="alert-card sev-{{ 'critical' if lc.risk == 'HIGH' else 'high' if lc.risk == 'MODERATE' else 'low' }} mb-3">
+        <span class="hub-card-icon rules"><i class="fas fa-rotate-left"></i></span>
+        <div style="flex:1">
+            <div class="alert-title">LACE {{ lc.score }} — {{ ('خطر إعادة دخول مرتفع' if lc.risk == 'HIGH' else 'خطر متوسط' if lc.risk == 'MODERATE' else 'خطر منخفض') if g.lang == 'ar' else lc.risk ~ ' 30-day readmission risk' }}</div>
+            <div class="alert-msg">{{ lc.advice }}</div>
+            <div class="alert-meta"><span>L {{ lc.components.length_of_stay }} ({{ lc.inputs.length_of_stay_days }} d)</span><span>A {{ lc.components.acute_admission }}</span><span>C {{ lc.components.comorbidity }}</span><span>E {{ lc.components.ed_visits_6m }} ({{ lc.inputs.ed_visits_6m }} visits)</span><span>{{ 'قاعدة حتمية (van Walraven 2010)' if g.lang == 'ar' else 'deterministic (van Walraven 2010)' }}</span></div>
+        </div>
+    </div>
     <div class="card-premium">
       <div class="card-header">
         <div class="card-title"><i class="fas fa-info-circle" style="color:var(--ihis-primary)"></i> {{ 'ملخص الدخول' if g.lang == 'ar' else 'Admission Summary' }}</div>

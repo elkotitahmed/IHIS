@@ -166,10 +166,25 @@ def vitals(patient_id):
                 title=f'Abnormal vitals: {", ".join(abnormal)}',
                 message=f'Recorded at {utcnow().strftime("%H:%M")} · {summary}',
                 source_type='vital_sign', source_id=vital.id)
+        # Standard early-warning scores (deterministic, explainable)
+        from app.services.clinical_scores import news2, qsofa
+        n2 = news2(vital, on_oxygen=request.form.get('on_oxygen') == '1',
+                   consciousness=request.form.get('consciousness') or 'A')
+        if n2['score'] >= 5 or n2['band'] == 'LOW-MEDIUM':
+            alert_svc.ensure_open_alert(
+                patient.id, 'NEWS2', severity='CRITICAL' if n2['score'] >= 7 else 'HIGH' if n2['score'] >= 5 else 'MODERATE',
+                title=f"NEWS2 {n2['score']} ({n2['band']}){' — partial' if n2['partial'] else ''}",
+                message=f"{summary} · {n2['advice']}", source_type='vital_sign', source_id=vital.id)
+        qs = qsofa(vital, altered_mentation=(request.form.get('consciousness') or 'A').upper() != 'A')
+        if qs['positive']:
+            alert_svc.ensure_open_alert(
+                patient.id, 'SEPSIS_RISK', severity='HIGH',
+                title=f"qSOFA {qs['score']}/3 — sepsis risk", message=f"{summary} · {qs['advice']}",
+                source_type='vital_sign', source_id=vital.id)
         log_activity('CREATE_VITAL_SIGN', 'patient', patient.id,
                      f'Nurse {current_user.id} recorded vital signs')
         db.session.commit()
-        flash('Vital signs recorded.', 'success')
+        flash(f"Vital signs recorded. NEWS2 {n2['score']} ({n2['band']}).", 'success')
         return redirect(url_for('nursing.vitals', patient_id=patient.id))
     vitals_list = VitalSign.query.filter_by(patient_id=patient.id).order_by(
         VitalSign.recorded_at.desc()).all()

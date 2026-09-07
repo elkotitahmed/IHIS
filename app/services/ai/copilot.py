@@ -171,6 +171,15 @@ def _interaction_findings(ctx):
             out.append(f"{names.get(r.medication_a_id)} + {names.get(r.medication_b_id)}: "
                        f"{r.severity or 'Moderate'} — {r.description or 'documented interaction'}"
                        + (f". Management: {r.management}" if getattr(r, 'management', None) else ''))
+    try:
+        from app.services import drug_interactions as ddi
+        local_pairs = {tuple(sorted((o.split(' + ')[0].lower(), o.split(' + ')[1].split(':')[0].lower()))) for o in out if ' + ' in o}
+        for row in ddi.check([m['name'] for m in ctx['medications'] if m.get('name')]):
+            key = tuple(sorted((row['a'].lower(), row['b'].lower())))
+            if key not in local_pairs:
+                out.append(f"{row['a']} + {row['b']}: {row['level']} — documented interaction (DDInter reference)")
+    except Exception:  # noqa: BLE001
+        pass
     seen = {}
     for m in ctx['medications']:
         key = (m['name'] or '').strip().lower()

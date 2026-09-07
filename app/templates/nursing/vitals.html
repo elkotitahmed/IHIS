@@ -84,6 +84,14 @@
                 </div>
             </div>
             <div class="mt-4">
+                <div class="d-flex gap-3 flex-wrap align-items-center mb-3" style="font-size:.8125rem">
+                    <label class="d-flex align-items-center gap-2"><input type="checkbox" name="on_oxygen" value="1" class="form-check-input"> {{ 'على أكسجين إضافي' if g.lang == 'ar' else 'On supplemental oxygen' }}</label>
+                    <label class="d-flex align-items-center gap-2">{{ 'الوعي (ACVPU)' if g.lang == 'ar' else 'Consciousness (ACVPU)' }}
+                        <select name="consciousness" class="form-select form-select-sm" style="width:auto">
+                            <option value="A">A — {{ 'واعٍ' if g.lang == 'ar' else 'Alert' }}</option><option value="C">C — {{ 'تشوش جديد' if g.lang == 'ar' else 'New confusion' }}</option><option value="V">V — {{ 'يستجيب للصوت' if g.lang == 'ar' else 'Voice' }}</option><option value="P">P — {{ 'يستجيب للألم' if g.lang == 'ar' else 'Pain' }}</option><option value="U">U — {{ 'لا يستجيب' if g.lang == 'ar' else 'Unresponsive' }}</option>
+                        </select></label>
+                    <span class="cell-muted">{{ 'يُحسب NEWS2 وqSOFA تلقائيًا ويُنشأ تنبيه عند الخطر' if g.lang == 'ar' else 'NEWS2 and qSOFA are computed automatically; an alert is raised when the score is high' }}</span>
+                </div>
                 <button type="submit" class="btn-ihs btn-ihs-primary"><i class="fas fa-save"></i> {{ 'حفظ العلامات الحيوية' if g.lang == 'ar' else 'Save Vital Signs' }}</button>
             </div>
         </form>
@@ -105,6 +113,7 @@
                         <th>{{ 'النبض' if g.lang == 'ar' else 'Heart Rate' }}</th>
                         <th>{{ 'التنفس' if g.lang == 'ar' else 'Resp. Rate' }}</th>
                         <th>SpO2 (%)</th>
+                        <th title="National Early Warning Score 2">NEWS2</th>
                         <th>{{ 'الطول' if g.lang == 'ar' else 'Height' }} (cm)</th>
                         <th>{{ 'الوزن' if g.lang == 'ar' else 'Weight' }} (kg)</th>
                         <th>{{ 'مسجل بواسطة' if g.lang == 'ar' else 'Recorded By' }}</th>
@@ -119,13 +128,15 @@
                         <td><span class="t-num">{{ vital.heart_rate or 'N/A' }}</span></td>
                         <td><span class="t-num">{{ vital.respiratory_rate or 'N/A' }}</span></td>
                         <td><span class="t-num">{{ vital.oxygen_saturation or 'N/A' }}</span></td>
+                        {% set n2 = news2_score(vital) %}
+                        <td><span class="ai-label {{ 'ai-label-danger' if n2.band == 'HIGH' else 'ai-label-warn' if n2.band in ('MEDIUM','LOW-MEDIUM') else 'ai-label-verified' }}" title="{{ n2.advice }}{% if n2.partial %} · missing: {{ n2.missing|join(', ') }}{% endif %}">{{ n2.score }}{% if n2.partial %}*{% endif %} {{ n2.band }}</span></td>
                         <td><span class="t-num">{{ vital.height_cm or 'N/A' }}</span></td>
                         <td><span class="t-num">{{ vital.weight_kg or 'N/A' }}</span></td>
                         <td><span class="cell-secondary">{{ vital.nurse_id }}</span></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="9">
+                        <td colspan="10">
                             <div class="empty-state">
                                 <div class="empty-icon"><i class="fas fa-heartbeat"></i></div>
                                 <div class="empty-title">{{ 'لا توجد علامات حيوية' if g.lang == 'ar' else 'No vital signs recorded yet' }}</div>

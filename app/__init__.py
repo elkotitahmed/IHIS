@@ -720,6 +720,10 @@ def register_context_processors(app):
 
     app.context_processor(lambda: {'g': g})
 
+    from app.services import clinical_scores as _scores
+    app.jinja_env.globals.update(news2_score=_scores.news2, qsofa_score=_scores.qsofa,
+                                 lace_for_admission=_scores.lace_for_admission)
+
 
 def register_error_handlers(app):
     """Production-safe error handlers. Never expose stack traces, SQL, or secrets."""

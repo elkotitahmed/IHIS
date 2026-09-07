@@ -249,6 +249,19 @@ def medication_safety(patient, medication):
                                         'severity': r.severity or 'Moderate',
                                         'description': r.description or '',
                                         'management': getattr(r, 'management', None) or ''})
+    # DDInter reference (deterministic, 160k curated pairs) for pairs the local formulary does not cover
+    try:
+        from app.services import drug_interactions as ddi
+        already = {i['with'].lower() for i in out['interactions']}
+        for row in ddi.check([medication.generic_name] + [n for n in names.values() if n and n != '?']):
+            other = row['b'] if row['a'] == medication.generic_name else row['a'] if row['b'] == medication.generic_name else None
+            if other and other.lower() not in already and other.lower() != name:
+                out['interactions'].append({'with': other, 'severity': row['level'],
+                                            'description': 'Documented interaction (DDInter reference)', 'management': '',
+                                            'source': 'DDInter'})
+                already.add(other.lower())
+    except Exception:  # noqa: BLE001 - reference data is optional
+        pass
     if medication.contraindications:
         out['warnings'].append(f"Contraindications: {medication.contraindications}")
     if medication.side_effects:

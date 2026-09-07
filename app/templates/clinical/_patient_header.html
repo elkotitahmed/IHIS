@@ -48,6 +48,11 @@
             <div class="t-num" style="font-size:1.15rem">{{ latest_vitals.temperature or '-' }}°C</div>
             <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">Temp</div>
         </div>
+        {% set n2 = news2_score(latest_vitals) %}
+        <div style="text-align:center" title="NEWS2 {{ n2.score }} · {{ n2.advice }}{% if n2.partial %} · missing: {{ n2.missing|join(', ') }}{% endif %}">
+            <div class="t-num" style="font-size:1.15rem;color:{{ 'var(--ihis-danger)' if n2.band == 'HIGH' else 'var(--ihis-warning)' if n2.band in ('MEDIUM','LOW-MEDIUM') else 'var(--ihis-success)' }}">{{ n2.score }}{% if n2.partial %}<span style="font-size:.7rem">*</span>{% endif %}</div>
+            <div style="font-size:0.6875rem;color:var(--ihis-text-muted)">NEWS2</div>
+        </div>
     </div>
     {% endif %}
     {% if oa_all or al_all or pr_all %}

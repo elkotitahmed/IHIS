@@ -3,6 +3,8 @@
 Local-first by design: every lookup here is instant and free. Gemini is only
 consulted by the caller *after* local suggestions, and only when enabled.
 """
+import io
+import os
 import re
 from collections import Counter
 
@@ -145,10 +147,58 @@ PHRASES = {
 _TOKEN = re.compile(r'[a-zA-Z0-9\-\.]+')
 
 
+_ICD_FULL = None          # [(code, description, description_lower, words)] from app/data/icd10cm_2026.tsv
+_ICD_FULL_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'icd10cm_2026.tsv')
+
+
+def _icd_full():
+    """Official ICD-10-CM FY2026 list (public domain), loaded once per process."""
+    global _ICD_FULL
+    if _ICD_FULL is None:
+        rows = []
+        if os.path.isfile(_ICD_FULL_FILE):
+            with io.open(_ICD_FULL_FILE, encoding='utf-8') as f:
+                for ln in f:
+                    if ln.startswith('#'):
+                        continue
+                    code, _, desc = ln.rstrip('\n').partition('\t')
+                    if code and desc:
+                        low = desc.lower()
+                        rows.append((code, desc, low, [w.strip('(),;') for w in low.split()]))
+        _ICD_FULL = rows
+    return _ICD_FULL
+
+
+def icd_count():
+    return len(_icd_full())
+
+
 def search_icd(q, limit=8):
     q = (q or '').strip().lower()
     if len(q) < 2:
         return []
+    curated = _search_icd_curated(q, limit)
+    if len(curated) >= limit:
+        return curated
+    seen = {r['code'] for r in curated}
+    qc = q.upper().replace(' ', '')
+    starts, words, contains = [], [], []
+    for code, desc, low, ws in _icd_full():
+        if code in seen:
+            continue
+        if code.startswith(qc) or low.startswith(q):
+            starts.append((code, desc))
+        elif any(w.startswith(q) for w in ws):
+            words.append((code, desc))
+        elif len(q) >= 4 and q in low:
+            contains.append((code, desc))
+        if len(starts) >= limit * 3:
+            break
+    extra = [{'code': c, 'term': t} for c, t in (starts + words + contains)]
+    return (curated + extra)[:limit]
+
+
+def _search_icd_curated(q, limit=8):
     starts, word_starts, contains = [], [], []
     for code, term, syns in ICD10:
         hay = term.lower()

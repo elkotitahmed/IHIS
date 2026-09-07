@@ -164,11 +164,19 @@ def build(role_names, has_permission=None):
     if roles & ({'Doctor', 'Nurse', 'Pharmacist', 'Dentist'} | ADMIN):
         safety.append({
             'key': 'med_safety', 'label': 'Medication safety', 'label_ar': 'سلامة الأدوية',
-            'desc': 'Allergy, cross-reactivity and interaction checks as you prescribe; rules are authoritative.',
+            'desc': 'Allergy, cross-reactivity and interaction checks as you prescribe (local formulary + 160k DDInter reference pairs); rules are authoritative.',
             'desc_ar': 'فحص الحساسية والتفاعل المتصالب والتداخلات أثناء الوصف؛ القواعد هي المرجع.',
             'icon': 'fa-shield-halved', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
             'url': url_for('pharmacy.drug_check') if (roles & ({'Pharmacist', 'Doctor', 'Nurse'} | ADMIN)) and perm('DRUG_INTERACTION') else None,
             'copilot': True,
+        })
+    if roles & ({'Doctor', 'Nurse'} | ADMIN):
+        safety.append({
+            'key': 'scores', 'label': 'Early-warning scores', 'label_ar': 'مؤشرات الإنذار المبكر',
+            'desc': 'NEWS2 on every vital-sign entry, qSOFA sepsis screen and LACE readmission risk at discharge. Standard, deterministic, explainable.',
+            'desc_ar': 'NEWS2 عند كل قياس للعلامات الحيوية، qSOFA لفحص الإنتان، وLACE لخطر إعادة الدخول عند الخروج. معيارية وحتمية وقابلة للتفسير.',
+            'icon': 'fa-heart-pulse', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
+            'url': url_for('nursing.dashboard') if roles & {'Nurse'} | ADMIN else url_for('clinical.alerts_all'),
         })
     if roles & CLINICAL and perm('INBOX_VIEW'):
         safety.append({
@@ -198,7 +206,7 @@ def build(role_names, has_permission=None):
         })
         docs.append({
             'key': 'dx_lookup', 'label': 'ICD-10 diagnosis lookup', 'label_ar': 'بحث تشخيص ICD-10',
-            'desc': 'Type "hyper…" and get Hypertension (I10) first; recents and favourites included.',
+            'desc': 'Official ICD-10-CM FY2026 (74,719 codes): type "hyper…" and get Hypertension (I10) first; recents and favourites included.',
             'desc_ar': 'اكتب "hyper…" لتحصل على Hypertension (I10) أولًا، مع الأخيرة والمفضلة.',
             'icon': 'fa-code-medical', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
             'url': None, 'inline': 'Inside the diagnosis field',

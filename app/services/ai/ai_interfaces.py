@@ -150,6 +150,17 @@ class AIDrugInteractionEngine:
             'severity': i.severity,
             'description': i.description,
         } for i in interactions]
+        try:
+            from app.services import drug_interactions as ddi
+            have = {tuple(sorted(((r['a'] or '').lower(), (r['b'] or '').lower()))) for r in result}
+            for row in ddi.check(list(meds.values())):
+                key = tuple(sorted((row['a'].lower(), row['b'].lower())))
+                if key not in have:
+                    result.append({'a': row['a'], 'b': row['b'], 'severity': row['level'],
+                                   'description': 'Documented interaction — DDInter reference (CC BY-NC-SA 4.0)'})
+                    have.add(key)
+        except Exception:  # noqa: BLE001
+            pass
         return {'medications': list(meds.values()), 'interactions': result,
                 'count': len(result)}
 
