@@ -475,7 +475,8 @@ def ai_media(feature, kind, filename):
     base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
     feature_dir = {'fracture': os.path.join(base, 'ai', 'fracture'),
                    'tooth': os.path.join(base, 'ai', 'tooth'),
-                   'skin': os.path.join(base, 'ai', 'skin')}[feature]
+                   'skin': os.path.join(base, 'ai', 'skin'),
+                   'chest': os.path.join(base, 'ai', 'chest')}[feature]
     sub = {'uploads': 'uploads', 'results': 'results', 'masks': 'uploads'}.get(kind)
     if sub is None:
         abort(404)

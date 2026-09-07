@@ -490,3 +490,8 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-vis
 /* "Coming soon" cards stay readable: no opacity dimming (contrast), dashed border instead */
 .hub-card.hub-card-off { opacity: 1; border-style: dashed; background: var(--ihis-surface-inset); }
 .hub-card.hub-card-off .hub-card-icon { filter: grayscale(1); opacity: .8; }
+/* Image-AI result: the radiograph gets the wider column and keeps its aspect on a dark plate */
+.compare.compare-xray { grid-template-columns: 1.25fr 1fr; align-items: start; }
+.compare img { max-height: 480px; object-fit: contain; }
+.compare-xray figure:first-child img { min-height: 260px; }
+.sb-ai-btn .ai-pill { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }

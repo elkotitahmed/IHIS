@@ -145,5 +145,23 @@ class NoShowTests(Base):
         self.assertIn(b'No prediction yet', r.data)
 
 
+class ChestMediaTests(Base):
+    def test_uploaded_chest_image_is_served_to_staff(self):
+        import os
+        base = self.app.config.get('UPLOAD_FOLDER') or 'var/uploads'
+        d = os.path.join(base, 'ai', 'chest', 'uploads'); os.makedirs(d, exist_ok=True)
+        name = 'test_chest_media.png'
+        with open(os.path.join(d, name), 'wb') as f:
+            f.write(b'PNGSTUB' + b'0' * 32)
+        try:
+            self._login(self._user('radio2', 'Radiologist', 'radiologist'))
+            r = self.client.get(f'/ai/media/chest/uploads/{name}')
+            self.assertEqual(r.status_code, 200)
+            r.close()                      # send_file keeps the handle open until the response is closed
+            self.assertEqual(self.client.get('/ai/media/chest/uploads/missing.png').status_code, 404)
+        finally:
+            os.remove(os.path.join(d, name))
+
+
 if __name__ == '__main__':
     unittest.main()

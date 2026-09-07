@@ -42,8 +42,8 @@
                     <div><div class="verdict-title">{{ 'لا نتيجة حرجة واثقة' if ar else 'No confident critical finding' }}</div><div class="verdict-sub">{{ 'الاحتمالات الفردية أدناه؛ نتيجة سلبية من النموذج لا تستبعد المرض.' if ar else 'Individual probabilities below; a negative model result does not exclude disease.' }}</div></div>
                 </div>
                 {% endif %}
-                <div class="compare mb-3">
-                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة' if ar else 'X-ray' }}</figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="{{ 'أشعة الصدر' if g.lang == 'ar' else 'Chest X-ray' }}"></figure>
+                <div class="compare compare-xray mb-3">
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'الأشعة' if ar else 'X-ray' }} <a class="cell-muted" style="margin-inline-start:auto;font-weight:500;text-transform:none;letter-spacing:0" href="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> {{ 'فتح بالحجم الكامل' if ar else 'Open full size' }}</a></figcaption><img src="{{ url_for('ai.ai_media', feature=result.feature, kind='uploads', filename=result.orig_key) }}" alt="{{ 'أشعة الصدر' if g.lang == 'ar' else 'Chest X-ray' }}"></figure>
                     <figure><figcaption><span class="ai-spark">✦</span> {{ 'أعلى 5 نتائج' if ar else 'Top 5 findings' }}</figcaption>
                         <div class="d-flex flex-column gap-2">
                         {% for f in result.top %}
