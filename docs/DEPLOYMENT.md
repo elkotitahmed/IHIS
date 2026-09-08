@@ -89,7 +89,7 @@ through a tunnel. Nothing leaves the PC except the HTTP traffic; the free
 cloud tiers (PythonAnywhere, Render) cannot install torch/tensorflow.
 
 ```powershell
-.\scripts	unnel.ps1                 # or double-click scripts	unnel.bat
+.\scripts\tunnel.ps1                 # or double-click scripts\tunnel.bat
 ```
 
 What it does: starts the venv server with `IHIS_BEHIND_PROXY=1` (so
@@ -102,7 +102,7 @@ Fixed URL: create a free ngrok account, run `ngrok config add-authtoken …`
 once, claim the free static domain in the ngrok dashboard, then
 
 ```powershell
-.\scripts	unnel.ps1 -Ngrok -NgrokDomain your-name.ngrok-free.app
+.\scripts\tunnel.ps1 -Ngrok -NgrokDomain your-name.ngrok-free.app
 ```
 
 Verified 2026-09-09: login, AI Hub and a real chest X-ray inference through a
