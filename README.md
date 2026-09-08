@@ -240,6 +240,8 @@ plus the migration-chain check, a seeded role-by-route white-page audit
 
 ## Deployment
 
+**Free public demo without deploying:** `.\scripts	unnel.ps1` serves the app from your PC through a Cloudflare quick tunnel (all local AI models included); see `docs/DEPLOYMENT.md` §6b.
+
 See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for:
 
 1. Local setup and running Flask

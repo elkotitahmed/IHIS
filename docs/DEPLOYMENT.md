@@ -81,6 +81,35 @@ python run.py                 # http://localhost:5000
 `run.py` uses Flask's built-in dev server with debug on — local development
 only.
 
+## 6b. Free public demo from this PC (tunnel)
+
+The only free way to show **every** feature — all local image models, dictation,
+the reference data — is to serve the app from this machine and expose it
+through a tunnel. Nothing leaves the PC except the HTTP traffic; the free
+cloud tiers (PythonAnywhere, Render) cannot install torch/tensorflow.
+
+```powershell
+.\scripts	unnel.ps1                 # or double-click scripts	unnel.bat
+```
+
+What it does: starts the venv server with `IHIS_BEHIND_PROXY=1` (so
+`url_for` builds https links and the real client IP is logged), then runs a
+Cloudflare *quick tunnel* (`cloudflared tunnel --url`; no account) and prints
+a `https://<random>.trycloudflare.com` URL, also copied to the clipboard.
+Ctrl+C stops both. The URL changes on every run.
+
+Fixed URL: create a free ngrok account, run `ngrok config add-authtoken …`
+once, claim the free static domain in the ngrok dashboard, then
+
+```powershell
+.\scripts	unnel.ps1 -Ngrok -NgrokDomain your-name.ngrok-free.app
+```
+
+Verified 2026-09-09: login, AI Hub and a real chest X-ray inference through a
+quick tunnel from an external IP. Limits: the PC must stay on with the window
+open; the built-in dev server is fine for a demo audience, not for production;
+do not seed real patient data behind a public URL.
+
 ## 7. Running Tests
 
 ```bash
