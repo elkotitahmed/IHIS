@@ -20,6 +20,9 @@ def dashboard():
     log_activity('VIEW_ADMIN_DASHBOARD', resource='admin')
 
     total_patients = Patient.query.count()
+    from app.models import Admission as _Adm
+    inpatients = (db.session.query(_Adm.patient_id).filter(_Adm.status == 'Admitted').distinct().count())
+    outpatients = max(0, total_patients - inpatients)
     total_doctors = Doctor.query.count()
     total_users = User.query.count()
     total_departments = Department.query.count()
@@ -49,6 +52,7 @@ def dashboard():
         title='Admin Dashboard',
         role_label=role_label,
         total_patients=total_patients,
+        inpatients=inpatients, outpatients=outpatients,
         total_doctors=total_doctors,
         total_users=total_users,
         total_departments=total_departments,

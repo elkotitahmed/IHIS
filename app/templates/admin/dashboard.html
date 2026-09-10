@@ -10,13 +10,27 @@
 {% include '_ai_strip.html' %}
 
 <div class="kpi-grid mb-4">
-    <div class="kpi-card">
+    <a class="kpi-card kpi-link" href="{{ url_for('doctor.patients') }}">
         <div class="kpi-icon primary"><i class="fas fa-user-injured"></i></div>
         <div class="kpi-body">
             <div class="kpi-label">{{ t('patients') }}</div>
             <div class="kpi-value">{{ total_patients }}</div>
         </div>
-    </div>
+    </a>
+    <a class="kpi-card kpi-link" href="{{ url_for('doctor.patients', setting='outpatient') }}" title="{{ 'مرضى العيادات الخارجية (غير منوَّمين)' if g.lang == 'ar' else 'Outpatient clinic patients (not admitted)' }}">
+        <div class="kpi-icon info"><i class="fas fa-hospital-user"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'عيادات خارجية' if g.lang == 'ar' else 'Outpatients' }}</div>
+            <div class="kpi-value">{{ outpatients }}</div>
+        </div>
+    </a>
+    <a class="kpi-card kpi-link" href="{{ url_for('doctor.patients', setting='inpatient') }}" title="{{ 'مرضى منوَّمون حاليًا' if g.lang == 'ar' else 'Currently admitted patients' }}">
+        <div class="kpi-icon danger"><i class="fas fa-bed-pulse"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-label">{{ 'تنويم' if g.lang == 'ar' else 'Inpatients' }}</div>
+            <div class="kpi-value">{{ inpatients }}</div>
+        </div>
+    </a>
     <div class="kpi-card">
         <div class="kpi-icon success"><i class="fas fa-user-md"></i></div>
         <div class="kpi-body">

@@ -24,6 +24,14 @@
     </div>
 </div>
 
+{% if counts is defined %}
+<div class="seg-tabs mb-3" role="tablist" aria-label="{{ 'نوع الرعاية' if g.lang == 'ar' else 'Care setting' }}">
+    <a class="seg-tab {{ 'active' if not setting }}" href="{{ url_for('doctor.patients', q=search or None) }}"><i class="fas fa-users"></i> {{ 'الكل' if g.lang == 'ar' else 'All' }} <span class="seg-count">{{ counts.all }}</span></a>
+    <a class="seg-tab {{ 'active' if setting == 'outpatient' }}" href="{{ url_for('doctor.patients', setting='outpatient', q=search or None) }}"><i class="fas fa-hospital-user"></i> {{ 'عيادات خارجية' if g.lang == 'ar' else 'Outpatients' }} <span class="seg-count">{{ counts.outpatient }}</span></a>
+    <a class="seg-tab {{ 'active' if setting == 'inpatient' }}" href="{{ url_for('doctor.patients', setting='inpatient', q=search or None) }}"><i class="fas fa-bed-pulse"></i> {{ 'تنويم' if g.lang == 'ar' else 'Inpatients' }} <span class="seg-count">{{ counts.inpatient }}</span></a>
+</div>
+{% endif %}
+
 <div class="card-premium">
     <div class="card-body flush">
         <div class="table-wrapper">
@@ -32,6 +40,7 @@
                     <tr>
                         <th>#</th>
                         <th>{{ 'الاسم' if g.lang == 'ar' else 'Name' }}</th>
+                        <th>{{ 'الرعاية' if g.lang == 'ar' else 'Setting' }}</th>
                         <th>{{ 'البريد الإلكتروني' if g.lang == 'ar' else 'Email' }}</th>
                         <th>{{ 'تاريخ الميلاد' if g.lang == 'ar' else 'Date of Birth' }}</th>
                         <th>{{ 'الجنس' if g.lang == 'ar' else 'Gender' }}</th>
@@ -44,6 +53,7 @@
                         <tr>
                             <td class="cell-mono">{{ p.mrn or p.id }}</td>
                             <td class="cell-primary">{{ p.user.full_name if p.user else '-' }}</td>
+                            <td>{% if admitted_ids is defined and p.id in admitted_ids %}<span class="status-badge s-in-progress"><i class="fas fa-bed-pulse"></i> {{ 'تنويم' if g.lang == 'ar' else 'Inpatient' }}</span>{% else %}<span class="status-badge s-active"><i class="fas fa-hospital-user"></i> {{ 'عيادة' if g.lang == 'ar' else 'Outpatient' }}</span>{% endif %}</td>
                             <td class="cell-secondary">{{ p.user.email if p.user else '-' }}</td>
                             <td class="cell-secondary">{{ p.date_of_birth.strftime('%d %b %Y') if p.date_of_birth else '-' }}</td>
                             <td>{{ p.gender or '-' }}</td>

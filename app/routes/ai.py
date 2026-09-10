@@ -123,14 +123,44 @@ def _alert_on_positive_finding(result, patient, doc=None):
             severity='CRITICAL' if worst >= 0.85 else 'HIGH', source_type='ai_tool', source_id=source_id)
         db.session.commit()
     elif result.get('feature') == 'skin' and result.get('is_melanoma'):
-        alert_svc.ensure_open_alert(
+        # Confident melanoma calls (>= 90 %) are CRITICAL for the treating
+        # dermatologist: alert + urgent task + notification, like a critical
+        # radiology finding. The model output is never a diagnosis.
+        from app.services import tasks as task_svc
+        from app.services.notifications import notify
+        prob = float(result.get('proba_melanoma') or 0)
+        severity = 'CRITICAL' if prob >= 0.9 else 'HIGH'
+        responsible = current_user.id if current_user.has_any_role('Doctor', 'Dentist') else None
+        alert = alert_svc.ensure_open_alert(
             patient.id, 'AI_MELANOMA_SUSPECTED',
             title='Positive AI finding: suspected melanoma',
             message=(f'Skin lesion analysis classified the image as '
                      f'{result.get("prediction", "melanoma")} at '
                      f'~{result.get("percent", 0)}% confidence. '
-                     f'Urgent dermatology review is recommended.'),
-            severity='HIGH', source_type='ai_tool', source_id=source_id)
+                     f'Urgent dermatology review is recommended: complete the ABCDE assessment, '
+                     f'consider excisional biopsy with histopathology and regional lymph-node examination.'),
+            severity=severity, source_type='ai_tool', source_id=source_id)
+        alert.ai_assisted = True
+        alert.confidence = prob
+        alert.rationale = (f"Local ResNet-50 + EfficientNet-B0 ensemble ({', '.join(result.get('models_used') or [])}); "
+                           f"Grad-CAM heatmap {'available' if result.get('heatmap_key') else 'not generated'}.")
+        if responsible and not alert.assigned_to:
+            alert.assigned_to = responsible
+        db.session.flush()
+        if severity == 'CRITICAL' and not task_svc.open_tasks_for_resource('clinical_alert', alert.id):
+            task_svc.create_task(
+                title='URGENT: review AI-flagged lesion — suspected melanoma',
+                description=(f'Skin lesion AI call: melanoma {result.get("percent", 0)}%. Review the image and '
+                             f'Grad-CAM, document the ABCDE assessment, decide on excisional biopsy and '
+                             f'lymph-node examination, then acknowledge the alert.'),
+                task_type='CRITICAL_RESULT', department='Dermatology', patient_id=patient.id,
+                assigned_to=responsible, assigned_role=None if responsible else 'Doctor',
+                priority='URGENT', related_resource_type='clinical_alert', related_resource_id=alert.id)
+            if responsible:
+                notify(responsible, 'CRITICAL AI FINDING: suspected melanoma',
+                       f'Patient {patient.mrn or "#" + str(patient.id)}: skin lesion classified as melanoma '
+                       f'({result.get("percent", 0)}%). Acknowledge the alert and document your action.',
+                       notification_type='critical', entity_type='clinical_alert', entity_id=alert.id)
         db.session.commit()
 
 

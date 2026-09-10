@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models import (
+    Admission,
     Doctor, Patient, Appointment, MedicalRecord, Diagnosis, Prescription,
     PrescriptionItem, Medication, LabOrder, LabTestCatalog, LabResult,
     RadiologyOrder, ImagingType, Specialty, Referral, VitalSign,
@@ -303,6 +304,9 @@ def patient_attachments():
 @roles_required('Doctor', 'Admin', 'SuperAdmin')
 def patients():
     search = request.args.get('q', '')
+    setting = request.args.get('setting', '')          # '' | 'outpatient' | 'inpatient'
+    if setting not in ('outpatient', 'inpatient'):
+        setting = ''
     query = Patient.query
     # A role reconciliation: Doctor only sees patients they have a documented
     # need-to-know relationship with, so opening a patient's overview/detail
@@ -317,9 +321,20 @@ def patients():
                    User.email.ilike(f'%{search}%'),
                    Patient.mrn.ilike(f'%{search}%'),
                    Patient.phone.ilike(f'%{search}%')))
+    # Care setting: inpatient = currently admitted; outpatient = everyone else (clinic)
+    admitted_ids = {pid for (pid,) in db.session.query(Admission.patient_id)
+                    .filter(Admission.status == 'Admitted').distinct().all()}
+    if setting == 'inpatient':
+        query = query.filter(Patient.id.in_(admitted_ids or {-1}))
+    elif setting == 'outpatient':
+        query = query.filter(Patient.id.notin_(admitted_ids)) if admitted_ids else query
     results = query.order_by(Patient.id.desc()).limit(100).all()
+    total_allowed = len(allowed)
+    counts = {'inpatient': len(admitted_ids & set(allowed)),
+              'outpatient': total_allowed - len(admitted_ids & set(allowed)), 'all': total_allowed}
     return render_template('doctor/patients.html', title='Patient Search',
-                           patients=results, search=search)
+                           patients=results, search=search, setting=setting, counts=counts,
+                           admitted_ids=admitted_ids)
 
 
 @doctor_bp.route('/patients/<int:patient_id>/overview')
