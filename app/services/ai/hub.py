@@ -149,6 +149,16 @@ def build(role_names, has_permission=None):
             'note': '' if tooth else 'Model weights are not installed on this server.',
             'url': url_for('ai.tooth_segmentation'),
         })
+    # Specialty policy: a dermatologist sees only the skin model, an orthopaedic
+    # surgeon only fracture detection, etc. (app.services.ai.specialty_models).
+    try:
+        from flask_login import current_user as _cu
+        from app.services.ai import specialty_models as _sm
+        if _cu.is_authenticated:
+            _allowed = _sm.allowed_models(_cu, roles)
+            pred_items = [it for it in pred_items if _sm.hub_item_allowed(it, _allowed)]
+    except Exception:  # noqa: BLE001 - outside a request the catalogue is unfiltered
+        pass
     if pred_items:
         groups.append({
             'key': 'predictive', 'label': 'Predictive & imaging AI', 'label_ar': 'الذكاء التنبؤي وتحليل الصور',

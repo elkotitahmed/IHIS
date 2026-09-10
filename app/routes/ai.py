@@ -46,6 +46,11 @@ def _patient_document_path(doc):
     return os.path.normpath(os.path.join(base, rel))
 
 
+def _require_model(key):
+    from app.services.ai.specialty_models import require_model
+    return require_model(key)
+
+
 def _load_doc(doc_id):
     """Load a patient document a clinician may legitimately analyze."""
     if not doc_id:
@@ -328,6 +333,9 @@ def medication_review(patient_id):
 @roles_required('Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
                 'Dentist', 'Admin', 'SuperAdmin')
 def fracture_detection():
+    _denied = _require_model('fracture')
+    if _denied is not None:
+        return _denied
     """YOLOv8 bone-fracture detection on uploaded X-rays."""
     from app.services.ai.fracture_detection import (
         detect_fracture, fracture_model_available,
@@ -366,6 +374,9 @@ def fracture_detection():
 @roles_required('Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin')
 def tooth_segmentation():
     """U-Net dental (panoramic) tooth segmentation."""
+    _denied = _require_model('tooth')
+    if _denied is not None:
+        return _denied
     from app.services.ai.tooth_segmentation import (
         segment_tooth, tooth_model_available,
     )
@@ -403,6 +414,9 @@ def tooth_segmentation():
 @roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin')
 def chest_xray():
     """TorchXRayVision DenseNet-121 screening of a frontal chest X-ray (18 findings)."""
+    _denied = _require_model('chest')
+    if _denied is not None:
+        return _denied
     from app.services.ai.chest_xray import analyze_chest_xray, chest_model_available, weights_ready
     result = None
     error = None
@@ -439,6 +453,9 @@ def chest_xray():
 @roles_required('Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin')
 def skin_lesion_detection():
     """ResNet-50 + EfficientNet-B0 ensemble for skin lesion classification."""
+    _denied = _require_model('skin')
+    if _denied is not None:
+        return _denied
     from app.services.ai.skin_lesion_classification import (
         classify_skin_lesion, skin_model_available,
     )

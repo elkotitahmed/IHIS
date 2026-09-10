@@ -45,25 +45,9 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-8">
-        <div class="card-premium">
-            <div class="card-header">
-                <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات سريعة' if g.lang == 'ar' else 'Quick Actions' }}</div>
-            </div>
-            <div class="card-body">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
-                    <a href="{{ url_for('dentistry.ortho') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-teeth-open"></i> {{ ' حالات التقويم' if g.lang == 'ar' else 'Ortho Cases' }}
-                    </a>
-                    <a href="{{ url_for('ai.tooth_segmentation') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-robot"></i> AI {{ 'تقسيم الأسنان' if g.lang == 'ar' else 'Tooth Segmentation' }}
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
-    <div class="col-lg-4">
+    <div class="col-lg-12">
         <div class="card-premium mb-4">
             <div class="card-header">
                 <div class="card-title"><i class="fas fa-share-nodes" style="color:var(--ihis-info)"></i> {{ 'إحالات واردة' if g.lang == 'ar' else 'Incoming Referrals' }}</div>

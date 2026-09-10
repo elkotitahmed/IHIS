@@ -38,22 +38,9 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-8">
-        <div class="card-premium">
-            <div class="card-header">
-                <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات سريعة' if g.lang == 'ar' else 'Quick Actions' }}</div>
-            </div>
-            <div class="card-body">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
-                    <a href="{{ url_for('physiotherapy.exercise_library') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                        <i class="fas fa-dumbbell"></i> {{ t('exercise_library') }}
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
-    <div class="col-lg-4">
+    <div class="col-lg-12">
         <div class="card-premium">
             <div class="card-header">
                 <div class="card-title"><i class="fas fa-share-nodes" style="color:var(--ihis-info)"></i> {{ 'إحالات واردة' if g.lang == 'ar' else 'Incoming Referrals' }}</div>

@@ -169,3 +169,17 @@ Goal: anyone opening the project understands it at a glance; the AI models stay 
   Outpatients / Inpatients are clickable and open the patient list filtered by care setting.
 * Sidebar (Doctor): PRACTICE holds only Patients, Appointments, Clinical Inbox, Clinical Alerts; Lab Results,
   Admissions, Referrals, Attachments moved under WORK (collapsed). The AI TOOLS group is hidden when empty.
+
+### v4.3b — every role home, specialty-aware models, landing page
+
+* Role homes trimmed the same way: Lab 6 → 4 KPIs; Nursing, Dentistry and Physiotherapy lost their
+  "Quick Actions" cards (every link is in the sidebar); Radiology lost its duplicate "AI Tools" card.
+  All of them keep the shared AI block first.
+* `app/services/ai/specialty_models.py` is the single policy for the four imaging models: sidebar
+  AI TOOLS, dashboard AI block, AI Hub catalogue and the four routes (redirect to the hub with a
+  notice). Physicians get the models of their specialty (Dermatology → Skin Lesion Detection only;
+  Orthopedics → Fracture; Internal Medicine / Cardiology / Pulmonology → Chest X-ray; Emergency and
+  Surgery → Chest + Fracture; Family Medicine → all three physician models; unknown or missing
+  specialty → all three). Other roles keep the route-decorator sets; admins see all four.
+* Landing page (`/home`): the hero side panel now shows the four models as cards (name, engine),
+  and the feature grid names them explicitly.

@@ -555,3 +555,13 @@ a.kpi-card.kpi-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px 
 .ai-other:hover { border-color: var(--ai-border, rgba(124,58,237,.35)); color: var(--ihis-text); text-decoration: none; }
 .ai-other.is-off { opacity: .6; }
 .kpi-sub { font-size: .72rem; color: var(--ihis-text-muted); margin-top: 2px; }
+
+/* ---- Landing: four models panel ---- */
+.landing-models { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 18px; border-radius: 20px; border: 1px solid var(--ai-border, rgba(124,58,237,.25)); background: var(--ihis-surface); box-shadow: var(--shadow-md); }
+.landing-models-head { grid-column: 1 / -1; font-weight: 750; font-size: .95rem; display: flex; gap: 8px; align-items: center; }
+.landing-models-foot { grid-column: 1 / -1; font-size: .72rem; color: var(--ihis-text-muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.landing-model { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; border: 1px solid var(--ihis-border-light); background: var(--ai-soft); color: inherit; text-decoration: none; transition: transform .12s ease, box-shadow .12s ease; }
+.landing-model:hover { transform: translateY(-2px); box-shadow: var(--ai-glow); color: inherit; text-decoration: none; }
+.landing-model .lm-name { font-weight: 750; font-size: .9rem; margin-top: 4px; }
+.landing-model .lm-sub { font-size: .72rem; color: var(--ihis-text-secondary); }
+@media (max-width: 480px) { .landing-models { grid-template-columns: 1fr; } }

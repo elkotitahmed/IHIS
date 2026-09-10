@@ -264,8 +264,11 @@ def register_context_processors(app):
                 (_l('Clinical Pharmacist AI', 'الصيدلاني السريري'), '/pharmacy/ai-workbench',
                  'fa-user-doctor', {'Pharmacist', 'Admin', 'SuperAdmin'}),
             ]
+            from app.services.ai.specialty_models import allowed_models, KEY_BY_ENDPOINT
+            allowed = allowed_models(current_user, role_set)
             return [{'label': label, 'url': url, 'icon': icon}
-                    for label, url, icon, roles in specs if role_set & roles]
+                    for label, url, icon, roles in specs
+                    if role_set & roles and (url not in KEY_BY_ENDPOINT or KEY_BY_ENDPOINT[url] in allowed)]
 
         effective_roles = _get_effective_roles(current_user)
         role_set = set(effective_roles)

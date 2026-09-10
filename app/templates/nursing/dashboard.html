@@ -174,20 +174,7 @@
             </div>
         </div>
 
-        <div class="card-premium">
-            <div class="card-header">
-                <div class="card-title"><i class="fas fa-bolt" style="color:var(--ihis-warning)"></i> {{ 'إجراءات سريعة' if g.lang == 'ar' else 'Quick Actions' }}</div>
-            </div>
-            <div class="card-body">
-                <div style="display:flex;flex-direction:column;gap:0.5rem">
-                    <a href="{{ url_for('admissions.dashboard') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-door-open"></i> {{ 'الاستشفاء والأسرّة' if g.lang == 'ar' else 'Admissions & Beds' }}</a>
-                    {% if current_user.has_permission('INBOX_VIEW') %}                    <a href="{{ url_for('clinical.inbox') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-inbox"></i> {{ 'الصندوق السريري' if g.lang == 'ar' else 'Clinical Inbox' }}</a>{% endif %}
-                    <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-bell"></i> {{ 'التنبيهات السريرية' if g.lang == 'ar' else 'Clinical Alerts' }}</a>
-                    <a href="{{ url_for('care.referrals') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-share-nodes"></i> {{ t('referrals') }}</a>
-                    <a href="{{ url_for('pharmacy.drug_check') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start"><i class="fas fa-dna"></i> {{ 'فحص التفاعلات' if g.lang == 'ar' else 'Interaction Check' }}</a>
-                </div>
-            </div>
-        </div>
+        
     </div>
 </div>
 {% endblock %}

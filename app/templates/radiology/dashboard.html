@@ -92,16 +92,7 @@
             </div>
         </div>
 
-        <div class="card-premium">
-            <div class="card-header">
-                <div class="card-title"><i class="fas fa-robot" style="color:var(--ihis-primary)"></i> {{ 'أدوات الذكاء' if g.lang == 'ar' else 'AI Tools' }}</div>
-            </div>
-            <div class="card-body" style="display:flex;flex-direction:column;gap:0.5rem">{% if current_user.has_any_role('Radiologist','Doctor','Nurse','Physiotherapist','Dentist','Admin','SuperAdmin') %}
-                <a href="{{ url_for('ai.fracture_detection') }}" class="btn-ihs btn-ihs-outline" style="justify-content:flex-start">
-                    <i class="fas fa-bone"></i> {{ 'كشف الكسور' if g.lang == 'ar' else 'Fracture Detection' }}
-                </a>{% endif %}
-            </div>
-        </div>
+        
     </div>
 </div>
 {% endblock %}
