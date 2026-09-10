@@ -2,10 +2,10 @@
 {% block content %}
 {% set ar = g.lang == 'ar' %}
 {% with wb_title='Health Insights', wb_title_ar='الرؤى الصحية',
-        wb_desc='A risk overview built from the record with a plain-language summary. Rule-based and explainable; it is not a diagnosis.',
-        wb_desc_ar='نظرة على المخاطر مبنية من السجل مع ملخص بلغة بسيطة. قاعدية وقابلة للتفسير، وليست تشخيصًا.',
+        wb_desc='An explainable risk profile built from the record: every point is traced to a finding (labs, vitals, kidney function, medications, alerts). Rules first; an AI narrative only when you ask.',
+        wb_desc_ar='ملف مخاطر قابل للتفسير مبني من السجل: كل نقطة مرتبطة بنتيجة (تحاليل، علامات حيوية، وظائف الكلى، أدوية، تنبيهات). القواعد أولًا، وسرد الذكاء عند الطلب فقط.',
         wb_icon='fa-brain',
-        wb_facts=[('fa-list-check', 'Deterministic scoring', 'تقييم حتمي'), ('fa-lock', 'Own record only', 'السجل الخاص فقط')],
+        wb_facts=[('fa-list-check', 'Deterministic scoring', 'تقييم حتمي'), ('fa-magnifying-glass', 'Every factor shows its evidence', 'كل عامل يعرض دليله'), ('fa-lock', 'Own record only', 'السجل الخاص فقط')],
         wb_back_url=None %}
 {% include 'ai/_workbench_hero.html' %}
 {% endwith %}
@@ -27,75 +27,115 @@
 </div>
 {% endif %}
 
-{% set lvl = (risk.level or 'Low')|lower %}
-<div class="row g-3">
-    <div class="col-lg-4">
-        <div class="card-premium h-100">
-            <div class="card-header"><div class="card-title"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'تقييم المخاطر' if ar else 'Risk assessment' }} <span class="ai-tag">AI</span></div></div>
-            <div class="card-body">
-                <div class="risk-dial risk-{{ 'high' if lvl == 'high' else 'moderate' if lvl == 'moderate' else 'low' }}">
-                    <div class="risk-score">{{ risk.score }}</div>
-                    <div><div class="risk-level">{{ risk.level }} {{ 'مخاطرة' if ar else 'risk' }}</div><div class="cell-muted" style="font-size:.74rem">{{ patient.user.full_name }} · {{ patient.mrn|mrn_label }}</div></div>
+{% set lvl = profile.level|lower %}
+{% set r = profile.renal %}
+<div class="hi-grid">
+    {# ---------- Risk profile ---------- #}
+    <div class="card-premium">
+        <div class="card-header"><div class="card-title"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'ملف المخاطر' if ar else 'Risk profile' }} <span class="ai-label ai-label-verified">{{ 'قواعد' if ar else 'RULES' }}</span></div></div>
+        <div class="card-body">
+            <div class="risk-dial risk-{{ lvl }}">
+                <div class="risk-score">{{ profile.score }}</div>
+                <div>
+                    <div class="risk-level">{{ ('عالية' if lvl == 'high' else 'متوسطة' if lvl == 'moderate' else 'منخفضة') if ar else profile.level }} {{ 'مخاطرة' if ar else 'risk' }}</div>
+                    <div class="cell-muted" style="font-size:.74rem">{{ patient.user.full_name }} · {{ patient.mrn|mrn_label }}{% if profile.age is not none %} · {{ profile.age }} {{ 'سنة' if ar else 'y' }}{% endif %}</div>
                 </div>
-                <div class="ai-sec-title mt-3">{{ 'العوامل المساهمة' if ar else 'Contributing factors' }}</div>
-                <ul class="mb-0" style="padding-inline-start:18px;font-size:.8125rem">
-                    {% for r in risk.reasons %}<li>{{ r }}</li>{% else %}<li class="cell-muted">{{ 'لا توجد عوامل خطر مكتشفة.' if ar else 'No significant risk factors detected.' }}</li>{% endfor %}
-                </ul>
-                {% if risk.source == 'gemini' %}
-                {% if risk.narrative %}<div class="ai-block mt-3"><div class="ai-block-head"><span class="ai-label ai-label-ai">✦ {{ 'سرد الذكاء' if ar else 'AI NARRATIVE' }}</span></div><div class="ai-text" style="font-size:.8125rem">{{ risk.narrative }}</div></div>{% endif %}
-                {% if risk.mitigation_strategies %}<div class="ai-sec-title mt-2">{{ 'استراتيجيات التخفيف المقترحة' if ar else 'Suggested mitigation' }}</div><ul class="mb-0" style="padding-inline-start:18px;font-size:.8125rem">{% for m in risk.mitigation_strategies %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
-                {% else %}
-                <div class="mt-3"><a class="ai-btn ai-btn-soft" href="{{ url_for('ai.health_insights', pid=(patient.id if picker else None), ai=1) }}"><span class="ai-spark">✦</span> {{ 'اشرح بالذكاء الاصطناعي' if ar else 'Explain with AI' }}</a> <span class="cell-muted" style="font-size:.72rem">{{ 'يستدعي الموفر مرة واحدة عند الطلب فقط.' if ar else 'Calls the provider once, only when you ask.' }}</span></div>
-                {% endif %}
-                <div class="ai-footer">{{ risk.disclaimer }}</div>
             </div>
+            <div class="risk-scale" aria-hidden="true">
+                <span class="rs-low"></span><span class="rs-mod"></span><span class="rs-high"></span>
+                <i style="{{ 'right' if ar else 'left' }}:{{ [profile.score, 16]|min / 16 * 100 }}%"></i>
+            </div>
+            <div class="cell-muted" style="font-size:.7rem;display:flex;justify-content:space-between"><span>0–4 {{ 'منخفضة' if ar else 'low' }}</span><span>5–9 {{ 'متوسطة' if ar else 'moderate' }}</span><span>10+ {{ 'عالية' if ar else 'high' }}</span></div>
+
+            <div class="ai-sec-title mt-3">{{ 'العوامل المساهمة' if ar else 'Contributing factors' }}</div>
+            {% if profile.factors %}
+            <div class="hi-factors">
+                {% for f in profile.factors %}
+                <div class="hi-factor">
+                    <span class="hi-pts">+{{ f.points }}</span>
+                    <div><div class="hi-factor-label">{{ f.label }}</div><div class="hi-factor-ev">{{ f.evidence }} <span class="hi-src">· {{ f.source }}</span></div></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="cell-muted" style="font-size:.8125rem">{{ 'لا عوامل خطر مكتشفة في السجل.' if ar else 'No risk factors found in the record.' }}</div>
+            {% endif %}
+
+            {% if narrative and narrative.source == 'gemini' %}
+            <div class="ai-surface mt-3" style="padding:12px 14px">
+                <div class="d-flex align-items-center gap-2 mb-1"><span class="ai-label ai-label-ai">✦ {{ 'سرد الذكاء الاصطناعي' if ar else 'AI NARRATIVE' }}</span><span class="cell-muted" style="font-size:.7rem">{{ 'يشرح العوامل أعلاه ولا يغيّر الدرجة' if ar else 'explains the factors above; does not change the score' }}</span></div>
+                {% if narrative.narrative %}<div class="ai-text" style="font-size:.8125rem">{{ narrative.narrative }}</div>{% endif %}
+                {% if narrative.mitigation_strategies %}<div class="ai-sec-title mt-2">{{ 'اقتراحات للمراجعة' if ar else 'Suggestions to review' }}</div><ul class="mb-0" style="padding-inline-start:18px;font-size:.8125rem">{% for m in narrative.mitigation_strategies %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+            {% elif narrative and narrative.ai_error %}
+            <div class="alert alert-warning mt-3" style="font-size:.8125rem">{{ 'تعذّر الحصول على سرد الذكاء الآن؛ الدرجة والعوامل أعلاه لا تعتمد عليه.' if ar else 'The AI narrative is unavailable right now; the score and factors above do not depend on it.' }}</div>
+            {% elif ai_available %}
+            <div class="mt-3"><a class="ai-btn ai-btn-soft" href="{{ url_for('ai.health_insights', pid=(patient.id if picker else None), ai=1) }}"><span class="ai-spark">✦</span> {{ 'اشرح بالذكاء الاصطناعي' if ar else 'Explain with AI' }}</a> <span class="cell-muted" style="font-size:.72rem">{{ 'استدعاء واحد عند الطلب فقط.' if ar else 'One provider call, only when you ask.' }}</span></div>
+            {% endif %}
+            <div class="ai-footer">{{ profile.disclaimer }}</div>
         </div>
     </div>
-    <div class="col-lg-8">
-        <div class="card-premium h-100">
-            <div class="card-header"><div class="card-title"><i class="fas fa-heart-pulse" style="color:var(--ihis-primary)"></i> {{ 'الملخص الصحي' if ar else 'Health summary' }}</div></div>
-            <div class="card-body">
-                <dl class="kv mb-3">
-                    <dt>{{ 'فصيلة الدم' if ar else 'Blood type' }}</dt><dd><span class="tag-ihs">{{ summary.blood_type }}</span></dd>
-                    <dt>{{ 'الحساسية' if ar else 'Allergies' }}</dt><dd>{{ summary.allergies }}</dd>
-                    <dt>{{ 'الأمراض المزمنة' if ar else 'Chronic conditions' }}</dt><dd>{{ summary.chronic_diseases }}</dd>
-                    <dt>{{ 'آخر زيارة' if ar else 'Last visit' }}</dt><dd>{{ summary.last_visit }}</dd>
-                </dl>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="ai-sec-title">{{ 'التشخيصات المسجلة' if ar else 'Diagnoses on record' }}</div>
-                        <ul class="mb-0" style="padding-inline-start:18px;font-size:.8125rem">
-                            {% for d in summary.diagnoses %}<li>{{ d.description }} {% if d.primary %}<span class="tag-ihs">{{ 'أساسي' if ar else 'Primary' }}</span>{% endif %} <span class="cell-muted">({{ d.icd10 }})</span></li>
-                            {% else %}<li class="cell-muted">{{ 'لا توجد تشخيصات مسجلة.' if ar else 'No diagnoses recorded.' }}</li>{% endfor %}
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="ai-sec-title">{{ 'الأدوية النشطة' if ar else 'Active medications' }}</div>
-                        <ul class="mb-0" style="padding-inline-start:18px;font-size:.8125rem">
-                            {% for p in summary.active_prescriptions %}<li>{{ p.medication }} — {{ p.dosage }} {{ p.frequency }}</li>
-                            {% else %}<li class="cell-muted">{{ 'لا توجد أدوية نشطة.' if ar else 'No active medications.' }}</li>{% endfor %}
-                        </ul>
-                    </div>
+
+    {# ---------- Record summary ---------- #}
+    <div class="card-premium">
+        <div class="card-header"><div class="card-title"><i class="fas fa-heart-pulse" style="color:var(--ihis-primary)"></i> {{ 'ملخص السجل' if ar else 'Record summary' }}</div></div>
+        <div class="card-body">
+            <div class="hi-stats">
+                <div class="hi-stat"><div class="lbl">{{ 'الحساسية' if ar else 'Allergies' }}</div>
+                    <div class="val">{% if profile.allergies %}{% for a in profile.allergies %}<span class="safety-chip s-allergy"><i class="fas fa-allergies"></i> {{ a.substance }}</span> {% endfor %}{% else %}<span class="status-badge s-completed">NKDA</span>{% endif %}</div></div>
+                <div class="hi-stat"><div class="lbl">{{ 'فصيلة الدم' if ar else 'Blood type' }}</div><div class="val">{{ patient.blood_type or '—' }}</div></div>
+                <div class="hi-stat"><div class="lbl">{{ 'الكلى' if ar else 'Kidney' }}</div>
+                    <div class="val {{ 'bad' if r.effective is not none and r.effective < 60 }}">{% if r.crcl is not none %}CrCl {{ r.crcl }}{% elif r.egfr is not none %}eGFR {{ r.egfr }}{% else %}—{% endif %}</div>
+                    <div class="sub">{{ r.stage or ('بيانات ناقصة' if ar else 'no recent creatinine') }}</div></div>
+                <div class="hi-stat"><div class="lbl">NEWS2</div>
+                    <div class="val {{ 'bad' if profile.news2 and profile.news2.score >= 5 }}">{{ profile.news2.score if profile.news2 else '—' }}</div>
+                    <div class="sub">{% if profile.vital %}{{ profile.vital.recorded_at.strftime('%d %b %H:%M') }} · BP {{ profile.vital.blood_pressure_systolic or '?' }}/{{ profile.vital.blood_pressure_diastolic or '?' }} · HR {{ profile.vital.heart_rate or '?' }}{% else %}{{ 'لا علامات حيوية' if ar else 'no vitals' }}{% endif %}</div></div>
+                <div class="hi-stat"><div class="lbl">{{ 'الرعاية' if ar else 'Setting' }}</div>
+                    <div class="val">{% if profile.admission %}<span class="status-badge s-in-progress"><i class="fas fa-bed-pulse"></i> {{ 'تنويم' if ar else 'Inpatient' }}</span>{% else %}<span class="status-badge s-active"><i class="fas fa-hospital-user"></i> {{ 'عيادة' if ar else 'Outpatient' }}</span>{% endif %}</div>
+                    <div class="sub">{{ 'آخر زيارة' if ar else 'last visit' }} {{ profile.last_visit.strftime('%d %b %Y') if profile.last_visit else '—' }}</div></div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <div class="ai-sec-title">{{ 'المشاكل النشطة والتشخيصات' if ar else 'Active problems & diagnoses' }}</div>
+                    <ul class="mb-0 hi-list">
+                        {% for p in profile.problems %}<li>{{ p.description }} {% if p.icd10_code %}<span class="cell-mono cell-muted">{{ p.icd10_code }}</span>{% endif %}</li>
+                        {% else %}{% for d in profile.diagnoses[:6] %}<li>{{ d.description }} {% if d.is_primary %}<span class="tag-ihs">{{ 'أساسي' if ar else 'Primary' }}</span>{% endif %} <span class="cell-mono cell-muted">{{ d.icd10_code or '' }}</span></li>{% else %}<li class="cell-muted">{{ 'لا مشاكل مسجلة.' if ar else 'Nothing recorded.' }}</li>{% endfor %}{% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <div class="ai-sec-title">{{ 'الأدوية النشطة' if ar else 'Active medications' }} <span class="ai-count">{{ profile.medications|length }}</span></div>
+                    <ul class="mb-0 hi-list">
+                        {% for it in profile.medications %}<li>{{ it.medication.generic_name }} <span class="cell-muted">{{ it.dosage or '' }} {{ it.frequency or '' }}</span></li>
+                        {% else %}<li class="cell-muted">{{ 'لا أدوية نشطة.' if ar else 'No active medications.' }}</li>{% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-{% if analysis.flags %}
+{# ---------- Observations ---------- #}
 <div class="card-premium mt-3">
-    <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'ملاحظات' if ar else 'Observations' }} <span class="ai-tag">AI</span></div></div>
+    <div class="card-header"><div class="card-title"><i class="fas fa-magnifying-glass-chart" style="color:var(--ihis-primary)"></i> {{ 'الملاحظات' if ar else 'Observations' }} <span class="ai-count">{{ profile.observations|length }}</span></div>
+        <span class="cell-muted" style="font-size:.72rem">{{ 'كل ملاحظة تذكر مصدرها في السجل' if ar else 'Each observation names its source in the record' }}</span></div>
     <div class="card-body">
+        {% if profile.observations %}
         <div class="row g-2">
-            {% for f in analysis.flags %}
+            {% for o in profile.observations %}
             <div class="col-md-6">
-                <div class="alert-card sev-{{ 'high' if f.level == 'warning' else 'moderate' if f.level == 'info' else 'low' }}" style="padding:12px 14px">
-                    <div><div class="alert-title" style="font-size:.8125rem">{{ f.title }}</div><div class="alert-msg" style="margin-bottom:0">{{ f.detail }}</div></div>
+                <div class="alert-card sev-{{ o.severity }}" style="padding:12px 14px;height:100%">
+                    <div style="flex:1;min-width:0">
+                        <div class="alert-title" style="font-size:.8125rem">{{ o.title }}</div>
+                        <div class="alert-msg" style="margin-bottom:4px">{{ o.detail }}</div>
+                        <div class="alert-meta"><span><i class="fas fa-database"></i> {{ o.source }}</span>{% if o.url and not (current_user.user_type == 'patient') %}<a href="{{ o.url }}">{{ 'فتح' if ar else 'Open' }}</a>{% endif %}</div>
+                    </div>
                 </div>
             </div>
             {% endfor %}
         </div>
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem"><div class="empty-title">{{ 'لا ملاحظات' if ar else 'No observations' }}</div><div class="empty-desc">{{ 'لا يوجد في السجل ما يستدعي الانتباه حاليًا.' if ar else 'Nothing in the record needs attention right now.' }}</div></div>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 {% endblock %}

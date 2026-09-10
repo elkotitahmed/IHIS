@@ -209,16 +209,15 @@ def health_insights():
     else:
         picker = False
         patients = []
-    clinical = AIClinicalAssistant()
-    risk = AIPatientRiskPrediction()
-    summary = clinical.summarize_medical_history(patient.id)
-    analysis = clinical.analyze_patient(patient.id)
+    from app.services import health_insights as hi
+    profile = hi.build(patient)
     want_ai = request.args.get('ai') == '1'      # explicit click only; never on a plain load
-    risk_report = risk.predict_risk(patient.id, use_ai=want_ai)
+    risk = AIPatientRiskPrediction()
+    narrative = risk.predict_risk(patient.id, use_ai=True) if want_ai else None
     return render_template(
         'ai/health_insights.html', title='AI Health Insights',
-        patient=patient, summary=summary, analysis=analysis,
-        risk=risk_report, picker=picker, patients=patients, want_ai=want_ai)
+        patient=patient, profile=profile, narrative=narrative, ai_available=risk.available(),
+        picker=picker, patients=patients, want_ai=want_ai)
 
 
 @ai_bp.route('/summary/<int:patient_id>')

@@ -52,7 +52,7 @@ class AIClinicalAssistant:
         if 'error' in summary:
             return summary
         flags = []
-        if summary['allergies'] not in ('None recorded', 'Unknown'):
+        if summary['allergies'] not in ('None recorded', 'Unknown') and not any(m in summary['allergies'].lower() for m in ('nkda', 'no known', 'none')):
             flags.append({'level': 'warning',
                           'title': 'Documented Allergies',
                           'detail': f"Allergies on record: {summary['allergies']}"})
@@ -231,7 +231,7 @@ class AIPatientRiskPrediction:
         if patient.chronic_diseases:
             score += 2
             reasons.append('Chronic disease present')
-        if patient.allergies:
+        if patient.allergies and not any(m in patient.allergies.lower() for m in ('nkda', 'no known', 'none')):
             score += 1
             reasons.append('Documented allergies')
         # Abnormal labs

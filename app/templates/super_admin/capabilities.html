@@ -1,71 +1,66 @@
 {% extends "base.html" %}
-{% set title = 'Platform Capabilities' %}
-
 {% block content %}
+{% set ar = g.lang == 'ar' %}
 <div class="page-header">
-    <div class="page-header-left">
-        <h1 class="page-title">
-            <i class="fas fa-rocket" style="color:var(--ihis-primary)"></i>
-            {{ 'قدرات المنصة' if g.lang == 'ar' else 'Platform Capabilities Discovery Center' }}
-        </h1>
-        <p class="page-subtitle">
-            {{ 'استكشف كل ما يمكن لـ iHIS فعله' if g.lang == 'ar' else 'Explore everything iHIS can do across the hospital system' }}
-        </p>
+    <div>
+        <h1 class="page-title"><i class="fas fa-rocket" style="color:var(--ihis-primary)"></i> {{ 'قدرات المنصة' if ar else 'Platform Capabilities' }}</h1>
+        <p class="page-subtitle">{{ 'كل ما يفعله iHIS في صفحة واحدة، مرتبًا حسب القسم، وكل بطاقة تفتح الصفحة الحية.' if ar else 'Everything iHIS does on one page, grouped by area; every card opens the live page.' }}</p>
     </div>
-    <div class="page-header-actions">
-        <span class="chip chip-primary">{{ total }} {{ 'ميزة' if g.lang == 'ar' else 'Features' }}</span>
+    <div class="page-actions">
+        <div class="cap-search"><i class="fas fa-search"></i><input type="search" id="capSearch" placeholder="{{ 'ابحث عن ميزة…' if ar else 'Search a feature…' }}" aria-label="{{ 'بحث' if ar else 'Search' }}"></div>
     </div>
 </div>
 
-<!-- Stats Row -->
-<div class="stat-row" style="margin-bottom:var(--sp-6)">
+<div class="kpi-grid mb-3">
     {% for stat in stats %}
-    <div class="stat-row-item">
-        <div class="stat-row-icon" style="background:{{ stat.color }}15;color:{{ stat.color }}">
-            <i class="fas {{ stat.icon }}"></i>
-        </div>
-        <div>
-            <div class="stat-row-value">{{ stat.count }}</div>
-            <div class="stat-row-label">{{ stat.label }}</div>
-        </div>
+    <div class="kpi-card">
+        <div class="kpi-icon {{ stat.tone }}"><i class="fas {{ stat.icon }}"></i></div>
+        <div class="kpi-body"><div class="kpi-label">{{ stat.label_ar if ar else stat.label }}</div><div class="kpi-value">{{ stat.count }}</div></div>
     </div>
     {% endfor %}
 </div>
 
-<!-- Capability Groups -->
+<nav class="cap-nav" aria-label="{{ 'الأقسام' if ar else 'Sections' }}">
+    {% for group in groups %}<a href="#cap-{{ group.key }}" class="cap-nav-chip {{ 'is-ai' if group.ai }}"><i class="fas {{ group.icon }}"></i> {{ group.label_ar if ar else group.label }} <span>{{ group.capabilities|length }}</span></a>{% endfor %}
+</nav>
+
 {% for group in groups %}
-<div class="panel" style="margin-bottom:var(--sp-5)">
-    <div class="panel-header" style="display:flex;align-items:center;gap:var(--sp-3)">
-        <div class="panel-icon" style="background:{{ group.icon_color }}15;color:{{ group.icon_color }}">
-            <i class="fas {{ group.icon }}"></i>
-        </div>
-        <div>
-            <h3 class="panel-title" style="margin:0;font-size:1rem">{{ group.label }}</h3>
-            <p style="margin:0;font-size:0.75rem;color:var(--ihis-text-muted)">{{ group.description }}</p>
-        </div>
-        <span class="chip" style="margin-left:auto;background:{{ group.icon_color }}10;color:{{ group.icon_color }}">{{ group.capabilities|length }}</span>
+<section class="cap-group {{ 'cap-group-ai' if group.ai }}" id="cap-{{ group.key }}">
+    <div class="cap-group-head">
+        <span class="cap-group-icon {{ 'ai' if group.ai else group.tone }}"><i class="fas {{ group.icon }}"></i></span>
+        <div><div class="cap-group-title">{{ group.label_ar if ar else group.label }}</div><div class="cap-group-desc">{{ group.desc_ar if ar else group.desc }}</div></div>
+        <span class="ai-count" style="margin-inline-start:auto">{{ group.capabilities|length }}</span>
     </div>
-    <div class="panel-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-3)">
+    <div class="cap-cards">
         {% for cap in group.capabilities %}
-        <div class="capability-card" style="border:1px solid var(--ihis-border);border-radius:var(--radius-md);padding:var(--sp-4);background:var(--ihis-bg);transition:all var(--duration-fast) var(--ease-smooth)">
-            <div style="display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:var(--sp-3)">
-                <div style="width:36px;height:36px;border-radius:var(--radius-sm);background:{{ group.icon_color }}10;color:{{ group.icon_color }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                    <i class="fas {{ cap.icon }}" style="font-size:0.875rem"></i>
-                </div>
-                <div>
-                    <div style="font-weight:600;font-size:0.875rem;color:var(--ihis-text)">{{ cap.label }}</div>
-                </div>
-            </div>
-            <p style="font-size:0.75rem;color:var(--ihis-text-muted);margin:0 0 var(--sp-3) 0;line-height:1.5">{{ cap.description }}</p>
-            <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap">
-                <span class="chip" style="background:var(--ihis-primary-bg);color:var(--ihis-primary);font-size:0.65rem">{{ cap.category }}</span>
-                {% for role in cap.roles %}
-                <span class="chip" style="background:var(--ihis-bg-alt);color:var(--ihis-text-muted);font-size:0.65rem">{{ role }}</span>
-                {% endfor %}
-            </div>
-        </div>
+        <a class="cap-card" href="{{ cap.url }}" data-search="{{ (cap.label ~ ' ' ~ cap.label_ar ~ ' ' ~ cap.description ~ ' ' ~ cap.roles|join(' '))|lower }}">
+            <span class="cap-card-icon {{ 'ai' if group.ai else group.tone }}"><i class="fas {{ cap.icon }}"></i></span>
+            <span class="cap-card-title">{{ cap.label_ar if ar else cap.label }}{% if cap.model %} <span class="ai-label ai-label-ai">{{ 'نموذج' if ar else 'MODEL' }}</span>{% endif %}</span>
+            <span class="cap-card-desc">{{ cap.description_ar if ar else cap.description }}</span>
+            <span class="cap-card-roles">{% for role in cap.roles %}<span class="chip">{{ role }}</span>{% endfor %}</span>
+            <span class="cap-card-open"><i class="fas fa-arrow-up-right-from-square"></i> {{ 'فتح' if ar else 'Open' }}</span>
+        </a>
         {% endfor %}
     </div>
-</div>
+</section>
 {% endfor %}
+<div id="capEmpty" class="empty-state" hidden><div class="empty-title">{{ 'لا نتائج' if ar else 'No matches' }}</div></div>
+
+<script>
+(function () {
+    var q = document.getElementById('capSearch'); if (!q) return;
+    q.addEventListener('input', function () {
+        var v = q.value.trim().toLowerCase(), any = false;
+        document.querySelectorAll('.cap-group').forEach(function (g) {
+            var shown = 0;
+            g.querySelectorAll('.cap-card').forEach(function (c) {
+                var hit = !v || c.getAttribute('data-search').indexOf(v) !== -1;
+                c.hidden = !hit; if (hit) shown++;
+            });
+            g.hidden = shown === 0; any = any || shown > 0;
+        });
+        document.getElementById('capEmpty').hidden = any;
+    });
+})();
+</script>
 {% endblock %}

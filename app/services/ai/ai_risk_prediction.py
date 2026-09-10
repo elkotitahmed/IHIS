@@ -131,7 +131,7 @@ class AIPatientRiskPrediction(GeminiBase):
                 score += 2; reasons.append('Age under 3')
         if patient.chronic_diseases:
             score += 2; reasons.append('Chronic disease present')
-        if patient.allergies:
+        if patient.allergies and not any(m in patient.allergies.lower() for m in ('nkda', 'no known', 'none')):
             score += 1; reasons.append('Documented allergies')
         abnormal = LabResult.query.join(LabOrder).filter(
             LabOrder.patient_id == patient_id,

@@ -183,3 +183,17 @@ Goal: anyone opening the project understands it at a glance; the AI models stay 
   specialty → all three). Other roles keep the route-decorator sets; admins see all four.
 * Landing page (`/home`): the hero side panel now shows the four models as cards (name, engine),
   and the feature grid names them explicitly.
+
+### v4.3c — Platform Capabilities + Health Insights
+
+* `/super-admin/capabilities`: rebuilt catalogue (45 entries, 7 groups, bilingual) with the AI group first
+  (four models tagged MODEL, copilot, rule engines, specialty policy, dictation, no-show model, control
+  center); every card links to a live page and a test resolves every URL against the route map; sticky
+  section chips, search box, KPI row.
+* `/ai/health-insights`: `app/services/health_insights.py` replaces the old heuristic. Score = age +
+  Charlson-style comorbidity (Z-codes / family history excluded) + renal function (Cockcroft-Gault/eGFR) +
+  potassium + recent abnormal/critical labs + NEWS2 (vitals ≤ 7 days) + polypharmacy / high-risk classes +
+  medication-safety findings (clinical pharmacist rules) + documented drug allergies (NKDA never counts) +
+  admissions + open alerts (not double-counted with medication findings). Every factor shows points,
+  evidence and source; observations name their source; data gaps are listed. Gemini narrative only on
+  "Explain with AI" and it never changes the score.
