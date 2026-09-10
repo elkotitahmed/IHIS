@@ -1,4 +1,4 @@
-"""The four imaging models follow one specialty policy everywhere: sidebar,
+"""The five imaging models follow one specialty policy everywhere: sidebar,
 dashboard AI block, AI Hub and the routes themselves."""
 import unittest
 
@@ -40,7 +40,7 @@ class Base(unittest.TestCase):
     def _models_on(self, path):
         html = self.client.get(path).data.decode()
         return {k for k, url in (('chest', '/ai/chest-xray'), ('fracture', '/ai/fracture-detection'),
-                                  ('tooth', '/ai/tooth-segmentation'), ('skin', '/ai/skin-lesion-detection'))
+                                  ('tooth', '/ai/tooth-segmentation'), ('skin', '/ai/skin-lesion-detection'), ('ich', '/ai/ich-detection'))
                 if f'href="{url}"' in html}
 
 
@@ -52,8 +52,8 @@ class PolicyTests(Base):
         self.assertEqual(allowed_models(derm), {'skin'})
         self.assertEqual(allowed_models(ortho), {'fracture'})
         self.assertEqual(allowed_models(im), {'chest'})
-        self.assertEqual(allowed_models(gen), {'chest', 'fracture', 'skin'})     # unknown specialty: full set
-        self.assertEqual(allowed_models(none), {'chest', 'fracture', 'skin'})
+        self.assertEqual(allowed_models(gen), {'chest', 'fracture', 'skin', 'ich'})     # unknown specialty: full set
+        self.assertEqual(allowed_models(none), {'chest', 'fracture', 'skin', 'ich'})
 
     def test_dermatologist_sees_only_skin_everywhere(self):
         derm = self._doctor('derm', 'Dermatology'); self._login(derm)
@@ -74,7 +74,7 @@ class PolicyTests(Base):
         u = User(username='adm', email='adm@t.com', full_name='Adm', user_type='admin'); u.set_password('123456')
         u.roles.append(Role.query.filter_by(name='Admin').first()); db.session.add(u); db.session.commit()
         self._login(u)
-        self.assertEqual(self._models_on('/admin/dashboard'), {'chest', 'fracture', 'tooth', 'skin'})
+        self.assertEqual(self._models_on('/admin/dashboard'), {'chest', 'fracture', 'tooth', 'skin', 'ich'})
 
     def test_landing_page_lists_the_four_models(self):
         html = self.client.get('/home').data.decode()

@@ -49,6 +49,7 @@ def build(role_names, has_permission=None):
     gem_status, gem_note = _gemini_status(st['state'])
 
     from app.services.ai.chest_xray import chest_model_available
+    from app.services.ai.ich_detection import ich_model_available
     from app.services.ai.dictation import dictation_available
     from app.services.ai.fracture_detection import fracture_model_available
     from app.services.ai.skin_lesion_classification import skin_model_available
@@ -56,6 +57,7 @@ def build(role_names, has_permission=None):
 
     fracture = _safe(fracture_model_available)
     chest = _safe(chest_model_available)
+    ich = _safe(ich_model_available)
     dictation = _safe(dictation_available)
     skin = _safe(skin_model_available)
     tooth = _safe(tooth_model_available)
@@ -119,6 +121,16 @@ def build(role_names, has_permission=None):
             'status': 'AVAILABLE' if chest else 'COMING SOON',
             'note': '' if chest else 'torchxrayvision is not installed on this server.',
             'url': url_for('ai.chest_xray'),
+        })
+    if roles & ({'Radiologist', 'RadiologyTechnician', 'Doctor'} | ADMIN):
+        pred_items.append({
+            'key': 'ich', 'label': 'Head CT Haemorrhage Detection', 'label_ar': 'كشف النزف الدماغي (CT)',
+            'desc': 'Intracranial haemorrhage screening on non-contrast head CT (ConvNeXt-Tiny + Swin-Tiny, LayerCAM); single slice or whole series; a positive call raises an alert.',
+            'desc_ar': 'فحص النزف داخل الجمجمة في الأشعة المقطعية للرأس بدون صبغة (ConvNeXt-Tiny + Swin-Tiny مع LayerCAM)؛ مقطع واحد أو سلسلة كاملة؛ النتيجة الإيجابية تُنشئ تنبيهًا.',
+            'icon': 'fa-brain', 'engine': 'model',
+            'status': 'AVAILABLE' if ich else 'COMING SOON',
+            'note': '' if ich else 'Model weights are not installed on this server.',
+            'url': url_for('ai.ich_detection'),
         })
     if roles & ({'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist', 'Dentist'} | ADMIN):
         pred_items.append({
@@ -325,4 +337,4 @@ def build(role_names, has_permission=None):
     total = sum(len(gr['items']) for gr in groups)
     available = sum(1 for gr in groups for it in gr['items'] if it['status'] == 'AVAILABLE')
     return {'status': st, 'groups': groups, 'total': total, 'available': available,
-            'models_installed': sum([chest, fracture, tooth, skin])}
+            'models_installed': sum([chest, fracture, tooth, skin, ich])}

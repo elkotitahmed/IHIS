@@ -249,6 +249,8 @@ def register_context_processors(app):
             specs = [
                 (_l('Chest X-ray Screening', 'فحص أشعة الصدر'), '/ai/chest-xray',
                  'fa-lungs', {'Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin'}),
+                (_l('Head CT Haemorrhage', 'نزف الدماغ (CT)'), '/ai/ich-detection',
+                 'fa-brain', {'Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin'}),
                 (_l('Fracture Detection', 'كشف الكسور'), '/ai/fracture-detection',
                  'fa-bone', {'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
                              'Dentist', 'Admin', 'SuperAdmin'}),   # = route decorator
@@ -635,10 +637,10 @@ def register_context_processors(app):
                     out.append(it)
         return out[:limit]
 
-    MODEL_ENDPOINTS = ('/ai/chest-xray', '/ai/fracture-detection', '/ai/tooth-segmentation', '/ai/skin-lesion-detection')
+    MODEL_ENDPOINTS = ('/ai/chest-xray', '/ai/fracture-detection', '/ai/tooth-segmentation', '/ai/skin-lesion-detection', '/ai/ich-detection')
 
     def ai_models_block():
-        """The four local imaging models (chest, fracture, tooth, skin) the effective
+        """The five local imaging models (chest, fracture, tooth, skin, head-CT haemorrhage) the effective
         role may open, in that fixed order, plus the other AI tools as a short list.
         Uses the AI Hub catalogue; never calls the provider."""
         from flask_login import current_user
@@ -679,6 +681,9 @@ def register_context_processors(app):
             '/ai/skin-lesion-detection': ('Skin Lesion Detection', 'كشف آفات الجلد',
                                           'Melanoma vs. nevus on a lesion photo, with a Grad-CAM heatmap.',
                                           'ميلانوما أم وحمة من صورة الآفة، مع خريطة انتباه Grad-CAM.'),
+            '/ai/ich-detection': ('Head CT Haemorrhage Detection', 'كشف النزف الدماغي (CT)',
+                                  'Intracranial haemorrhage on head CT slices or a whole series, with LayerCAM.',
+                                  'نزف داخل الجمجمة في مقاطع CT الرأس أو سلسلة كاملة، مع LayerCAM.'),
         }
         ordered = []
         for e in MODEL_ENDPOINTS:

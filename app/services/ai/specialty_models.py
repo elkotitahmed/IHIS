@@ -1,10 +1,10 @@
-"""Which of the four local imaging models a user may see and open.
+"""Which of the five local imaging models a user may see and open.
 
 One policy, applied everywhere the models appear: the sidebar AI TOOLS group,
 the dashboard AI block, the AI Hub catalogue and the model routes themselves.
 
 * Roles without a specialty get a fixed set (radiologists: chest, fracture,
-  tooth; nurses: fracture, tooth, skin; physiotherapists: fracture; dentists:
+  tooth, head-CT haemorrhage; nurses: fracture, tooth, skin; physiotherapists: fracture; dentists:
   tooth, fracture, skin; admins: everything).
 * Physicians get the models that belong to their specialty's workflow: a
   dermatologist sees only Skin Lesion Detection, an orthopaedic surgeon only
@@ -12,12 +12,13 @@ the dashboard AI block, the AI Hub catalogue and the model routes themselves.
   A physician without a specialty on file (or with a specialty that is not in
   the table) keeps the full physician set.
 """
-MODEL_KEYS = ('chest', 'fracture', 'tooth', 'skin')
+MODEL_KEYS = ('chest', 'fracture', 'tooth', 'skin', 'ich')
 ENDPOINT_BY_KEY = {
     'chest': '/ai/chest-xray',
     'fracture': '/ai/fracture-detection',
     'tooth': '/ai/tooth-segmentation',
     'skin': '/ai/skin-lesion-detection',
+    'ich': '/ai/ich-detection',
 }
 KEY_BY_ENDPOINT = {v: k for k, v in ENDPOINT_BY_KEY.items()}
 # The AI Hub files the skin model under the 'dermatology' key.
@@ -25,9 +26,9 @@ HUB_KEY_ALIASES = {'dermatology': 'skin'}
 
 ROLE_MODELS = {
     'SuperAdmin': set(MODEL_KEYS), 'Admin': set(MODEL_KEYS),
-    'Doctor': {'chest', 'fracture', 'skin'},          # narrowed by specialty below
-    'Radiologist': {'chest', 'fracture', 'tooth'},
-    'RadiologyTechnician': {'chest'},
+    'Doctor': {'chest', 'fracture', 'skin', 'ich'},   # narrowed by specialty below
+    'Radiologist': {'chest', 'fracture', 'tooth', 'ich'},
+    'RadiologyTechnician': {'chest', 'ich'},
     'Nurse': {'fracture', 'tooth', 'skin'},
     'Physiotherapist': {'fracture'},
     'Dentist': {'tooth', 'fracture', 'skin'},   # jaw fractures, oral/facial lesions (= route decorators)
@@ -44,11 +45,12 @@ SPECIALTY_MODELS = {
     'Endocrinology': {'chest'},
     'Gastroenterology': {'chest'},
     'Oncology': {'chest', 'skin'},
-    'Emergency Medicine': {'chest', 'fracture'},
-    'Surgery': {'chest', 'fracture'},
+    'Emergency Medicine': {'chest', 'fracture', 'ich'},
+    'Surgery': {'chest', 'fracture', 'ich'},
     'Pediatrics': {'chest', 'fracture'},
     'Family Medicine': {'chest', 'fracture', 'skin'},
-    'Neurology': set(), 'Psychiatry': set(), 'Ophthalmology': set(), 'ENT': set(),
+    'Neurosurgery': {'ich'},
+    'Neurology': {'ich'}, 'Psychiatry': set(), 'Ophthalmology': set(), 'ENT': set(),
     'Gynecology': set(), 'Urology': set(),
 }
 

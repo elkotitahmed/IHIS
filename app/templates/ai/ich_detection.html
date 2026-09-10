@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block content %}
+{% set ar = g.lang == 'ar' %}
+{% with wb_title='Head CT Haemorrhage Detection', wb_title_ar='كشف النزف الدماغي في الأشعة المقطعية',
+        wb_desc='Screens non-contrast head CT slices for intracranial haemorrhage with two local classifiers (ConvNeXt-Tiny and Swin-Tiny) trained on brain, subdural and bone windows. LayerCAM shows what drove each call; a whole series can be scored slice by slice. A radiologist confirms.',
+        wb_desc_ar='يفحص مقاطع الأشعة المقطعية للرأس بدون صبغة بحثًا عن نزف داخل الجمجمة بنموذجين محليين (ConvNeXt-Tiny وSwin-Tiny) مدرَّبين على نوافذ الدماغ وتحت الجافية والعظم. خريطة LayerCAM تُظهر ما اعتمد عليه النموذج، ويمكن تقييم سلسلة كاملة مقطعًا مقطعًا. أخصائي الأشعة يؤكد.',
+        wb_icon='fa-brain',
+        wb_facts=[('fa-microchip', 'ConvNeXt-Tiny + Swin-Tiny (~107 MB each), local', 'ConvNeXt-Tiny + Swin-Tiny (نحو 107 ميجا لكل منهما)، محلي'), ('fa-layer-group', 'DICOM windows: brain 40/80 · subdural 80/200 · bone 600/2800', 'نوافذ DICOM: دماغ 40/80 · تحت الجافية 80/200 · عظم 600/2800'), ('fa-eye', 'LayerCAM shows what drove the call', 'LayerCAM تُظهر ما اعتمد عليه القرار'), ('fa-bell', 'Positive call → alert → radiologist', 'نتيجة إيجابية ← تنبيه ← أخصائي الأشعة')],
+        wb_back_url=(url_for('radiology.orders') if current_user.has_any_role('Radiologist','RadiologyTechnician','Doctor','Admin','SuperAdmin') else url_for('main.dashboard')), wb_back_label='Worklist', wb_back_label_ar='قائمة العمل' %}
+{% include 'ai/_workbench_hero.html' %}
+{% endwith %}
+
+{% include 'clinical/_patient_header.html' %}
+
+{% if error %}<div class="alert alert-danger"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>{% endif %}
+
+<div class="wb-grid">
+    <div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-brain" style="color:var(--ai-1)"></i> {{ ('تحليل صورة المريض' if selected_doc else 'مقاطع الأشعة المقطعية للرأس') if ar else ('Analyze the patient image' if selected_doc else 'Head CT slices') }}</div></div>
+            <div class="card-body">
+                {% with form_action=url_for('ai.ich_detection'), submit_label='Screen for haemorrhage', submit_label_ar='فحص النزف', accept='.dcm,.dicom,.png,.jpg,.jpeg', camera=false, multiple=true, hint='One DICOM slice, or select a whole series (several .dcm files) · PNG/JPG accepted but less reliable · max 16 MB', hint_ar='مقطع DICOM واحد، أو سلسلة كاملة (عدة ملفات .dcm) · PNG/JPG مقبولة لكن أقل موثوقية · حتى 16 ميجابايت' %}
+                {% include 'ai/_image_input.html' %}
+                {% endwith %}
+            </div>
+        </div>
+
+        {% if result and result.error is not defined %}
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><span class="ai-spark">✦</span> {{ 'نتيجة الفحص' if ar else 'Screening result' }} <span class="ai-label ai-label-ai">{{ 'بمساعدة الذكاء' if ar else 'AI-ASSISTED' }}</span> <span class="ai-label ai-label-warn">{{ 'ليس تشخيصًا نهائيًا' if ar else 'NOT A FINAL DIAGNOSIS' }}</span></div></div>
+            <div class="card-body">
+                {% if result.positive %}
+                <div class="verdict verdict-danger">
+                    <span class="verdict-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                    <div><div class="verdict-title">{{ 'اشتباه نزف داخل الجمجمة' if ar else 'Intracranial haemorrhage suspected' }}</div>
+                        <div class="verdict-sub">{{ ('السلسلة: ' ~ result.n_flagged ~ ' من ' ~ result.n_slices ~ ' مقطعًا فوق العتبة') if ar and result.mode == 'study' else ('Series: ' ~ result.n_flagged ~ ' of ' ~ result.n_slices ~ ' slices above threshold') if result.mode == 'study' else ('فوق عتبة الحساسية 95%' if ar else 'above the 95 %-sensitivity operating point') }} — {{ 'يتطلب مراجعة أخصائي الأشعة فورًا' if ar else 'immediate radiologist review required' }}</div></div>
+                    <div class="verdict-side"><div class="big">{{ result.percent }}%</div><div class="small-lbl">{{ ('درجة السلسلة' if ar else 'study score') if result.mode == 'study' else ('متوسط النموذجين' if ar else 'mean of two models') }}</div></div>
+                </div>
+                {% else %}
+                <div class="verdict verdict-ok">
+                    <span class="verdict-icon"><i class="fas fa-check"></i></span>
+                    <div><div class="verdict-title">{{ 'لا اشتباه نزف فوق العتبة' if ar else 'No haemorrhage call above threshold' }}</div><div class="verdict-sub">{{ 'العتبة منخفضة عمدًا (حساسية 95%)؛ النتيجة السلبية مطمئنة لكنها لا تستبعد النزف تحت الجافية أو تحت العنكبوتية الصغير.' if ar else 'The operating point is deliberately low (95 % sensitivity); a negative is reassuring but does not exclude small subdural or subarachnoid bleeds.' }}</div></div>
+                    <div class="verdict-side"><div class="big">{{ result.percent }}%</div><div class="small-lbl">{{ 'العتبة' if ar else 'threshold' }} {{ '%.1f'|format(result.threshold * 100) }}%</div></div>
+                </div>
+                {% endif %}
+                {% if result.note %}<div class="alert alert-warning" style="font-size:.8125rem"><i class="fas fa-circle-info"></i> {{ result.note }}</div>{% endif %}
+
+                {% if result.mode == 'slice' %}
+                <div class="compare mb-3">
+                    <figure><figcaption><i class="fas fa-image"></i> {{ 'نافذة الدماغ' if ar else 'Brain window' }}</figcaption><img src="{{ url_for('ai.ai_media', feature='ich', kind='results', filename=result.orig_key) }}" alt="{{ 'مقطع CT' if ar else 'CT slice' }}"></figure>
+                    {% for m in result.per_model %}
+                    <figure><figcaption><span class="ai-spark">✦</span> LayerCAM · {{ m.model }} <span class="cell-muted" style="text-transform:none;letter-spacing:0">{{ m.percent }}%</span></figcaption><img src="{{ url_for('ai.ai_media', feature='ich', kind='results', filename=m.cam_key) }}" alt="LayerCAM {{ m.model }}"></figure>
+                    {% endfor %}
+                </div>
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    {% for k, label, label_ar in (('brain', 'Brain 40/80', 'دماغ 40/80'), ('subdural', 'Subdural 80/200', 'تحت الجافية 80/200'), ('bone', 'Bone 600/2800', 'عظم 600/2800')) %}
+                    <figure style="margin:0;text-align:center"><img src="{{ url_for('ai.ai_media', feature='ich', kind='results', filename=result.windows[k]) }}" alt="{{ label }}" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--ihis-border)"><figcaption class="cell-muted" style="font-size:.7rem">{{ label_ar if ar else label }}</figcaption></figure>
+                    {% endfor %}
+                </div>
+                <div class="table-wrapper mb-3">
+                    <table class="table-ihs">
+                        <thead><tr><th>{{ 'النموذج' if ar else 'Model' }}</th><th>{{ 'النداء' if ar else 'Call' }}</th><th>{{ 'احتمال النزف' if ar else 'P(haemorrhage)' }}</th><th>{{ 'الثقة' if ar else 'Confidence' }}</th></tr></thead>
+                        <tbody>
+                        {% for m in result.per_model %}
+                        <tr>
+                            <td class="cell-primary">{{ m.model }}</td>
+                            <td>{% if m.positive %}<span class="ai-label ai-label-danger">{{ 'نزف' if ar else 'Haemorrhage' }}</span>{% else %}<span class="ai-label ai-label-verified">{{ 'سلبي' if ar else 'Negative' }}</span>{% endif %}</td>
+                            <td class="t-num">{{ m.percent }}%</td>
+                            <td><div class="meter-row"><div class="meter"><span style="width:{{ m.percent|round(0)|int }}%;{% if m.positive %}background:var(--ihis-danger){% endif %}"></span></div></div></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if not result.agree %}<div class="alert alert-warning" style="font-size:.8125rem"><i class="fas fa-scale-unbalanced"></i> {{ 'النموذجان غير متفقين؛ اعتبر النتيجة غير محسومة.' if ar else 'The two models disagree; treat the result as undetermined.' }}</div>{% endif %}
+                {% else %}
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-2" style="font-size:.8rem">
+                    <strong>{{ 'السلسلة' if ar else 'Series' }}</strong>
+                    <span class="cell-muted">{{ result.n_slices }} {{ 'مقطعًا' if ar else 'slices' }} · z {{ result.z_range[0] }} → {{ result.z_range[1] }}{% if result.skipped %} · {{ result.skipped }} {{ 'ملفات تجاوزها' if ar else 'unreadable file(s) skipped' }}{% endif %}</span>
+                    <span class="ai-label {{ 'ai-label-verified' if result.sequence_model else 'ai-label-warn' }}">{{ ('نموذج التسلسل (LSTM)' if ar else 'sequence model (LSTM)') if result.sequence_model else ('تجميع CNN فقط — نموذج التسلسل غير مثبّت' if ar else 'CNN-only aggregation — sequence model not installed') }}</span>
+                </div>
+                <div class="ich-gallery mb-3">
+                    {% for s in result.gallery %}
+                    <figure class="ich-slice {{ 'is-flagged' if s.flagged }}">
+                        <img src="{{ url_for('ai.ai_media', feature='ich', kind='results', filename=s.cam_key) }}" alt="{{ 'مقطع' if ar else 'slice' }} {{ s.index }}">
+                        <figcaption><strong>#{{ s.index }}</strong> · z {{ s.z }} · CNN {{ s.cnn }}%{% if s.seq is not none %} · LSTM {{ s.seq }}%{% endif %}{% if s.flagged %} <span class="ai-label ai-label-danger">!</span>{% endif %}</figcaption>
+                    </figure>
+                    {% endfor %}
+                </div>
+                <div class="ai-sec-title">{{ 'احتمال كل مقطع (من الأسفل إلى الأعلى)' if ar else 'Per-slice probability (inferior → superior)' }}</div>
+                <div class="ich-curve mb-3" aria-hidden="true">{% for v in result.curve %}<span style="height:{{ [v * 100, 100]|min|round(0)|int }}%;{% if v > result.threshold %}background:var(--ihis-danger){% endif %}" title="#{{ loop.index }} {{ '%.1f'|format(v * 100) }}%"></span>{% endfor %}</div>
+                {% endif %}
+
+                {% if result.usage_id %}
+                <form method="post" action="{{ url_for('ai.ich_review') }}" class="review-box">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="usage_id" value="{{ result.usage_id }}">
+                    <div class="review-title"><i class="fas fa-user-check" style="color:var(--ihis-primary)"></i> {{ 'مراجعة أخصائي الأشعة (إلزامية قبل الاعتماد)' if ar else 'Radiologist review (required before this result is relied on)' }}</div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <select name="decision" class="form-select form-select-sm" style="max-width:260px" aria-label="{{ 'قرار المراجعة' if ar else 'Review decision' }}">
+                            <option value="agree">{{ 'أتفق مع التقييم' if ar else 'I agree with the assessment' }}</option>
+                            <option value="disagree">{{ 'لا أتفق' if ar else 'I disagree' }}</option>
+                            <option value="needs_review">{{ 'يلزم قراءة كاملة للسلسلة' if ar else 'Needs full-series read' }}</option>
+                        </select>
+                        <input type="text" name="note" class="form-control form-control-sm" style="max-width:300px" placeholder="{{ 'ملاحظة (اختياري)' if ar else 'Note (optional)' }}">
+                        <button class="btn-ihs btn-ihs-primary btn-ihs-sm"><i class="fas fa-check"></i> {{ 'تسجيل المراجعة' if ar else 'Record review' }}</button>
+                    </div>
+                    <div class="cell-muted mt-1" style="font-size:.7rem">{{ 'تُسجَّل المراجعة في سجل تدقيق الذكاء فقط؛ لا يُنشأ تشخيص ولا يتغير الملف.' if ar else 'Recorded in the AI audit trail only; no diagnosis is created and the chart is unchanged.' }}</div>
+                </form>
+                {% endif %}
+                <div class="ai-footer">{{ 'كشف، لا تحديد حدود: تصنيف ثنائي على مستوى المقطع دون تحديد النوع أو الحجم. النزف تحت الجافية وتحت العنكبوتية يُفوَّت بنسبة أعلى.' if ar else 'Detection, not segmentation: slice-level binary calls without subtype or volume. Subdural and subarachnoid haemorrhage are missed disproportionately.' }} {{ 'النماذج:' if ar else 'Models:' }} {{ result.models_used|join(', ') }} · {{ result.seconds }} s</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <div class="card-premium mb-3">
+            <div class="card-header"><div class="card-title"><i class="fas fa-book-open" style="color:var(--ihis-primary)"></i> {{ 'كيف تقرأ النتيجة' if ar else 'How to read the result' }}</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                <ul class="mb-0" style="padding-inline-start:18px;display:flex;flex-direction:column;gap:6px">
+                    <li>{{ 'عتبة المقطع 10.3% وعتبة السلسلة 7.2% مضبوطتان عند حساسية 95% على مجموعة اختبار محجوزة؛ لذلك النسب المنخفضة قد تكون إيجابية.' if ar else 'Slice threshold 10.3 % and study threshold 7.2 % were set at 95 % sensitivity on a held-out test set, so low percentages can still be positive calls.' }}</li>
+                    <li>{{ 'ارفع ملفات DICOM: الصور المسطحة تفقد نوافذ تحت الجافية والعظم.' if ar else 'Upload DICOM files: flat images lose the subdural and bone windows.' }}</li>
+                    <li>{{ 'خريطة LayerCAM تُظهر المنطقة الدافعة للقرار؛ إن كانت خارج الدماغ فلا تثق بالنتيجة.' if ar else 'The LayerCAM map shows the driving region; if it lies outside the brain, do not trust the call.' }}</li>
+                    <li>{{ 'تقييم السلسلة يتطلب 8 مقاطع على الأقل لنموذج التسلسل.' if ar else 'Series scoring needs at least 8 slices for the sequence model.' }}</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-premium">
+            <div class="card-header"><div class="card-title"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'الحوكمة' if ar else 'Governance' }}</div></div>
+            <div class="card-body" style="font-size:.8125rem">
+                <dl class="kv">
+                    <dt>{{ 'المحرك' if ar else 'Engine' }}</dt><dd>{{ 'نموذجان محليان (PyTorch / timm)' if ar else 'Two local models (PyTorch / timm)' }}</dd>
+                    <dt>{{ 'البيانات' if ar else 'Data' }}</dt><dd>{{ 'تبقى على الخادم؛ الصور خاصة' if ar else 'Stays on the server; images are private' }}</dd>
+                    <dt>{{ 'التدقيق' if ar else 'Audit' }}</dt><dd>{{ 'كل تشغيل ومراجعة تُسجَّل' if ar else 'Every run and review is logged' }}</dd>
+                    <dt>{{ 'الحالة' if ar else 'Status' }}</dt><dd><span class="hub-status hub-status-{{ 'available' if available else 'soon' }}">{{ ('متاح' if available else 'غير مثبّت') if ar else ('AVAILABLE' if available else 'NOT INSTALLED') }}</span>{% if available and not seq_available %} <span class="cell-muted" style="font-size:.7rem">({{ 'بدون نموذج التسلسل' if ar else 'sequence head not installed' }})</span>{% endif %}</dd>
+                </dl>
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    {% if current_user.has_any_role('Radiologist','RadiologyTechnician','Doctor','Admin','SuperAdmin') %}<a href="{{ url_for('copilot.radiology_ai') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm"><span class="ai-spark">✦</span> {{ 'محرك النتائج الحرجة' if ar else 'Critical-finding engine' }}</a>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

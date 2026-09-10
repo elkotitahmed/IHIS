@@ -197,3 +197,18 @@ Goal: anyone opening the project understands it at a glance; the AI models stay 
   admissions + open alerts (not double-counted with medication findings). Every factor shows points,
   evidence and source; observations name their source; data gaps are listed. Gemini narrative only on
   "Explain with AI" and it never changes the score.
+
+### v4.4 — fifth model: Head CT Haemorrhage Detection (2026-09-11)
+
+`app/services/ai/ich_detection.py` + `/ai/ich-detection`: ConvNeXt-Tiny and Swin-Tiny slice classifiers
+(timm, ~107 MB each, in `app/static/ai_models/`, git-ignored) on non-contrast head CT — DICOM windows
+brain 40/80, subdural 80/200, bone 600/2800 stacked as RGB; LayerCAM fused over two stages; operating
+points from the author's held-out set at 95 % sensitivity (slice 0.103, study 0.072). Single slice runs
+both models with heatmaps; a multi-file DICOM upload is scored per slice by ConvNeXt (the optional
+`sequence_head.pt` LSTM is used when installed, otherwise the page says "CNN-only aggregation") with a
+per-slice curve and a gallery of the six highest slices. Positive calls raise `AI_ICH_SUSPECTED`
+(CRITICAL when ≥ 50 %, else HIGH) assigned to the radiologist/physician who ran it, with an urgent task.
+Registered everywhere the other four models are: sidebar AI TOOLS, dashboard AI block (five cards,
+auto-fit grid), AI Hub (5/5), landing page, Platform Capabilities, specialty policy (Radiologist,
+Radiology Technician, Emergency, Surgery, Neurology, Neurosurgery; physicians without a specialty),
+media route, tests (`tests/test_ich_detection.py`).

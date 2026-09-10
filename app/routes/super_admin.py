@@ -325,8 +325,8 @@ def capabilities():
     groups = [
         {'key': 'ai', 'ai': True, 'tone': 'ai', 'icon': 'fa-wand-magic-sparkles',
          'label': 'AI models & engines', 'label_ar': 'نماذج الذكاء الاصطناعي ومحركاته',
-         'desc': 'Four local imaging models, a copilot on every page, and rule engines that stay authoritative.',
-         'desc_ar': 'أربعة نماذج صور محلية، مساعد في كل صفحة، ومحركات قواعد تبقى هي المرجع.',
+         'desc': 'Five local imaging models, a copilot on every page, and rule engines that stay authoritative.',
+         'desc_ar': 'خمسة نماذج صور محلية، مساعد في كل صفحة، ومحركات قواعد تبقى هي المرجع.',
          'capabilities': [
              cap('Chest X-ray Screening', 'فحص أشعة الصدر', '18 findings on a frontal chest X-ray (DenseNet-121, local); confident critical findings raise an alert.',
                  '18 نتيجة في أشعة الصدر الأمامية (DenseNet-121 محلي)؛ النتائج الحرجة الواثقة تُنشئ تنبيهًا.', 'Radiologist, Physician', '/ai/chest-xray', 'fa-lungs', True),
@@ -336,6 +336,8 @@ def capabilities():
                  'قناع تجزئة U-Net على الأشعة البانورامية للأسنان.', 'Dentist, Radiologist', '/ai/tooth-segmentation', 'fa-teeth', True),
              cap('Skin Lesion Detection', 'كشف آفات الجلد', 'ResNet-50 + EfficientNet-B0 ensemble: melanoma vs nevus with a Grad-CAM heatmap; confident melanoma calls alert the dermatologist.',
                  'مجموعة ResNet-50 + EfficientNet-B0: ميلانوما أم وحمة مع خريطة Grad-CAM؛ النداءات الواثقة تنبّه طبيب الجلدية.', 'Physician (Dermatology), Dentist, Nurse', '/ai/skin-lesion-detection', 'fa-person-circle-question', True),
+             cap('Head CT Haemorrhage Detection', 'كشف النزف الدماغي (CT)', 'ConvNeXt-Tiny + Swin-Tiny on non-contrast head CT (DICOM windows) with LayerCAM; single slice or series; positive calls alert the radiologist.',
+                 'ConvNeXt-Tiny + Swin-Tiny على الأشعة المقطعية للرأس بدون صبغة (نوافذ DICOM) مع LayerCAM؛ مقطع أو سلسلة؛ النتائج الإيجابية تنبّه أخصائي الأشعة.', 'Radiologist, Physician (Neurology, Emergency)', '/ai/ich-detection', 'fa-brain', True),
              cap('AI Clinical Copilot', 'المساعد السريري الذكي', 'One entry point on every clinical page: summary, differential support, documentation drafts, safety review, patient communication. Reads the chart, never writes to it.',
                  'نقطة دخول واحدة في كل صفحة سريرية: ملخص، دعم تفريقي، مسودات توثيق، مراجعة سلامة، تواصل مع المريض. يقرأ الملف ولا يكتب فيه.', 'Physician, Nurse, Pharmacist, Dentist', '/ai/hub', 'fa-wand-magic-sparkles'),
              cap('Radiology critical-finding engine', 'محرك النتائج الحرجة للأشعة', 'Rules + local negation classifier on every signed report → alert → urgent task → acknowledgement → audit.',

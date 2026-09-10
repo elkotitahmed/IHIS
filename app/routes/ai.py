@@ -33,7 +33,7 @@ ai_bp = Blueprint('ai', __name__)
 CLINICAL = ('Doctor', 'Admin', 'SuperAdmin', 'Nurse', 'Physiotherapist',
             'LabTechnician', 'Radiologist', 'Pharmacist')
 
-IMAGE_EXTS = ('.png', '.jpg', '.jpeg')
+IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.dcm', '.dicom')
 
 
 def _patient_document_path(doc):
@@ -165,6 +165,43 @@ def _alert_on_positive_finding(result, patient, doc=None):
                 notify(responsible, 'CRITICAL AI FINDING: suspected melanoma',
                        f'Patient {patient.mrn or "#" + str(patient.id)}: skin lesion classified as melanoma '
                        f'({result.get("percent", 0)}%). Acknowledge the alert and document your action.',
+                       notification_type='critical', entity_type='clinical_alert', entity_id=alert.id)
+        db.session.commit()
+    elif result.get('feature') == 'ich' and result.get('positive'):
+        # Haemorrhage calls are time-critical: CRITICAL when the models are
+        # confident, HIGH at the (deliberately low) 95 %-sensitivity operating point.
+        from app.services import tasks as task_svc
+        from app.services.notifications import notify
+        prob = float(result.get('probability') or 0)
+        severity = 'CRITICAL' if prob >= 0.5 else 'HIGH'
+        responsible = current_user.id if current_user.has_any_role('Doctor', 'Radiologist') else None
+        alert = alert_svc.ensure_open_alert(
+            patient.id, 'AI_ICH_SUSPECTED',
+            title='Positive AI finding: intracranial haemorrhage suspected on head CT',
+            message=(f"Head CT screening flagged possible intracranial haemorrhage "
+                     f"({result.get('percent', 0)}% {'study score' if result.get('mode') == 'study' else 'model probability'}, "
+                     f"operating point {round(float(result.get('threshold') or 0) * 100, 1)}%). Immediate radiologist "
+                     f"review of the series is required; the model output is not a diagnosis."),
+            severity=severity, source_type='ai_tool', source_id=source_id)
+        alert.ai_assisted = True
+        alert.confidence = prob
+        alert.rationale = (f"Local ConvNeXt-Tiny / Swin-Tiny head-CT classifiers ({', '.join(result.get('models_used') or [])}); "
+                           f"{result.get('n_slices', 1)} slice(s); LayerCAM saved.")
+        if responsible and not alert.assigned_to:
+            alert.assigned_to = responsible
+        db.session.flush()
+        if severity == 'CRITICAL' and not task_svc.open_tasks_for_resource('clinical_alert', alert.id):
+            task_svc.create_task(
+                title='URGENT: review AI-flagged head CT — possible intracranial haemorrhage',
+                description=(f'Head CT AI call: haemorrhage {result.get("percent", 0)}%. Read the series, '
+                             f'confirm or refute, communicate to the treating team, then acknowledge the alert.'),
+                task_type='CRITICAL_RESULT', department='Radiology', patient_id=patient.id,
+                assigned_to=responsible, assigned_role=None if responsible else 'Radiologist',
+                priority='URGENT', related_resource_type='clinical_alert', related_resource_id=alert.id)
+            if responsible:
+                notify(responsible, 'CRITICAL AI FINDING: possible intracranial haemorrhage',
+                       f'Patient {patient.mrn or "#" + str(patient.id)}: head CT flagged ({result.get("percent", 0)}%). '
+                       f'Acknowledge the alert and document your action.',
                        notification_type='critical', entity_type='clinical_alert', entity_id=alert.id)
         db.session.commit()
 
@@ -408,6 +445,73 @@ def tooth_segmentation():
         selected_doc=doc, **safety, today=utcnow().date())
 
 
+@ai_bp.route('/ich-detection', methods=['GET', 'POST'])
+@login_required
+@roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin')
+def ich_detection():
+    """ConvNeXt-Tiny + Swin-Tiny head-CT haemorrhage screening (single slice or series)."""
+    _denied = _require_model('ich')
+    if _denied is not None:
+        return _denied
+    from app.services.ai.ich_detection import analyze_ich, ich_model_available, sequence_model_available
+    result = None
+    error = None
+    patient = None
+    doc = None
+    if request.method == 'POST':
+        uploads = [f for f in request.files.getlist('file') if f and f.filename]
+        storage = None
+        if not uploads:
+            storage, patient, doc, error = _resolve_image_input()
+            uploads = [storage] if storage is not None else []
+        if uploads:
+            try:
+                result = analyze_ich(uploads)
+                if 'error' in result:
+                    error = result.pop('error', None)
+                else:
+                    from app.services.ai import platform as _platform
+                    result['usage_id'] = _platform.record_usage(
+                        'ich.detect', 'ok', provider='local',
+                        patient_id=patient.id if patient else None,
+                        detail=f"{result.get('mode')} {'positive' if result.get('positive') else 'negative'} "
+                               f"{result.get('percent')}% n={result.get('n_slices')}")
+                    _alert_on_positive_finding(result, patient, doc)
+                    log_activity('AI_ICH_DETECTION', 'patient', patient.id if patient else 0,
+                                 f"Head CT haemorrhage screening ({result.get('mode')})")
+            finally:
+                _close_storage(storage)
+    available = ich_model_available()
+    doc = doc or _load_doc(request.args.get('doc'))
+    patient = patient or (doc.patient if doc else None)
+    safety = patient_safety_context(patient.id) if patient else {}
+    return render_template('ai/ich_detection.html', title='AI Head CT Haemorrhage Detection',
+                           result=result, error=error, available=available,
+                           seq_available=available and sequence_model_available(),
+                           patient=patient, selected_doc=doc, **safety, today=utcnow().date())
+
+
+@ai_bp.route('/ich-detection/review', methods=['POST'])
+@login_required
+@roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin')
+@permissions_required('AI_IMAGE_ANALYSIS')
+def ich_review():
+    """Explicit radiologist review of an AI head-CT result (audit trail only)."""
+    from app.services.ai import platform as _platform
+    usage_id = request.form.get('usage_id', type=int)
+    decision = request.form.get('decision')
+    note = (request.form.get('note') or '')[:300]
+    if usage_id and decision in ('agree', 'disagree', 'needs_review'):
+        _platform.mark_feedback(usage_id, decision != 'disagree')
+        _platform.record_usage('ich.review', decision, provider='local', detail=note or None)
+        log_activity('AI_ICH_REVIEW', 'ai_usage', usage_id, f'{decision}: {note}')
+        db.session.commit()
+        flash('Your review was recorded in the AI audit trail. No diagnosis was created.', 'success')
+    else:
+        flash('Review not recorded.', 'warning')
+    return redirect(url_for('ai.ich_detection'))
+
+
 @ai_bp.route('/chest-xray', methods=['GET', 'POST'])
 @login_required
 @roles_required('Radiologist', 'RadiologyTechnician', 'Doctor', 'Admin', 'SuperAdmin')
@@ -517,13 +621,14 @@ def ai_media(feature, kind, filename):
     ``kind`` is 'uploads' for the original image and 'results'/'masks' for the
     generated annotation/segmentation output.
     """
-    if feature not in ('fracture', 'tooth', 'skin', 'chest'):
+    if feature not in ('fracture', 'tooth', 'skin', 'chest', 'ich'):
         abort(404)
     base = current_app.config.get('UPLOAD_FOLDER') or 'var/uploads'
     feature_dir = {'fracture': os.path.join(base, 'ai', 'fracture'),
                    'tooth': os.path.join(base, 'ai', 'tooth'),
                    'skin': os.path.join(base, 'ai', 'skin'),
-                   'chest': os.path.join(base, 'ai', 'chest')}[feature]
+                   'chest': os.path.join(base, 'ai', 'chest'),
+                   'ich': os.path.join(base, 'ai', 'ich')}[feature]
     sub = {'uploads': 'uploads', 'results': 'results', 'masks': 'uploads'}.get(kind)
     if sub is None:
         abort(404)

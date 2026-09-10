@@ -35,3 +35,5 @@ a2wsgi>=1.10
 # Chest X-ray screening (DenseNet-121, ~29 MB weights fetched once) and local dictation (faster-whisper base int8, ~75 MB)
 torchxrayvision>=1.5
 faster-whisper>=1.0
+# Head CT haemorrhage detection (ConvNeXt-Tiny + Swin-Tiny, ~107 MB each; DICOM input)
+pydicom>=3.0

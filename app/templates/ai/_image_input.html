@@ -24,7 +24,7 @@
     {% if selected_doc %}<input type="hidden" name="doc" value="{{ selected_doc.id }}">{% endif %}
     {% if not selected_doc %}
     <div class="dropzone" id="dz{{ uid }}">
-        <input type="file" name="file" id="file{{ uid }}" accept="{{ accept or '.png,.jpg,.jpeg' }}" required aria-label="{{ 'اختر صورة' if ar else 'Choose an image' }}">
+        <input type="file" name="file" id="file{{ uid }}" accept="{{ accept or '.png,.jpg,.jpeg' }}" required{% if multiple %} multiple{% endif %} aria-label="{{ 'اختر صورة' if ar else 'Choose an image' }}">
         <div class="dz-icon"><i class="fas fa-cloud-arrow-up"></i></div>
         <div class="dz-title">{{ 'اسحب الصورة هنا أو انقر للاختيار' if ar else 'Drop the image here or click to choose' }}</div>
         <div class="dz-sub">{{ hint_ar if ar and hint_ar else hint or ('PNG · JPG · JPEG' if not ar else 'PNG · JPG · JPEG') }}</div>
@@ -66,7 +66,10 @@
             dz.classList.add('has-file'); lbl.textContent = f.name + ' · ' + Math.round(f.size / 1024) + ' KB';
             try { img.src = URL.createObjectURL(f); prev.classList.add('show'); } catch (e) { /* no preview */ }
         }
-        input.addEventListener('change', function () { show(input.files && input.files[0]); });
+        input.addEventListener('change', function () {
+            if (input.files && input.files.length > 1) { dz.classList.add('has-file'); lbl.textContent = input.files.length + ' files'; prev.classList.remove('show'); return; }
+            show(input.files && input.files[0]);
+        });
         ['dragenter', 'dragover'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('is-drag'); }); });
         ['dragleave', 'drop'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('is-drag'); }); });
         dz.addEventListener('drop', function (e) {

@@ -15,3 +15,11 @@ The two ISIC images are the dermoscopic inputs for the Dermatology outpatient ca
 (`scripts/seed_dermatology_cases.py`). They were chosen after running the local
 skin-lesion ensemble on 20 CC-0 candidates; the model's own output on them is
 melanoma (~98 %) and nevus (~99.9 %) respectively — nothing is hard-coded.
+
+| ich_study/s00–s23.dcm | Head CT test series bundled with the ICH detection project (`AI apps/2/ich_app/study_test`) | project data; anonymised research series, not a patient of this hospital |
+
+The `ich_study` folder is the demo input for **Head CT Haemorrhage Detection** (`/ai/ich-detection`):
+select all 24 `.dcm` files for series mode, or one file for slice mode. The model output on it is
+whatever the ConvNeXt-Tiny / Swin-Tiny classifiers return; nothing is hard-coded. Note: this series is a
+synthetic phantom (uniform disc with a marker), not a patient head, so the two models disagree on it;
+real non-contrast head CT DICOMs give meaningful calls.

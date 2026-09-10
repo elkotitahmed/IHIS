@@ -539,7 +539,7 @@ a.kpi-card.kpi-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px 
 .ai-block-sub { font-size: .75rem; color: var(--ihis-text-muted); }
 .ai-block-actions { margin-inline-start: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ai-btn.ai-btn-sm { padding: 6px 12px; font-size: .78rem; border-radius: 9px; }
-.ai-models { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ai-models { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 @media (max-width: 1100px) { .ai-models { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .ai-models { grid-template-columns: 1fr; } }
 .ai-model-card { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 14px; background: var(--ihis-surface); border: 1px solid var(--ai-border, rgba(124,58,237,.25)); color: inherit; text-decoration: none; min-height: 150px; position: relative; transition: transform .12s ease, box-shadow .12s ease; }
@@ -557,7 +557,7 @@ a.kpi-card.kpi-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px 
 .kpi-sub { font-size: .72rem; color: var(--ihis-text-muted); margin-top: 2px; }
 
 /* ---- Landing: four models panel ---- */
-.landing-models { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 18px; border-radius: 20px; border: 1px solid var(--ai-border, rgba(124,58,237,.25)); background: var(--ihis-surface); box-shadow: var(--shadow-md); }
+.landing-models { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 18px; border-radius: 20px; border: 1px solid var(--ai-border, rgba(124,58,237,.25)); background: var(--ihis-surface); box-shadow: var(--shadow-md); }
 .landing-models-head { grid-column: 1 / -1; font-weight: 750; font-size: .95rem; display: flex; gap: 8px; align-items: center; }
 .landing-models-foot { grid-column: 1 / -1; font-size: .72rem; color: var(--ihis-text-muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .landing-model { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; border: 1px solid var(--ihis-border-light); background: var(--ai-soft); color: inherit; text-decoration: none; transition: transform .12s ease, box-shadow .12s ease; }
@@ -625,3 +625,12 @@ a.kpi-card.kpi-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px 
 .cap-card-roles .chip { font-size: .62rem; padding: 2px 7px; border-radius: 999px; background: var(--ihis-surface-2, #f1f5f9); color: var(--ihis-text-muted); }
 .cap-card-open { font-size: .7rem; font-weight: 600; color: var(--ihis-primary); opacity: 0; transition: opacity .12s ease; position: absolute; top: 12px; inset-inline-end: 12px; }
 .cap-card:hover .cap-card-open { opacity: 1; }
+
+/* ---- Head CT haemorrhage workbench ---- */
+.ich-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ich-slice { margin: 0; border: 1px solid var(--ihis-border); border-radius: 12px; overflow: hidden; background: #000; }
+.ich-slice.is-flagged { border-color: var(--ihis-danger); box-shadow: 0 0 0 2px rgba(185,28,28,.2); }
+.ich-slice img { width: 100%; display: block; aspect-ratio: 1; object-fit: cover; }
+.ich-slice figcaption { font-size: .68rem; padding: 6px 8px; background: var(--ihis-surface); color: var(--ihis-text-secondary); }
+.ich-curve { display: flex; align-items: flex-end; gap: 2px; height: 70px; padding: 6px; border-radius: 10px; background: var(--ihis-surface-2, #f8fafc); border: 1px solid var(--ihis-border); }
+.ich-curve span { flex: 1; min-height: 2px; background: var(--ihis-primary); border-radius: 2px 2px 0 0; }
