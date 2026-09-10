@@ -21,18 +21,7 @@ moon icon for dark mode.
 
 - **Hospital Overview** `/super-admin/dashboard`: live KPIs (patients, visits
   today, pending lab/radiology, admitted census, low stock, open tasks).
-- **Hospital Demo** `/super-admin/demo`: ten scenarios, each step linked to
-  the real record it touches. Use it as the agenda:
-  1. Outpatient visit
-  2. Doctor → Laboratory
-  3. Doctor → Radiology
-  4. Doctor → Pharmacy
-  5. Nursing medication (MAR)
-  6. Physiotherapy
-  7. Dentistry
-  8. Referral
-  9. Billing and payment
-  10. Patient portal
+- **Demo scenarios**: the Hospital Demo Center page was retired (2026-09-10) to reduce clutter; the judging walkthrough with prepared patients lives in `docs/DEMO_JUDGING_AR.md` (`scripts/demo_reset.py`, `scripts/seed_robert_miller.py`, `scripts/seed_dermatology_cases.py`).
 - **System Health** `/super-admin/system-health`: database, migration head,
   storage, secrets, CSRF, rate limiting, AI providers, image models, latest
   backup, FHIR entry point, and the preventive-care sweep button.

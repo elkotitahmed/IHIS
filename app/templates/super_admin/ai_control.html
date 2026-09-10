@@ -9,7 +9,6 @@
     <div class="page-actions">
         <span class="ai-pill ai-pill-{{ 'ready' if st.state == 'READY' else 'limited' if st.state == 'LIMITED' else 'limit' if st.state == 'LIMIT_REACHED' else 'off' }}" title="{{ st.reason }}">AI {{ st.state.replace('_',' ') }}</span>
         <a href="{{ url_for('super_admin.system_health') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-heart-pulse"></i> {{ 'صحة النظام' if g.lang == 'ar' else 'System Health' }}</a>
-        <a href="{{ url_for('super_admin.demo') }}" class="btn-ihs btn-ihs-outline"><i class="fas fa-play-circle"></i> {{ 'العرض التوضيحي' if g.lang == 'ar' else 'Demo' }}</a>
     </div>
 </div>
 

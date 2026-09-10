@@ -20,7 +20,7 @@ from app import create_app, db, limiter  # noqa: E402
 
 PAGES = [
     ('superadmin@ihis.com', [
-        '/super-admin/dashboard', '/super-admin/demo', '/super-admin/system-health',
+        '/super-admin/dashboard', '/super-admin/system-health',
         '/clinical', '/clinical/patient/1', '/clinical/inbox', '/clinical/alerts',
         '/doctor/patients', '/doctor/dashboard', '/lab/orders', '/lab/dashboard',
         '/radiology/orders', '/radiology/dashboard', '/pharmacy/prescriptions',

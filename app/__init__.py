@@ -292,7 +292,6 @@ def register_context_processors(app):
             items += [
                 {'section': _l('COMMAND CENTER', 'مركز الأوامر'), 'items': [
                     {'label': _l('Hospital Overview', 'نظرة عامة على المستشفى'), 'url': '/super-admin/dashboard', 'icon': 'fa-gauge-high'},
-                    {'label': _l('Hospital Demo', 'عرض المستشفى'), 'url': '/super-admin/demo', 'icon': 'fa-play-circle'},
                     {'label': _l('System Health', 'صحة النظام'), 'url': '/super-admin/system-health', 'icon': 'fa-heart-pulse'},
                     {'label': _l('AI Control Center', 'مركز التحكم بالذكاء'), 'url': '/super-admin/ai-control', 'icon': 'fa-wand-magic-sparkles'},
                     {'label': _l('Platform Capabilities', 'قدرات المنصة'), 'url': '/super-admin/capabilities', 'icon': 'fa-rocket'},
