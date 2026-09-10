@@ -93,8 +93,8 @@ def settings():
 
 
 def key_present():
-    from app.services.ai.gemini_base import gemini_available
-    return gemini_available()
+    from app.services.ai.gemini_base import provider_available
+    return provider_available()
 
 
 def calls_last_minute():
@@ -193,8 +193,8 @@ def before_provider_call(feature, heavy=False, autocomplete=False):
 
 
 def after_provider_call(feature, ok, http_status=None, latency_ms=None,
-                        patient_id=None, detail=None):
-    if http_status == 429:
+                        patient_id=None, detail=None, provider='gemini'):
+    if http_status == 429 and provider == 'gemini':
         _state['limit_until'] = utcnow() + timedelta(minutes=settings()['cooldown_minutes'])
         status_ = 'rate_limited'
     elif ok:
@@ -204,7 +204,7 @@ def after_provider_call(feature, ok, http_status=None, latency_ms=None,
     if not ok:
         _state['last_error'] = detail or 'Provider error'
         _state['last_error_at'] = utcnow()
-    return record_usage(feature, status_, provider='gemini', patient_id=patient_id,
+    return record_usage(feature, status_, provider=provider, patient_id=patient_id,
                         latency_ms=latency_ms, http_status=http_status, detail=detail)
 
 
@@ -480,7 +480,7 @@ def run_ai(feature, patient_id, context, prompt, *, system=None, heavy=False,
             cache_put(feature, patient_id, {'ctx': context, 'json': json_mode}, payload)
         except Exception:  # noqa: BLE001
             db.session.rollback()
-    result.update(status='ok', provider='gemini', text=payload['text'], data=payload['data'],
+    result.update(status='ok', provider=getattr(base, 'last_provider', 'gemini'), text=payload['text'], data=payload['data'],
                   usage_id=getattr(base, 'last_usage_id', None),
                   message='AI-assisted output. Review before use.')
     return result

@@ -257,8 +257,6 @@ def register_context_processors(app):
                 (_l('Skin Lesion Detection', 'كشف آفات الجلد'), '/ai/skin-lesion-detection',
                  'fa-person-circle-question', {'Doctor', 'Dentist', 'Nurse',
                                                'Admin', 'SuperAdmin'}),
-                (_l('Clinical Alerts', 'التنبيهات السريرية'), '/ai/clinical-alerts',
-                 'fa-bell', {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'}),
                 (_l('Health Insights', 'الرؤى الصحية'), '/ai/health-insights',
                  'fa-brain', {'Patient', 'Admin', 'SuperAdmin'}),
                 (_l('Clinical Pharmacist AI', 'الصيدلاني السريري'), '/pharmacy/ai-workbench',
@@ -717,8 +715,10 @@ def register_context_processors(app):
         if not current_user.is_authenticated:
             return 0
         from app.models import Task
+        role_names = [r.name for r in current_user.roles]
         return Task.query.filter(
-            Task.assigned_to == current_user.id,
+            db.or_(Task.assigned_to == current_user.id,
+                   db.and_(Task.assigned_to.is_(None), Task.assigned_role.in_(role_names or ['-']))),
             Task.status.in_(['NEW', 'ASSIGNED', 'IN_PROGRESS'])
         ).count()
 
@@ -757,8 +757,11 @@ def register_context_processors(app):
         if enabled and roles & {'Doctor', 'Admin', 'SuperAdmin'}:
             try:
                 from app.models import ClinicalAlert
+                # The red banner is reserved for radiology critical findings (signed
+                # report -> engine -> alert). Other rule alerts stay in the safety lists.
                 q = ClinicalAlert.query.filter(ClinicalAlert.status == 'OPEN',
-                                               ClinicalAlert.severity.in_(('CRITICAL', 'HIGH')))
+                                               ClinicalAlert.severity.in_(('CRITICAL', 'HIGH')),
+                                               ClinicalAlert.source_type == 'radiology_report')
                 if not roles & {'Admin', 'SuperAdmin'}:
                     q = q.filter(ClinicalAlert.assigned_to == current_user.id)
                 critical = q.order_by(ClinicalAlert.created_at.desc()).limit(5).all()

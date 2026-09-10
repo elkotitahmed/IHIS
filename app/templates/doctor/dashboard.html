@@ -100,7 +100,6 @@
         </div>
         <div class="p-2 d-flex gap-2 flex-wrap">
             <a href="{{ url_for('clinical.alerts_all') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'كل التنبيهات' if g.lang == 'ar' else 'All alerts' }}</a>
-            <a href="{{ url_for('ai.clinical_alerts') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm"><span class="ai-spark">✦</span> {{ 'محرك التنبيهات' if g.lang == 'ar' else 'Alert engine' }}</a>
             <a href="{{ url_for('pharmacy.interventions') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'تدخلات الصيدلة' if g.lang == 'ar' else 'Pharmacy interventions' }}</a>
         </div>
     </div>

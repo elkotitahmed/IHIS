@@ -44,7 +44,8 @@ _SECTION_HEADERS = [
 
 def gemini_available():
     """True when a Gemini API key is present so the LLM feature can be offered."""
-    return bool(os.getenv('GEMINI_API_KEY'))
+    from app.services.ai.groq_client import groq_available
+    return bool(os.getenv('GEMINI_API_KEY')) or groq_available()
 
 
 class AIClinicalPharmacist:
@@ -149,7 +150,10 @@ Format each section clearly with actionable recommendations. Prioritize serious 
 
     def _call_gemini(self, user_message, temperature=0.5, max_tokens=3000):
         import requests
+        from app.services.ai import groq_client
         if not self.api_key:
+            if groq_client.groq_available():
+                return self._call_groq(user_message, temperature, max_tokens)
             raise RuntimeError('GEMINI_API_KEY not configured')
         full_prompt = f"{SYSTEM_PROMPT}\n\n[Patient Case Data]:\n{user_message}"
         payload = {
@@ -164,6 +168,8 @@ Format each section clearly with actionable recommendations. Prioritize serious 
                                  json=payload, timeout=REQUEST_TIMEOUT)
             resp.raise_for_status()
         except requests.RequestException as exc:
+            if groq_client.groq_available():
+                return self._call_groq(user_message, temperature, max_tokens)
             raise AIServiceError(_safe_provider_error(exc)) from None
         try:
             result = resp.json()
@@ -172,6 +178,18 @@ Format each section clearly with actionable recommendations. Prioritize serious 
         except (ValueError, KeyError, IndexError, TypeError):
             raise AIServiceError('The AI provider returned a malformed response.') from None
         return "".join(part.get("text", "") for part in parts)
+
+    def _call_groq(self, user_message, temperature, max_tokens):
+        """Plan B provider with the same system prompt and case data."""
+        import requests
+        from app.services.ai import groq_client
+        try:
+            return groq_client.chat(SYSTEM_PROMPT, f"[Patient Case Data]:\n{user_message}",
+                                    temperature=temperature, max_tokens=max_tokens)
+        except requests.RequestException as exc:
+            raise AIServiceError(_safe_provider_error(exc)) from None
+        except Exception:  # noqa: BLE001
+            raise AIServiceError('The backup AI provider returned an unexpected response.') from None
 
     def _parse_sections(self, content):
         """Split the free-form LLM text into named sections."""

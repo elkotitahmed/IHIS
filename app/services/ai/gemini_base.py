@@ -52,6 +52,12 @@ def gemini_available():
     return bool(os.getenv('GEMINI_API_KEY'))
 
 
+def provider_available():
+    """Any language-model provider: Gemini (plan A) or Groq (plan B)."""
+    from app.services.ai.groq_client import groq_available
+    return gemini_available() or groq_available()
+
+
 def _collect_patient_context(patient):
     """Build a clinical context string for any LLM prompt."""
     from datetime import date
@@ -135,11 +141,38 @@ class GeminiBase:
         self.max_tokens = max_tokens
 
     def available(self):
-        return bool(self.api_key)
+        from app.services.ai.groq_client import groq_available
+        return bool(self.api_key) or groq_available()
+
+    def _call_groq(self, user_message, feature, started, first_error=None):
+        """Plan B: same prompt through Groq. Records its own usage row."""
+        from app.services.ai import platform
+        from app.services.ai import groq_client
+        try:
+            text = groq_client.chat(self.system_prompt, user_message,
+                                    temperature=self.temperature, max_tokens=self.max_tokens)
+        except Exception as exc:  # noqa: BLE001 - requests / ValueError / RuntimeError
+            message = _safe_provider_error(exc) if isinstance(exc, _requests.RequestException) \
+                else 'The backup AI provider returned an unexpected response.'
+            self.last_usage_id = platform.after_provider_call(
+                feature, ok=False, http_status=getattr(getattr(exc, 'response', None), 'status_code', None),
+                latency_ms=int((time.monotonic() - started) * 1000),
+                patient_id=getattr(self, 'patient_id', None),
+                detail=(f'{first_error} | groq: {message}' if first_error else message), provider='groq')
+            raise AIServiceError(first_error or message) from None
+        self.last_provider = 'groq'
+        self.last_usage_id = platform.after_provider_call(
+            feature, ok=True, http_status=200, latency_ms=int((time.monotonic() - started) * 1000),
+            patient_id=getattr(self, 'patient_id', None),
+            detail=('fallback after gemini: ' + first_error) if first_error else 'gemini not configured',
+            provider='groq')
+        return text
 
     def _call_gemini(self, user_message):
-        if not self.api_key:
+        from app.services.ai.groq_client import groq_available
+        if not self.api_key and not groq_available():
             raise RuntimeError('GEMINI_API_KEY not configured')
+        self.last_provider = 'gemini'
         full_prompt = f"{self.system_prompt}\n\n{user_message}"
         payload = {
             "contents": [{"role": "user",
@@ -156,12 +189,17 @@ class GeminiBase:
         # every feature (legacy or new) respects the free-tier limits.
         from app.services.ai import platform
         feature = getattr(self, 'feature', None) or type(self).__name__
+        started = time.monotonic()
         try:
             platform.before_provider_call(feature, heavy=getattr(self, 'heavy', False),
                                           autocomplete=getattr(self, 'autocomplete', False))
         except platform.AIBudgetExceeded as exc:
+            if groq_available():
+                # Gemini is in cool-down / over budget: plan B takes the call.
+                return self._call_groq(user_message, feature, started, first_error=str(exc))
             raise AIServiceError(str(exc)) from None
-        started = time.monotonic()
+        if not self.api_key:
+            return self._call_groq(user_message, feature, started)
         fallback = os.getenv('AI_FALLBACK_MODEL', FALLBACK_MODEL)
         attempts = [(self.model_name, url)]
         attempts.append((self.model_name, url))                      # one retry on 503
@@ -194,6 +232,8 @@ class GeminiBase:
                 http_status=getattr(getattr(exc, 'response', None), 'status_code', None),
                 latency_ms=int((time.monotonic() - started) * 1000),
                 patient_id=getattr(self, 'patient_id', None), detail=message)
+            if groq_available():
+                return self._call_groq(user_message, feature, time.monotonic(), first_error=message)
             raise AIServiceError(message) from None
         self.last_usage_id = platform.after_provider_call(
             feature, ok=True, http_status=resp.status_code,

@@ -116,3 +116,17 @@ ALERT_ESCALATION_HIGH_MINUTES=120
 `tests/test_radiology_critical_alerts.py`, `tests/test_patient_ai.py`,
 `tests/test_experience.py` — Gemini is mocked everywhere; the suite never
 spends quota.
+
+## Plan B provider: Groq (2026-09-11)
+
+`app/services/ai/groq_client.py` — an OpenAI-compatible chat call used **only** when Gemini
+cannot answer: no `GEMINI_API_KEY`, Gemini over its per-minute / daily budget or in 429
+cool-down, or a Gemini request that fails (network, 5xx, malformed). Every language-model path
+goes through it automatically (`GeminiBase._call_gemini`, `platform.run_ai`, the clinical
+pharmacist review). Nothing else changes: same prompt, same guard text, same audit row
+(`provider='groq'`, detail notes the Gemini error it replaced), same budget bookkeeping.
+
+Configuration (`.env`): `GROQ_API_KEY` (never logged, never in a URL) and optional `GROQ_MODEL`
+(default `openai/gpt-oss-120b`; reasoning models get `reasoning_effort=low` so the visible
+answer always fits the token budget). `platform.status()` reports READY when either key exists.
+The tests clear both keys when they assert "no provider".

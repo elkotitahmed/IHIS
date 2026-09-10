@@ -44,7 +44,7 @@ class PlatformBase(unittest.TestCase):
         db.session.commit()
         seed_permissions(db)
         platform.reset_runtime_state()
-        self.env = mock.patch.dict('os.environ', {'GEMINI_API_KEY': 'test-key-not-real'})
+        self.env = mock.patch.dict('os.environ', {'GEMINI_API_KEY': 'test-key-not-real', 'GROQ_API_KEY': ''})
         self.env.start()
         pu = User(username='p1', email='p1@t.com', full_name='P One', user_type='patient')
         pu.set_password('x')
@@ -69,7 +69,7 @@ class BudgetAndStatusTests(PlatformBase):
         self.assertTrue(st['key_present'])
 
     def test_status_limited_without_key(self):
-        with mock.patch.dict('os.environ', {'GEMINI_API_KEY': ''}):
+        with mock.patch.dict('os.environ', {'GEMINI_API_KEY': '', 'GROQ_API_KEY': ''}):
             st = platform.status()
         self.assertEqual(st['state'], 'LIMITED')
         self.assertIn('Local clinical tools', st['reason'])
@@ -197,7 +197,7 @@ class RunAiAndCacheTests(PlatformBase):
         self.assertIn('malformed', out['message'])
 
     def test_missing_key_falls_back(self):
-        with mock.patch.dict('os.environ', {'GEMINI_API_KEY': ''}):
+        with mock.patch.dict('os.environ', {'GEMINI_API_KEY': '', 'GROQ_API_KEY': ''}):
             with mock.patch('requests.post') as post:
                 out = platform.run_ai('f', self.patient.id, {}, 'p', cache=False)
                 post.assert_not_called()

@@ -10,7 +10,7 @@
         <p>{{ 'كل أدوات الذكاء الاصطناعي المدمجة في iHIS في مكان واحد. القواعد الحتمية هي المرجع، والذكاء يشرح ويلخّص ويقترح، والطبيب هو من يقرر.' if ar else 'Every AI capability built into iHIS, in one place. Deterministic rules stay authoritative; AI explains, summarises and suggests; a clinician decides.' }}</p>
         <div class="hub-meter mt-3">
             <span><strong>{{ hub.available }}</strong>/{{ hub.total }} {{ 'متاح الآن' if ar else 'available now' }}</span>
-            <span><strong>{{ hub.models_installed }}</strong>/3 {{ 'نماذج صور مثبّتة' if ar else 'image models installed' }}</span>
+            <span><strong>{{ hub.models_installed }}</strong>/4 {{ 'نماذج صور مثبّتة' if ar else 'image models installed' }}</span>
             {% if st.key_present %}<span><strong>{{ st.day_used }}</strong>/{{ st.day_limit }} {{ 'طلبات ذكاء اليوم' if ar else 'AI requests today' }}</span>{% endif %}
         </div>
     </div>

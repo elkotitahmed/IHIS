@@ -40,7 +40,7 @@ class CopilotBase(unittest.TestCase):
         db.session.commit()
         seed_permissions(db)
         platform.reset_runtime_state()
-        self.env = mock.patch.dict('os.environ', {'GEMINI_API_KEY': 'test-key-not-real'})
+        self.env = mock.patch.dict('os.environ', {'GEMINI_API_KEY': 'test-key-not-real', 'GROQ_API_KEY': ''})
         self.env.start()
         self.spec = Specialty(name='General')
         db.session.add(self.spec)
@@ -200,7 +200,7 @@ class ActionTests(CopilotBase):
     def test_summary_verified_sections_without_ai(self):
         doc = self.user('doc', 'doctor', 'Doctor')
         p, *_ = self._rich_patient(doc)
-        with mock.patch.dict('os.environ', {'GEMINI_API_KEY': ''}):
+        with mock.patch.dict('os.environ', {'GEMINI_API_KEY': '', 'GROQ_API_KEY': ''}):
             out = copilot_svc.run_action('patient.summary', p)
         titles = [s['title'] for s in out['verified']]
         self.assertIn('Allergies', titles)

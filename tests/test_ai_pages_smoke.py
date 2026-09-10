@@ -28,7 +28,6 @@ ZERO_ARG_ROUTES = {
                                'SuperAdmin'},
     '/ai/skin-lesion-detection': {'Doctor', 'Dentist', 'Nurse', 'Admin',
                                   'SuperAdmin'},
-    '/ai/clinical-alerts': {'Doctor', 'Nurse', 'Admin', 'SuperAdmin'},
     '/ai/health-insights': {'Patient', 'Admin', 'SuperAdmin'},
     '/pharmacy/ai-workbench': {'Pharmacist', 'Admin', 'SuperAdmin'},
     '/admin/capacity': {'Admin', 'SuperAdmin'},

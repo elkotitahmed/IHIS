@@ -23,7 +23,7 @@ from app.services.ai import (
     AIRadiologyAssistant, AIPatientRiskPrediction, AIRehabilitationAssistant,
     AIHospitalAnalytics, AIClinicalPharmacist,
     AIClinicalNotes, AISmartOrders, AIPatientCommunication,
-    AIClinicalAlertEngine, gemini_available,
+    gemini_available,
 )
 from app.services.ai.ai_medical_coding import AIMedicalCodingAssistant
 from app.utils import utcnow
@@ -590,63 +590,6 @@ def medical_coding(patient_id):
                            available=gemini_available(),
                            **patient_safety_context(patient.id),
                            today=utcnow().date())
-
-
-@ai_bp.route('/clinical-alerts')
-@login_required
-@roles_required('Doctor', 'Nurse', 'Admin', 'SuperAdmin')
-def clinical_alerts():
-    """View and manage AI-generated clinical alerts."""
-    from app.models import ClinicalAlert
-    engine = AIClinicalAlertEngine()
-    alerts = []
-    # Get alerts for current user's patients or all if admin
-    is_admin = current_user.has_any_role('Admin', 'SuperAdmin')
-    if is_admin:
-        alerts = ClinicalAlert.query.filter_by(
-            status='OPEN').order_by(
-            ClinicalAlert.created_at.desc()).limit(50).all()
-    else:
-        # Staff: show alerts for their patients
-        from app.access import accessible_patient_ids
-        pids = accessible_patient_ids()
-        if pids:
-            alerts = ClinicalAlert.query.filter(
-                ClinicalAlert.patient_id.in_(pids),
-                ClinicalAlert.status == 'OPEN'
-            ).order_by(ClinicalAlert.created_at.desc()).limit(50).all()
-    return render_template('ai/clinical_alerts.html',
-                           title='AI Clinical Alerts',
-                           alerts=alerts)
-
-
-@ai_bp.route('/clinical-alerts/scan', methods=['POST'])
-@login_required
-@roles_required('Admin', 'SuperAdmin')
-def scan_alerts():
-    """Run a full alert scan on all active patients."""
-    engine = AIClinicalAlertEngine()
-    generated = engine.scan_all_active_patients()
-    for alert_data in generated:
-        engine.create_alert(alert_data)
-    flash(f'Alert scan complete. {len(generated)} alerts generated.', 'info')
-    return redirect(url_for('ai.clinical_alerts'))
-
-
-@ai_bp.route('/clinical-alerts/<int:alert_id>/read', methods=['POST'])
-@login_required
-def mark_alert_read(alert_id):
-    """Acknowledge an OPEN clinical alert (move it out of the active queue)."""
-    from app.models import ClinicalAlert
-    from app.services.alerts import acknowledge
-    alert = db.session.get(ClinicalAlert, alert_id)
-    if alert:
-        try:
-            acknowledge(alert)
-            db.session.commit()
-        except ValueError:
-            db.session.rollback()
-    return redirect(url_for('ai.clinical_alerts'))
 
 
 def _hub_context():

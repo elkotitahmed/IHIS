@@ -96,8 +96,15 @@ def notifications():
     if unchecked and unchecked in ('in-app', 'sms', 'email'):
         query = query.filter_by(notification_type=unchecked)
     notifs = query.order_by(Notification.created_at.desc()).limit(50).all()
+    # Opening the centre reads what is shown: the bell badge reflects only what
+    # the user has not seen yet.
+    unread_ids = {n.id for n in notifs if not n.is_read}
+    if unread_ids:
+        for n in notifs:
+            n.is_read = True
+        db.session.commit()
     return render_template('notifications.html', title='Notifications',
-                           notifications=notifs, category=unchecked)
+                           notifications=notifs, category=unchecked, unread_ids=unread_ids)
 
 
 @main_bp.route('/notifications/mark-all-read', methods=['POST'])

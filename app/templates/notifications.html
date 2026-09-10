@@ -27,14 +27,14 @@
         {% if notifications %}
         <div class="list-compact">
             {% for n in notifications %}
-            <div class="list-item" style="align-items:flex-start;{{ '' if n.is_read else 'background:var(--ihis-primary-light)' }};padding:var(--sp-3) var(--sp-4)">
+            <div class="list-item" style="align-items:flex-start;{{ 'background:var(--ihis-primary-light)' if n.id in unread_ids else '' }};padding:var(--sp-3) var(--sp-4)">
                 <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ 'var(--ihis-danger-light)' if n.notification_type == 'critical' else 'var(--ihis-info-light)' }}">
                     <i class="fas fa-{{ 'exclamation-triangle' if n.notification_type == 'critical' else 'bell' }}" style="font-size:0.75rem;color:{{ 'var(--ihis-danger)' if n.notification_type == 'critical' else 'var(--ihis-info)' }}"></i>
                 </div>
                 <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:2px">
-                        <span style="font-weight:{{ '600' if not n.is_read else '400' }};font-size:0.875rem;color:var(--ihis-text)">{{ n.title }}</span>
-                        {% if not n.is_read %}<span class="notif-badge" style="font-size:0.5625rem;min-width:14px;height:14px">{{ 'جديد' if g.lang == 'ar' else 'new' }}</span>{% endif %}
+                        <span style="font-weight:{{ '600' if n.id in unread_ids else '400' }};font-size:0.875rem;color:var(--ihis-text)">{{ n.title }}</span>
+                        {% if n.id in unread_ids %}<span class="notif-badge" style="font-size:0.5625rem;min-width:14px;height:14px">{{ 'جديد' if g.lang == 'ar' else 'new' }}</span>{% endif %}
                     </div>
                     <div style="font-size:0.8125rem;color:var(--ihis-text-secondary)">{{ n.message }}</div>
                 </div>

@@ -431,6 +431,8 @@ def capabilities():
 @roles_required('SuperAdmin')
 def preview_role(role_name):
     """Set a session flag so the base template renders the specified role's UI."""
+    # Display terminology: the UI offers "Physician"; the role is stored as "Doctor".
+    role_name = {'Physician': 'Doctor', 'physician': 'Doctor'}.get(role_name, role_name)
     valid_roles = list(ROLE_LABELS.keys())
     if role_name not in valid_roles:
         abort(404)

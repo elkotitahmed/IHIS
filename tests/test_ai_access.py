@@ -184,8 +184,7 @@ class AIAccessTest(unittest.TestCase):
                 'email': 'dashdr@test.com', 'password': '123456',
             }, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            for path, marker in (('/ai/ai-dashboard', 'Skin Lesion Detection'),   # legacy alias → /ai/hub
-                                 ('/ai/clinical-alerts', 'AI Clinical Alerts')):
+            for path, marker in (('/ai/ai-dashboard', 'Skin Lesion Detection'),):   # legacy alias → /ai/hub
                 resp = client.get(path, follow_redirects=True)
                 self.assertEqual(resp.status_code, 200, path)
                 marker_lower = marker.lower()
@@ -229,9 +228,7 @@ class AIAccessTest(unittest.TestCase):
                 'email': 'adm@test.com', 'password': '123456',
             }, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            resp = client.post(f'/ai/clinical-alerts/{alert_id}/read',
-                               data={'csrf_token': 'x'},
-                               headers={'X-CSRFToken': 'ignored'},
+            resp = client.post(f'/clinical/alerts/{alert_id}', data={'action': 'acknowledge'},
                                follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
             db.session.expire_all()

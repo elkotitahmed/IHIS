@@ -177,14 +177,6 @@ def build(role_names, has_permission=None):
             'icon': 'fa-triangle-exclamation', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
             'url': url_for('clinical.alerts_all'),
         })
-    if roles & ({'Doctor', 'Nurse'} | ADMIN):
-        safety.append({
-            'key': 'alert_engine', 'label': 'Clinical alert engine', 'label_ar': 'محرك التنبيهات السريرية',
-            'desc': 'Rule scan of vitals, labs and medications for your patients. Nothing is auto-finalised.',
-            'desc_ar': 'فحص قواعدي للعلامات الحيوية والمختبر والأدوية لمرضاك. لا يُنهى شيء تلقائيًا.',
-            'icon': 'fa-bell', 'engine': 'rules', 'status': 'AVAILABLE', 'note': '',
-            'url': url_for('ai.clinical_alerts'),
-        })
     if roles & ({'Doctor', 'Nurse', 'Pharmacist', 'Dentist'} | ADMIN):
         safety.append({
             'key': 'med_safety', 'label': 'Medication safety', 'label_ar': 'سلامة الأدوية',
@@ -333,4 +325,4 @@ def build(role_names, has_permission=None):
     total = sum(len(gr['items']) for gr in groups)
     available = sum(1 for gr in groups for it in gr['items'] if it['status'] == 'AVAILABLE')
     return {'status': st, 'groups': groups, 'total': total, 'available': available,
-            'models_installed': sum([fracture, skin, tooth])}
+            'models_installed': sum([chest, fracture, tooth, skin])}
