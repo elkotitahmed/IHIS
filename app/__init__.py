@@ -690,7 +690,9 @@ def register_context_processors(app):
                 ordered.append(it)
         return {'models': ordered, 'others': others[:6]}
 
+    from datetime import date as _date
     app.context_processor(lambda: {
+        'today': _date.today(),
         'current_user_menus': menus,
         'ai_quick_tools': ai_quick_tools,
         'ai_models_block': ai_models_block,

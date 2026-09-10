@@ -68,3 +68,20 @@ venv\Scripts\python.exe scripts\seed_dermatology_cases.py    # ينشئ الحا
 | 3 | د. أميرة | سجّل "مراجعة الطبيب" ثم افتح التنبيه واعتمده | القرار للطبيب: الذكاء لا يكتب تشخيصًا؛ الخزعة والإحالة أوامر حقيقية في طوابير المختبر والجراحة. |
 | 4 | د. أميرة | ملف W. S. ← نفس التحليل | وحمة حميدة، لا تنبيه، مقارنة مستقبلية بخط الأساس، متابعة سنوية مجدولة. |
 | 5 | المدير (`admin@ihis.com`) | لوحة المستشفى: أيقونتا "عيادات خارجية" و"تنويم" | تقسيم واضح للمرضى؛ الضغط يفتح القائمة مفلترة (Robert Miller تنويم، حالتا الجلدية عيادات خارجية). |
+
+## الأشعة — نتيجة حرجة عبر الواجهة بالكامل (Ahmed Hassan, CTPA)
+
+نُفّذ بالضغط فقط في 2026-09-11 بلا أي إدخال يدوي في القاعدة (MRN-000004، الطلب #1، التنبيه #8):
+
+| # | الدور | الخطوة | الصفحة |
+|---|-------|--------|--------|
+| 1 | الاستقبال (`reception@ihis.com`) | Register Patient: Ahmed Hassan، ذكر، 1968-04-15، NKDA | `/reception/register` |
+| 2 | الاستقبال | Book Appointment مع د. أحمد (عاجل): ضيق نفس وألم صدري أيمن منذ ساعتين | `/reception/appointments/book` |
+| 3 | الطبيب (`dr.ahmed@ihis.com`) | New Order: CT Scan، الأولوية Urgent، الملاحظات "CT Pulmonary Angiography…" | `/radiology/order/new` |
+| 4 | الأشعة (`radio@ihis.com`) | Schedule ← Patient arrived ← Perform | `/radiology/orders` |
+| 5 | الأشعة | Report: النتائج والانطباع (خثار رئوي حاد) ← Save ← **Sign** | `/radiology/orders/1/report` |
+| 6 | تلقائي | محرك النتائج الحرجة: قاعدة "pulmonary embolism / filling defect in pulmonary artery" بلا نفي ← تنبيه CRITICAL (AI-assisted) مُسنَد للطبيب الطالب + مهمة عاجلة + إشعار + قيد في سجل النتائج الحرجة | — |
+| 7 | الطبيب | شريط أحمر ← التنبيه #8 ← Acknowledge ← الإجراء المتخذ ← Resolve | `/clinical/alerts/8` |
+| 8 | SuperAdmin | سجل التدقيق: SCHEDULE → ARRIVED → PERFORMED → ENTER_REPORT → SIGN → CRITICAL_RADIOLOGY_ALERT → ALERT_ACK → ALERT_RESOLVE | `/super-admin/audit-logs` |
+
+ملاحظة: نوع الفحص الحالي "CT Scan" ووصف CTPA في الملاحظات؛ رقم المريض DEMO-CR-001 مذكور في العنوان لأن النظام يولّد MRN تلقائيًا.

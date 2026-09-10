@@ -97,12 +97,33 @@ def _transition(alert, new_status):
     return True
 
 
+def _sync_radiology_register(alert):
+    """A radiology critical finding lives in two places: the clinical alert and
+    the radiology department's critical-finding register. Acknowledging one
+    acknowledges the other, so the register never shows a finding as
+    unacknowledged after the physician has already acted on the alert."""
+    if alert.source_type != 'radiology_report' or not alert.source_id:
+        return
+    try:
+        from app.models import CriticalFindingNotification, RadiologyReport
+        rep = db.session.get(RadiologyReport, alert.source_id)
+        if rep is None:
+            return
+        for c in CriticalFindingNotification.query.filter_by(order_id=rep.order_id, acknowledged=False).all():
+            c.acknowledged = True
+            c.acknowledged_by = alert.acknowledged_by or _uid()
+            c.acknowledged_at = alert.acknowledged_at or utcnow()
+    except Exception:  # noqa: BLE001 - the register is secondary; never block the alert workflow
+        pass
+
+
 def acknowledge(alert):
     """Mark an OPEN alert as acknowledged by the acting user."""
     _transition(alert, 'ACKNOWLEDGED')
     alert.status = 'ACKNOWLEDGED'
     alert.acknowledged_by = _uid()
     alert.acknowledged_at = utcnow()
+    _sync_radiology_register(alert)
 
 
 def start_progress(alert):
@@ -130,6 +151,7 @@ def resolve(alert, note=None, action_taken=None):
     alert.resolved_note = note
     if action_taken:
         alert.action_taken = action_taken
+    _sync_radiology_register(alert)
 
 
 def dismiss(alert, note=None):
