@@ -37,7 +37,11 @@ def main():
         pu = User.query.filter_by(email='patient@ihis.com').first()
         patient = Patient.query.filter_by(user_id=pu.id).first() if pu else None
         if patient is None:
-            raise SystemExit('Run python seed.py first (patient@ihis.com missing).')
+            # The imaging demo works with any patient (e.g. Robert Miller from
+            # scripts/seed_robert_miller.py after the original demo patient was purged).
+            patient = Patient.query.order_by(Patient.id).first()
+        if patient is None:
+            raise SystemExit('No patient in the database: run python seed.py or scripts/seed_robert_miller.py first.')
         doctor = Doctor.query.join(User, Doctor.user_id == User.id).filter(User.email == 'dr.ahmed@ihis.com').first()
         radio = User.query.filter_by(email='radio@ihis.com').first()
 

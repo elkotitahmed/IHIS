@@ -336,8 +336,10 @@ def reject(rx_id):
 @roles_required('Pharmacist', 'Admin', 'SuperAdmin')
 def prescription_detail(rx_id):
     rx = Prescription.query.get_or_404(rx_id)
+    from app.services.medication_review import review_prescription
     return render_template('pharmacy/prescription_detail.html', title='Prescription Detail', rx=rx,
-                           patient=rx.patient, **patient_safety_context(rx.patient_id), today=utcnow().date())
+                           patient=rx.patient, review=review_prescription(rx), intervene_rx_id=rx.id,
+                           **patient_safety_context(rx.patient_id), today=utcnow().date())
 
 
 @pharmacy_bp.route('/inventory/<int:inv_id>/adjust', methods=['POST'])
@@ -430,6 +432,7 @@ def ai_workbench():
             .filter(Prescription.status != 'Dispensed')
             .order_by(Prescription.prescribed_date.desc())
             .all())
+    from app.services.medication_review import review_prescription
     cases = []
     seen = set()
     for patient, rx in rows:
@@ -437,13 +440,17 @@ def ai_workbench():
             continue
         seen.add(patient.id)
         active_items = [i for i in rx.items if i.status != 'Cancelled']
+        review = review_prescription(rx)
         cases.append({
             'patient': patient,
             'pending_prescriptions': Prescription.query.filter_by(
                 patient_id=patient.id).filter(Prescription.status != 'Dispensed').count(),
             'active_items': len(active_items),
             'latest_rx': rx,
+            'level': review['level'],
+            'top': review['findings'][0]['title'] if review['findings'] else '',
         })
+    cases.sort(key=lambda c: {'CRITICAL': 0, 'HIGH': 1, 'MODERATE': 2, 'LOW': 3, 'OK': 4}.get(c['level'], 5))
     total_active = Prescription.query.filter(Prescription.status != 'Dispensed').count()
     return render_template('pharmacy/ai_workbench.html', title='Clinical Pharmacist AI', cases=cases,
                            total_active=total_active)

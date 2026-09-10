@@ -284,10 +284,11 @@ def medication_review(patient_id):
         log_activity('AI_MEDICATION_REVIEW', 'patient', patient_id,
                      f'Medication review for {patient.user.full_name}')
 
+    from app.services.medication_review import review_patient
     return render_template(
         'ai/medication_review.html', title='AI Medication Review',
         patient=patient, available=available,
-        review=review,
+        review=review, rules_review=review_patient(patient),
         error=review.get('error') if review else None,
         **patient_safety_context(patient.id), today=utcnow().date())
 

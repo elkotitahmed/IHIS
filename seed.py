@@ -82,6 +82,17 @@ LAB_TESTS = [
     ('Lipid Profile', 'Cardiology', 'Varies', 'mg/dL', 200.0),
     ('Liver Function Test', 'Hepatic', 'Varies', 'U/L', 180.0),
     ('Kidney Function Test', 'Renal', 'Varies', 'mg/dL', 180.0),
+    # Discrete renal / hepatic / gout analytes so dose rules can read numbers
+    ('Serum Creatinine', 'Renal', '0.7-1.3', 'mg/dL', 60.0,
+     (None, 10.0, 'Very high creatinine: confirm and notify the treating physician.')),
+    ('eGFR (CKD-EPI)', 'Renal', '90-150', 'mL/min/1.73m2', 0.0,
+     (15.0, None, 'eGFR <15: kidney failure range, notify physician.')),
+    ('Serum Potassium', 'Chemistry', '3.5-5.0', 'mEq/L', 50.0,
+     (2.5, 6.0, 'Panic potassium: repeat immediately, ECG, notify physician.')),
+    ('AST (SGOT)', 'Hepatic', '10-40', 'U/L', 50.0),
+    ('ALT (SGPT)', 'Hepatic', '7-56', 'U/L', 50.0),
+    ('Total Bilirubin', 'Hepatic', '0.1-1.2', 'mg/dL', 50.0),
+    ('Uric Acid', 'Chemistry', '3.5-7.2', 'mg/dL', 50.0),
     ('Thyroid Profile', 'Endocrinology', '0.4-4.0', 'mIU/L', 250.0,
      (None, 50.0, 'TSH suggesting thyroid storm: escalate immediately.')),
     ('Coagulation Panel', 'Hematology', 'Varies', 'sec', 220.0),
@@ -100,6 +111,67 @@ MEDICATIONS = [
     ('Omeprazole', 'Prilosec', 'PPI'),
     ('Aspirin', 'Bayer', 'Antiplatelet'),
     ('Salbutamol', 'Ventolin', 'Bronchodilator'),
+    ('Apixaban', 'Eliquis', 'Anticoagulant (DOAC)'),
+    ('Diltiazem', 'Cartia XT', 'Calcium Blocker (non-DHP)'),
+    ('Colchicine', 'Colcrys', 'Anti-gout'),
+    ('Prednisone', 'Deltasone', 'Corticosteroid'),
+    ('Rosuvastatin', 'Crestor', 'Statin'),
+    ('Pravastatin', 'Pravachol', 'Statin'),
+    ('Naproxen', 'Naprosyn', 'NSAID'),
+    ('Indomethacin', 'Indocin', 'NSAID'),
+    ('Allopurinol', 'Zyloprim', 'Anti-gout'),
+]
+
+# Local formulary interaction pairs: (drug A, drug B, severity, description[, mechanism, management])
+INTERACTIONS = [
+    ('Aspirin', 'Ibuprofen', 'Major',
+     'Increased risk of gastrointestinal bleeding; avoid combination, or add gastroprotection.'),
+    ('Lisinopril', 'Ibuprofen', 'Major',
+     'NSAIDs may reduce antihypertensive effect and increase the risk of renal impairment.'),
+    ('Lisinopril', 'Aspirin', 'Moderate',
+     'Aspirin may attenuate the antihypertensive effect of ACE inhibitors.'),
+    ('Amlodipine', 'Ibuprofen', 'Moderate',
+     'NSAIDs may reduce the antihypertensive effect of calcium-channel blockers.'),
+    ('Amlodipine', 'Atorvastatin', 'Moderate',
+     'Reported myopathy risk mainly with high-dose atorvastatin (80 mg).'),
+    ('Metformin', 'Ibuprofen', 'Moderate',
+     'Risk of lactic acidosis in renal impairment; monitor renal function.'),
+    ('Ibuprofen', 'Acetaminophen', 'Moderate',
+     'Short-term combination is common; monitor for additive liver and GI effects.'),
+    ('Aspirin', 'Salbutamol', 'Minor',
+     'Rare bronchospasm in aspirin-sensitive asthmatics.'),
+    ('Colchicine', 'Diltiazem', 'Major',
+     'Diltiazem inhibits P-gp and CYP3A4, raising colchicine plasma concentration; life-threatening toxicity '
+     '(rhabdomyolysis, bone-marrow suppression, multi-organ failure), especially with renal impairment.',
+     'PK: P-gp / CYP3A4 inhibition',
+     'Reduce the colchicine dose or avoid; contraindicated in renal or hepatic impairment. Alternatives: oral '
+     'prednisone or intra-articular corticosteroid.'),
+    ('Apixaban', 'Diltiazem', 'Moderate',
+     'Diltiazem (moderate P-gp / CYP3A4 inhibitor) increases apixaban exposure; higher bleeding risk.',
+     'PK: P-gp / CYP3A4 inhibition',
+     'Monitor for bleeding (haematuria, bruising, melaena). No apixaban dose change unless 2 or more of: '
+     'age 80+, weight 60 kg or less, SCr 1.5 mg/dL or more.'),
+    ('Atorvastatin', 'Diltiazem', 'Moderate',
+     'Diltiazem inhibits CYP3A4 metabolism of atorvastatin; increased myopathy / rhabdomyolysis risk.',
+     'PK: CYP3A4 inhibition',
+     'Monitor for unexplained muscle pain or weakness; keep atorvastatin at 40 mg/day or less. Alternatives: '
+     'rosuvastatin or pravastatin (non-CYP3A4).'),
+    ('Colchicine', 'Atorvastatin', 'Moderate',
+     'Additive myopathy / rhabdomyolysis risk, compounded by CYP3A4 inhibitors and renal impairment.',
+     'PD: additive muscle toxicity',
+     'Monitor CK and muscle symptoms; use the lowest effective colchicine dose.'),
+    ('Apixaban', 'Naproxen', 'Major',
+     'NSAIDs with a DOAC increase bleeding risk, including GI bleeding.', 'PD: additive antihaemostatic effect',
+     'Avoid; prefer paracetamol or a corticosteroid for gout flare.'),
+    ('Apixaban', 'Indomethacin', 'Major',
+     'NSAIDs with a DOAC increase bleeding risk, including GI bleeding.', 'PD: additive antihaemostatic effect',
+     'Avoid; prefer a corticosteroid for gout flare in anticoagulated patients.'),
+    ('Apixaban', 'Ibuprofen', 'Major',
+     'NSAIDs with a DOAC increase bleeding risk, including GI bleeding.', 'PD: additive antihaemostatic effect',
+     'Avoid; prefer paracetamol.'),
+    ('Lisinopril', 'Naproxen', 'Major',
+     'NSAIDs reduce the antihypertensive effect and raise the risk of acute kidney injury and hyperkalaemia.',
+     'PD: renal prostaglandin inhibition', 'Avoid in CKD; monitor creatinine and potassium if unavoidable.'),
 ]
 
 
@@ -191,34 +263,22 @@ def seed_roles_and_permissions(app):
 
         # Drug interactions
         MED_BY_NAME = {m.generic_name: m for m in Medication.query.all()}
-        INTERACTIONS = [
-            ('Aspirin', 'Ibuprofen', 'Major',
-             'Increased risk of gastrointestinal bleeding; avoid combination, or add gastroprotection.'),
-            ('Lisinopril', 'Ibuprofen', 'Major',
-             'NSAIDs may reduce antihypertensive effect and increase the risk of renal impairment.'),
-            ('Lisinopril', 'Aspirin', 'Moderate',
-             'Aspirin may attenuate the antihypertensive effect of ACE inhibitors.'),
-            ('Amlodipine', 'Ibuprofen', 'Moderate',
-             'NSAIDs may reduce the antihypertensive effect of calcium-channel blockers.'),
-            ('Amlodipine', 'Atorvastatin', 'Moderate',
-             'Reported myopathy risk mainly with high-dose atorvastatin (80 mg).'),
-            ('Metformin', 'Ibuprofen', 'Moderate',
-             'Risk of lactic acidosis in renal impairment; monitor renal function.'),
-            ('Ibuprofen', 'Acetaminophen', 'Moderate',
-             'Short-term combination is common; monitor for additive liver and GI effects.'),
-            ('Aspirin', 'Salbutamol', 'Minor',
-             'Rare bronchospasm in aspirin-sensitive asthmatics.'),
-        ]
-        for a_name, b_name, sev, desc in INTERACTIONS:
+        for rec in INTERACTIONS:
+            a_name, b_name, sev, desc = rec[:4]
+            mech = rec[4] if len(rec) > 4 else None
+            mgmt = rec[5] if len(rec) > 5 else None
             ma, mb = MED_BY_NAME.get(a_name), MED_BY_NAME.get(b_name)
             if not ma or not mb:
                 continue
-            exists = DrugInteraction.query.filter_by(
-                medication_a_id=ma.id, medication_b_id=mb.id).first()
+            exists = DrugInteraction.query.filter(db.or_(
+                db.and_(DrugInteraction.medication_a_id == ma.id, DrugInteraction.medication_b_id == mb.id),
+                db.and_(DrugInteraction.medication_a_id == mb.id, DrugInteraction.medication_b_id == ma.id))).first()
             if not exists:
                 db.session.add(DrugInteraction(
                     medication_a_id=ma.id, medication_b_id=mb.id,
-                    severity=sev, description=desc))
+                    severity=sev, description=desc, mechanism=mech, management=mgmt))
+            elif mech and not exists.mechanism:
+                exists.mechanism, exists.management = mech, mgmt or exists.management
 
         # System settings
         defaults = {

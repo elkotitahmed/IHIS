@@ -28,59 +28,44 @@ def _current_doctor():
 
 
 def flag_prescription_safety(rx):
-    """Screen a freshly-written prescription for allergy conflicts and
-    drug-drug interactions, creating OPEN clinical alerts for review teams.
+    """Screen a freshly-written prescription and raise OPEN clinical alerts.
+
+    Delegates to the deterministic clinical-pharmacist review
+    (``app.services.medication_review``): allergy conflicts, drug-drug
+    interactions against *all* other active medications (local formulary +
+    DDInter), renal dose rules from the latest creatinine / weight / age,
+    inhibitor + impaired-clearance combinations and drug-lab conflicts.
 
     Runs within the caller's transaction (no commit). Duplicate alerts are
     avoided by ``ensure_open_alert`` for the same patient+type+source.
     """
-    from app.models import Allergy, DrugInteraction
-    from sqlalchemy import or_, and_
+    from app.services import medication_review as mr
 
     items = [it for it in rx.items if it.medication]
     if not items:
         return
-
-    # Allergy conflicts (structured records + legacy free-text field).
-    patient_allergies = set()
-    for a in Allergy.query.filter_by(patient_id=rx.patient_id, status='Active').all():
-        patient_allergies.add(a.substance.strip().lower())
-    if rx.patient.allergies:
-        for seg in rx.patient.allergies.split(','):
-            if seg.strip():
-                patient_allergies.add(seg.strip().lower())
-    for it in items:
-        med = it.medication
-        names = [n for n in ((med.generic_name or '').lower(),
-                             (med.brand_name or '').lower()) if n]
-        hit = next((al for al in patient_allergies
-                    if any(al == n or (len(al) >= 4 and (al in n or n in al))
-                           for n in names)), None)
-        if hit:
-            alert_svc.ensure_open_alert(
-                rx.patient_id, 'ALLERGY', severity='CRITICAL',
-                title=f'Allergy conflict: {med.generic_name}',
-                message=f'Prescription #{rx.id} conflicts with documented allergy "{hit}".',
-                source_type='prescription', source_id=rx.id)
-
-    # Drug-drug interactions among the items on this prescription.
-    for i in range(len(items)):
-        for j in range(i + 1, len(items)):
-            a, b = items[i].medication, items[j].medication
-            inter = (DrugInteraction.query
-                     .filter(or_(
-                         and_(DrugInteraction.medication_a_id == a.id,
-                              DrugInteraction.medication_b_id == b.id),
-                         and_(DrugInteraction.medication_a_id == b.id,
-                              DrugInteraction.medication_b_id == a.id)))
-                     .first())
-            if inter:
-                alert_svc.ensure_open_alert(
-                    rx.patient_id, 'DRUG_INTERACTION',
-                    severity=(inter.severity or 'MODERATE').upper(),
-                    title=f'Interaction: {inter.label}',
-                    message=f'Prescription #{rx.id} ({inter.description or ""})',
-                    source_type='prescription', source_id=rx.id)
+    review = mr.review_prescription(rx)
+    type_map = {'ALLERGY': 'ALLERGY', 'INTERACTION': 'DRUG_INTERACTION', 'RENAL': 'DRUG_DISEASE',
+                'LAB': 'DRUG_DISEASE', 'DUPLICATE': 'DUPLICATE_THERAPY'}
+    from app.models import ClinicalAlert
+    for f in review['findings']:
+        if f['severity'] == 'Info':
+            continue
+        alert_type = type_map.get(f['type'], 'DRUG_INTERACTION')
+        severity = mr.ALERT_SEVERITY.get(f['severity'], 'MODERATE')
+        title = f['title'][:250]
+        # One OPEN alert per distinct finding for the patient: the same pair seen
+        # from another active prescription must not raise a second alert.
+        existing = ClinicalAlert.query.filter_by(patient_id=rx.patient_id, alert_type=alert_type, status='OPEN',
+                                                 source_type='prescription', title=title).first()
+        if existing is not None:
+            if alert_svc.SEVERITY_WEIGHT[severity] > alert_svc.SEVERITY_WEIGHT[existing.severity]:
+                existing.severity = severity
+            continue
+        alert_svc.create_alert(
+            rx.patient_id, alert_type, title, severity=severity,
+            message=f"Prescription #{rx.id}: {f['detail']} {('Management: ' + f['management']) if f['management'] else ''}".strip(),
+            source_type='prescription', source_id=rx.id)
 
 
 @doctor_bp.route('/dashboard')

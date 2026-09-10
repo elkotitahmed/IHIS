@@ -1,0 +1,93 @@
+{# Rules-based clinical pharmacist review. Expects `review` (app.services.medication_review)
+   and optionally `intervene_rx_id` to enable "Raise intervention" prefill buttons. #}
+{% set ar = g.lang == 'ar' %}
+{% set rv = review %}
+{% set r = rv.renal %}
+<div class="card-premium mb-3" id="rxReview">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-doctor" style="color:var(--ihis-primary)"></i> {{ 'مراجعة الصيدلي الإكلينيكي (قواعد)' if ar else 'Clinical pharmacist review (rules)' }}
+            <span class="ai-label ai-label-verified">{{ 'حتمي · مرجعي' if ar else 'DETERMINISTIC · AUTHORITATIVE' }}</span></div>
+        <span class="cell-muted" style="font-size:.75rem">{{ 'المصادر: الملف الطبي، القائمة الدوائية المحلية، DDInter، نشرات FDA' if ar else 'Sources: chart, local formulary, DDInter, FDA labels' }}</span>
+    </div>
+    <div class="card-body">
+        {% if rv.level == 'CRITICAL' %}
+        <div class="verdict verdict-danger"><span class="verdict-icon"><i class="fas fa-hand"></i></span>
+            <div><div class="verdict-title">{{ 'أوقف وراجع الطبيب الواصف' if ar else 'Hold — contact the prescriber' }}</div>
+                <div class="verdict-sub">{{ 'مضاد استطباب أو حساسية موثقة في هذه الوصفة.' if ar else 'A contraindication or documented allergy conflict is present on this prescription.' }}</div></div>
+            <div class="verdict-side"><div class="big">{{ rv.counts.Contraindicated }}</div><div class="small-lbl">{{ 'مضاد استطباب' if ar else 'contraindicated' }}</div></div></div>
+        {% elif rv.level == 'HIGH' %}
+        <div class="verdict verdict-danger"><span class="verdict-icon"><i class="fas fa-triangle-exclamation"></i></span>
+            <div><div class="verdict-title">{{ 'تداخل أو جرعة كبيرة الخطورة' if ar else 'Major interaction or dose issue' }}</div>
+                <div class="verdict-sub">{{ 'يلزم تعديل الجرعة أو بديل قبل الصرف.' if ar else 'Dose adjustment or an alternative is needed before dispensing.' }}</div></div>
+            <div class="verdict-side"><div class="big">{{ rv.counts.Major }}</div><div class="small-lbl">{{ 'كبير' if ar else 'major' }}</div></div></div>
+        {% elif rv.level in ('MODERATE', 'LOW') %}
+        <div class="verdict verdict-warn"><span class="verdict-icon"><i class="fas fa-eye"></i></span>
+            <div><div class="verdict-title">{{ 'يُصرف مع مراقبة' if ar else 'Dispense with monitoring' }}</div>
+                <div class="verdict-sub">{{ 'ملاحظات متوسطة/طفيفة أدناه.' if ar else 'Moderate / minor findings below.' }}</div></div>
+            <div class="verdict-side"><div class="big">{{ rv.findings|length }}</div><div class="small-lbl">{{ 'ملاحظات' if ar else 'findings' }}</div></div></div>
+        {% else %}
+        <div class="verdict verdict-ok"><span class="verdict-icon"><i class="fas fa-check"></i></span>
+            <div><div class="verdict-title">{{ 'لا ملاحظات من القواعد' if ar else 'No rule-based findings' }}</div>
+                <div class="verdict-sub">{{ 'لا يعني غياب أي خطر؛ راجع السريريًا.' if ar else 'Absence of findings is not proof of safety; review clinically.' }}</div></div></div>
+        {% endif %}
+
+        <div class="rv-renal mb-3">
+            <div class="rv-stat"><div class="lbl">{{ 'تصفية الكرياتينين' if ar else 'Creatinine clearance' }}</div>
+                <div class="val {{ 'bad' if r.effective is not none and r.effective < 60 }}">{{ r.crcl ~ ' mL/min' if r.crcl is not none else ('—') }}</div>
+                <div class="sub">{{ r.method or ('بيانات ناقصة: ' ~ r.missing|join('، ') if ar else 'missing: ' ~ r.missing|join(', ')) }}</div></div>
+            <div class="rv-stat"><div class="lbl">{{ 'الكرياتينين' if ar else 'Serum creatinine' }}</div>
+                <div class="val {{ 'bad' if r.scr and r.scr > 1.3 }}">{{ r.scr if r.scr is not none else '—' }} <span class="sub">{{ r.scr_unit or '' }}</span></div>
+                <div class="sub">{{ r.scr_date.strftime('%d %b %Y') if r.scr_date else '' }}</div></div>
+            <div class="rv-stat"><div class="lbl">eGFR</div>
+                <div class="val {{ 'bad' if r.egfr and r.egfr < 60 }}">{{ r.egfr if r.egfr is not none else '—' }}</div>
+                <div class="sub">{{ r.stage or '' }}</div></div>
+            <div class="rv-stat"><div class="lbl">{{ 'البوتاسيوم' if ar else 'Potassium' }}</div>
+                <div class="val {{ 'bad' if r.potassium and r.potassium > 5.0 }}">{{ r.potassium if r.potassium is not none else '—' }} <span class="sub">mEq/L</span></div>
+                <div class="sub">{{ r.potassium_date.strftime('%d %b %Y') if r.potassium_date else '' }}</div></div>
+            <div class="rv-stat"><div class="lbl">{{ 'العمر / الوزن' if ar else 'Age / weight' }}</div>
+                <div class="val">{{ r.age if r.age is not none else '—' }} <span class="sub">{{ 'سنة' if ar else 'y' }}</span> · {{ r.weight_kg if r.weight_kg is not none else '—' }} <span class="sub">kg</span></div>
+                <div class="sub">{{ r.sex or '' }}</div></div>
+        </div>
+
+        {% if rv.findings %}
+        {% for f in rv.findings %}
+        <div class="rv-finding">
+            <span class="rv-sev rv-sev-{{ f.severity|lower }}">{{ f.severity }}</span>
+            <div>
+                <div class="rv-title">{{ f.title }}</div>
+                {% if f.detail %}<div class="rv-detail">{{ f.detail }}</div>{% endif %}
+                {% if f.management %}<div class="rv-mgmt"><i class="fas fa-lightbulb" style="color:var(--ihis-warning,#b45309)"></i> {{ f.management }}</div>{% endif %}
+                <div class="rv-src">{{ f.type|replace('_',' ') }} · {{ f.source }}</div>
+            </div>
+            {% if intervene_rx_id and current_user.has_permission('INTERVENTION_CREATE') %}
+            <button type="button" class="btn-ihs btn-ihs-outline btn-ihs-sm rv-prefill"
+                    data-category="{{ f.category }}" data-severity="{{ 'Contraindicated' if f.severity == 'Contraindicated' else 'Major' if f.severity == 'Major' else 'Moderate' if f.severity == 'Moderate' else 'Minor' }}"
+                    data-issue="{{ f.title }}" data-recommendation="{{ f.management or f.detail }}">
+                <i class="fas fa-flag"></i> {{ 'تدخّل' if ar else 'Intervene' }}</button>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if rv.background %}
+        <details class="section-details mt-2"><summary>{{ 'الأدوية النشطة الأخرى التي فُحصت ضدها' if ar else 'Other active medications checked against' }} ({{ rv.background|length }})</summary>
+            <div class="section-body p-3" style="font-size:.8125rem">
+                {% for it in rv.background %}<span class="status-badge s-active" style="margin:2px">{{ it.medication.generic_name }} {{ it.dosage or '' }} {{ it.frequency or '' }}</span>{% endfor %}
+            </div></details>
+        {% endif %}
+    </div>
+</div>
+{% if intervene_rx_id %}
+<script>
+document.querySelectorAll('.rv-prefill').forEach(function (b) {
+    b.addEventListener('click', function () {
+        var f = document.getElementById('interventionForm'); if (!f) return;
+        var set = function (n, v) { var el = f.querySelector('[name=' + n + ']'); if (el) el.value = v; };
+        set('category', b.dataset.category); set('severity', b.dataset.severity);
+        set('issue', b.dataset.issue); set('recommendation', b.dataset.recommendation);
+        f.scrollIntoView({behavior: 'smooth', block: 'center'});
+        var i = f.querySelector('[name=issue]'); if (i) i.focus();
+    });
+});
+</script>
+{% endif %}

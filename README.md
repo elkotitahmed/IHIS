@@ -111,6 +111,8 @@ LabTechnician, Radiologist, Pharmacist, Dentist, Physiotherapist.
 
 ## AI Layer
 
+**Rules first:** `app/services/medication_review.py` is the deterministic clinical-pharmacist review (Cockcroft-Gault renal function from the chart, renal dose rules, interactions against all active medications, inhibitor + impaired-clearance contraindications, drug-lab conflicts). It raises the prescription alerts, drives the pharmacist's review card and feeds the AI prompt as an authoritative block — see `docs/CLINICAL_PHARMACIST_REVIEW.md`.
+
 `app/services/ai/ai_interfaces.py` exposes `AIClinicalAssistant` and related
 assistants that produce deterministic, rule-based clinical insights from data
 already stored in iHIS. They act as drop-in points so a real ML model or

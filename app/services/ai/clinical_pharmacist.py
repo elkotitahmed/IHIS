@@ -97,6 +97,14 @@ class AIClinicalPharmacist:
                     f"{' (ABNORMAL)' if result.is_abnormal else ''}")
         lab_lines = lab_lines or ['No recent lab results']
 
+        # Deterministic findings (renal dosing, interactions vs. all active meds,
+        # drug-lab conflicts) are authoritative; the model elaborates, never contradicts.
+        try:
+            from app.services import medication_review as _mr
+            rules_text = _mr.summary_text(_mr.review_patient(patient))
+        except Exception:  # noqa: BLE001
+            rules_text = 'Not available.'
+
         prompt = f"""You are performing a comprehensive medication therapy review for a patient. Analyze the provided patient information and medications, then provide detailed clinical recommendations.
 
 PATIENT INFORMATION:
@@ -114,6 +122,9 @@ DIAGNOSES:
 
 LABORATORY RESULTS:
 {chr(10).join(lab_lines)}
+
+RULE-BASED SAFETY FINDINGS (authoritative — do not contradict; expand on them):
+{rules_text}
 
 Please provide a comprehensive medication review including:
 

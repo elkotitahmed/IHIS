@@ -43,6 +43,8 @@
     </div>
 </div>
 
+{% if rules_review is defined and rules_review %}{% with review=rules_review %}{% include 'pharmacy/_review_card.html' %}{% endwith %}{% endif %}
+
 {% if not available %}
 <div class="alert alert-warning">
     <i class="fas fa-info-circle me-2"></i>

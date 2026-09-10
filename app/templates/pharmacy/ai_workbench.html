@@ -47,6 +47,7 @@
                     <th>{{ 'الأدوية النشطة' if g.lang == 'ar' else 'Active Items' }}</th>
                     <th>{{ 'روشتات قيد الصرف' if g.lang == 'ar' else 'Pending Rx' }}</th>
                     <th>{{ 'آخر وصفة' if g.lang == 'ar' else 'Latest Rx' }}</th>
+                    <th>{{ 'حكم القواعد' if g.lang == 'ar' else 'Rules verdict' }}</th>
                     <th></th>
                 </tr></thead>
                 <tbody>
@@ -57,6 +58,7 @@
                         <td><span class="status-badge s-active">{{ case.active_items }}</span></td>
                         <td class="cell-secondary">{{ case.pending_prescriptions }}</td>
                         <td class="cell-secondary">#{{ case.latest_rx.id }} ({{ case.latest_rx.prescribed_date.strftime('%d %b %Y') if case.latest_rx.prescribed_date else '-' }})</td>
+                        <td>{% if case.level == 'OK' %}<span class="ai-label ai-label-verified">{{ 'لا ملاحظات' if g.lang == 'ar' else 'NO FINDINGS' }}</span>{% else %}<span class="ai-label {{ 'ai-label-danger' if case.level in ('CRITICAL','HIGH') else 'ai-label-warn' }}" title="{{ case.top }}">{{ case.level }}</span><div class="cell-muted" style="font-size:.72rem;max-width:260px">{{ case.top }}</div>{% endif %}</td>
                         <td>
                             <div style="display:flex;gap:0.25rem;flex-wrap:wrap">
                                 <a href="{{ url_for('ai.medication_review', patient_id=case.patient.id) }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
@@ -70,7 +72,7 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="empty-state">
                                 <div class="empty-icon"><i class="fas fa-prescription-bottle-medical"></i></div>
                                 <div class="empty-title">{{ 'لا توجد وصفات قيد المراجعة' if g.lang == 'ar' else 'No prescriptions awaiting review' }}</div>

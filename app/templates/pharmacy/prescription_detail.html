@@ -52,6 +52,8 @@
     </div>
 </div>
 
+{% if review is defined and review %}{% include 'pharmacy/_review_card.html' %}{% endif %}
+
 <div class="card-premium mb-3">
     <div class="card-header">
         <div class="card-title"><i class="fas fa-pills" style="color:var(--ihis-info)"></i> {{ 'العناصر' if g.lang == 'ar' else 'Items' }}</div>
@@ -166,7 +168,7 @@
     </div>
     <div class="card-body">
         <p class="cell-muted" style="font-size:0.8rem">{{ 'يُبلَّغ الطبيب الواصف مباشرة، ولا تُعدَّل الوصفة.' if g.lang == 'ar' else 'The prescriber is notified directly; the prescription itself is not modified.' }}</p>
-        <form method="POST" action="{{ url_for('pharmacy.create_intervention', rx_id=rx.id) }}" class="row g-2">
+        <form method="POST" action="{{ url_for('pharmacy.create_intervention', rx_id=rx.id) }}" class="row g-2" id="interventionForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="col-md-3"><label class="form-label small">{{ 'الفئة' if g.lang == 'ar' else 'Category' }}</label>
                 <select name="category" class="form-select form-select-sm">
