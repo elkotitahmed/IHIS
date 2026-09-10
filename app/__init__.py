@@ -377,13 +377,13 @@ def register_context_processors(app):
                 ]
                 if _has_menu_permission('INBOX_VIEW'):
                     practice.append({'label': _l('Clinical Inbox', 'الصندوق السريري'), 'url': '/clinical/inbox', 'icon': 'fa-inbox'})
-                practice.append({'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/doctor/lab-results', 'icon': 'fa-flask'})
                 if _has_menu_permission('ALERT_VIEW'):
                     practice.append({'label': _l('Clinical Alerts', 'التنبيهات السريرية'), 'url': '/clinical/alerts', 'icon': 'fa-bell'})
-                practice.append({'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'})
                 items += [
                     {'section': _l('PRACTICE', 'الممارسة'), 'items': practice},
                     {'section': _l('WORK', 'العمل'), 'items': [
+                        {'label': _l('Lab Results', 'نتائج المختبر'), 'url': '/doctor/lab-results', 'icon': 'fa-flask'},
+                        {'label': _l('Admissions', 'الاستشفاء'), 'url': '/admissions/dashboard', 'icon': 'fa-door-open'},
                         {'label': _l('Referrals', 'الإحالات'), 'url': '/care/referrals', 'icon': 'fa-share-nodes'},
                         {'label': _l('Attachments', 'المرفقات'), 'url': '/doctor/attachments', 'icon': 'fa-paperclip'},
                     ]},
@@ -635,9 +635,63 @@ def register_context_processors(app):
                     out.append(it)
         return out[:limit]
 
+    MODEL_ENDPOINTS = ('/ai/chest-xray', '/ai/fracture-detection', '/ai/tooth-segmentation', '/ai/skin-lesion-detection')
+
+    def ai_models_block():
+        """The four local imaging models (chest, fracture, tooth, skin) the effective
+        role may open, in that fixed order, plus the other AI tools as a short list.
+        Uses the AI Hub catalogue; never calls the provider."""
+        from flask_login import current_user
+        empty = {'models': [], 'others': []}
+        if not current_user.is_authenticated:
+            return empty
+        try:
+            from app.services.ai import hub as hub_svc
+            data = hub_svc.build(_get_effective_roles(current_user), has_permission=current_user.has_permission)
+        except Exception:  # noqa: BLE001 - a dashboard must render without AI
+            return empty
+        models, others, seen = {}, [], set()
+        for grp in data['groups']:
+            if grp['key'] == 'copilot':
+                continue
+            for it in grp['items']:
+                url = it.get('url') or ''
+                if not url or url in seen:
+                    continue
+                seen.add(url)
+                path = url.split('?')[0]
+                if path in MODEL_ENDPOINTS:
+                    models[path] = it
+                else:
+                    others.append(it)
+        # Canonical names + one-line descriptions for the four models (the hub
+        # catalogue groups the skin model under "Dermatology AI").
+        canon = {
+            '/ai/chest-xray': ('Chest X-ray Screening', 'فحص أشعة الصدر',
+                               'Frontal chest X-ray: 18 findings; confident critical ones raise an alert.',
+                               'أشعة الصدر الأمامية: 18 نتيجة، والحرجة الواثقة تُنشئ تنبيهًا.'),
+            '/ai/fracture-detection': ('Fracture Detection', 'كشف الكسور',
+                                       'Bone X-ray fracture detection with an annotated image.',
+                                       'كشف الكسور في أشعة العظام مع صورة موضّحة.'),
+            '/ai/tooth-segmentation': ('Tooth Segmentation', 'تجزئة الأسنان',
+                                       'Panoramic X-ray tooth segmentation mask for dental planning.',
+                                       'قناع تجزئة الأسنان من الأشعة البانورامية للتخطيط السني.'),
+            '/ai/skin-lesion-detection': ('Skin Lesion Detection', 'كشف آفات الجلد',
+                                          'Melanoma vs. nevus on a lesion photo, with a Grad-CAM heatmap.',
+                                          'ميلانوما أم وحمة من صورة الآفة، مع خريطة انتباه Grad-CAM.'),
+        }
+        ordered = []
+        for e in MODEL_ENDPOINTS:
+            if e in models:
+                it = dict(models[e])
+                it['label'], it['label_ar'], it['desc'], it['desc_ar'] = canon[e]
+                ordered.append(it)
+        return {'models': ordered, 'others': others[:6]}
+
     app.context_processor(lambda: {
         'current_user_menus': menus,
         'ai_quick_tools': ai_quick_tools,
+        'ai_models_block': ai_models_block,
         'is_superadmin_real': _is_superadmin,
         'is_previewing': _is_previewing,
         'preview_role': lambda: session.get('preview_role'),

@@ -14,7 +14,7 @@ from playwright.sync_api import expect
 def test_physician_dashboard_copilot_and_smart_diagnosis(login, server_url):
     page = login('physician')
     expect(page).to_have_url(re.compile(r'/doctor/dashboard'))
-    expect(page.locator('.ai-strip-title').first).to_contain_text('AI Clinical Copilot')
+    expect(page.locator('.ai-strip-title').first).to_contain_text('AI models')
     # one Copilot entry point (sidebar) opens the panel; Esc closes it
     page.click('.sb-ai-btn')
     panel = page.locator('#copilotPanel')
@@ -88,4 +88,4 @@ def test_keyboard_and_rtl(login, server_url):
     box = page.locator('#appSidebar').bounding_box()
     width = page.evaluate('window.innerWidth')
     assert box['x'] > width / 2
-    expect(page.locator('.ai-strip-title').first).to_contain_text('المساعد')
+    expect(page.locator('.ai-strip-title').first).to_contain_text('نماذج')

@@ -95,7 +95,7 @@ class PhysicianDashboardTests(ExperienceBase):
         r = self.client.get('/doctor/dashboard')
         self.assertEqual(r.status_code, 200)
         html = r.data.decode()
-        for tile in ('Patients today', 'Waiting', 'Critical alerts', 'Pending results', 'Tasks', 'Follow-ups'):
+        for tile in ('Patients today', 'Waiting', 'Critical alerts', 'Results &amp; tasks'):
             self.assertIn(tile, html)
         for section in ('TODAY', 'PATIENTS', 'WORK', 'RESULTS', 'SAFETY'):
             self.assertIn(section, html)

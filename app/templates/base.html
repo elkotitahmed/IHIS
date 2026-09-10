@@ -87,7 +87,7 @@
                 {% endif %}
             {% endfor %}
 
-            {% if ai_group %}
+            {% if ai_group and ai_group['items'] %}
             <details class="nav-group nav-group-ai" data-nav-key="ai" open>
                 <summary><span class="ai-spark">✦</span> {{ 'أدوات الذكاء' if is_ar else 'AI tools' }} <span class="ai-count">{{ ai_group['items']|length }}</span></summary>
                 {% for item in ai_group['items'] %}

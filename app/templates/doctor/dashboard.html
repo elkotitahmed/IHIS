@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-{# Physician home: TODAY · PATIENTS · WORK · RESULTS · SAFETY · AI.
-   Only high-priority counts are open by default; everything else is one click away. #}
+{# Physician home, kept deliberately simple: 4 numbers, the AI models, today's list and safety.
+   Everything else is one click away in the collapsed sections below. #}
 {% set name = (doctor.user.full_name if doctor and doctor.user else current_user.full_name) %}
 {% set open_alerts_hi = my_alerts|selectattr('severity', 'in', ['CRITICAL', 'HIGH'])|list %}
 {% set followups = todays_appts|selectattr('visit_type', 'equalto', 'Follow-up')|list %}
@@ -19,8 +19,8 @@
     </div>
 </div>
 
-{# ---------- Priority tiles (click → workspace) ---------- #}
-<div class="tile-grid">
+{# ---------- Four numbers ---------- #}
+<div class="tile-grid tile-grid-4">
     <a class="tile" href="{{ url_for('doctor.appointments') }}">
         <span class="tile-label"><i class="fas fa-calendar-day"></i> {{ 'مرضى اليوم' if g.lang == 'ar' else 'Patients today' }}</span>
         <span class="tile-value">{{ todays_appts|length }}</span>
@@ -36,58 +36,17 @@
         <span class="tile-value">{{ open_alerts_hi|length }}</span>
         <span class="tile-sub">{{ my_alerts|length }} {{ 'مفتوحة إجمالًا' if g.lang == 'ar' else 'open in total' }}</span>
     </a>
-    <a class="tile" href="{{ url_for('clinical.inbox') }}">
-        <span class="tile-label"><i class="fas fa-vials"></i> {{ 'نتائج معلقة' if g.lang == 'ar' else 'Pending results' }}</span>
-        <span class="tile-value">{{ pending_labs + pending_radio }}</span>
-        <span class="tile-sub">{{ pending_labs }} {{ 'مختبر' if g.lang == 'ar' else 'lab' }} · {{ pending_radio }} {{ 'أشعة' if g.lang == 'ar' else 'imaging' }}</span>
-    </a>
-    <a class="tile {{ 'tile-warning' if my_tasks }}" href="{{ url_for('tasks.my_tasks') }}">
-        <span class="tile-label"><i class="fas fa-clipboard-list"></i> {{ 'المهام' if g.lang == 'ar' else 'Tasks' }}</span>
-        <span class="tile-value">{{ my_tasks|length }}</span>
-        <span class="tile-sub">{{ my_tasks|selectattr('priority', 'equalto', 'URGENT')|list|length }} {{ 'عاجلة' if g.lang == 'ar' else 'urgent' }}</span>
-    </a>
-    <a class="tile" href="{{ url_for('clinical.recall_board') }}">
-        <span class="tile-label"><i class="fas fa-calendar-check"></i> {{ 'متابعات' if g.lang == 'ar' else 'Follow-ups' }}</span>
-        <span class="tile-value">{{ followups|length }}</span>
-        <span class="tile-sub">{{ 'اليوم' if g.lang == 'ar' else 'today' }} · {{ 'لوحة الاستدعاء' if g.lang == 'ar' else 'recall board' }}</span>
+    <a class="tile {{ 'tile-warning' if my_tasks }}" href="{{ url_for('clinical.inbox') }}">
+        <span class="tile-label"><i class="fas fa-inbox"></i> {{ 'نتائج ومهام' if g.lang == 'ar' else 'Results & tasks' }}</span>
+        <span class="tile-value">{{ pending_labs + pending_radio + my_tasks|length }}</span>
+        <span class="tile-sub">{{ pending_labs + pending_radio }} {{ 'نتائج' if g.lang == 'ar' else 'pending results' }} · {{ my_tasks|length }} {{ 'مهام' if g.lang == 'ar' else 'tasks' }}</span>
     </a>
 </div>
 
-{# ---------- AI strip: the AI Copilot is the headline of the physician home ---------- #}
-<div class="ai-strip">
-    <div class="ai-surface ai-strip-hero">
-        <div>
-            <div class="ai-strip-title"><span class="ai-spark">✦</span> {{ 'المساعد السريري الذكي' if g.lang == 'ar' else 'AI Clinical Copilot' }}
-                {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if g.lang == 'ar' and ai_status.state == 'READY' else ai_status.state.replace('_',' ') }}</span>{% endif %}
-            </div>
-            <p>{{ 'ملخص المريض، دعم الاستدلال، مسودات التوثيق، مراجعة السلامة، وتواصل المريض. كل إجراء صريح، ومراجَع، ولا يُكتب في الملف تلقائيًا.' if g.lang == 'ar' else 'Patient summaries, reasoning support, documentation drafts, safety review and patient communication. Every action is explicit, reviewed by you, and never written to the chart automatically.' }}</p>
-        </div>
-        <div class="ai-actions-row">
-            <a href="{{ url_for('clinical.inbox') }}" class="ai-btn ai-btn-soft"><i class="fas fa-inbox"></i> {{ 'ما الذي يحتاج انتباهي أولًا؟' if g.lang == 'ar' else 'What needs my attention first?' }}</a>
-            <a href="{{ url_for('ai.ai_hub') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'كل أدوات الذكاء' if g.lang == 'ar' else 'All AI tools' }} <i class="fas fa-arrow-{{ 'left' if g.lang == 'ar' else 'right' }}" style="font-size:.65rem"></i></a>
-        </div>
-    </div>
-    <div class="ai-strip-card">
-        <div class="ai-strip-label"><i class="fas fa-wand-magic-sparkles" style="color:var(--ai-1)"></i> {{ 'الذكاء التنبؤي' if g.lang == 'ar' else 'Predictive AI' }}</div>
-        <div class="ai-strip-list">
-            {% for p in predictive %}
-            {% if p.status == 'AVAILABLE' %}<a href="{{ p.url }}"><i class="fas {{ p.icon }}"></i> {{ p.label_ar if g.lang == 'ar' else p.label }} <span class="ai-avail">{{ 'متاح' if g.lang == 'ar' else 'AVAILABLE' }}</span></a>
-            {% else %}<span class="ai-strip-row" style="opacity:.7"><i class="fas {{ p.icon }}"></i> {{ p.label_ar if g.lang == 'ar' else p.label }} <span class="ai-soon">{{ 'قريبًا' if g.lang == 'ar' else 'COMING SOON' }}</span></span>{% endif %}
-            {% else %}<span class="ai-strip-body">{{ 'لا أدوات تنبؤية لدورك' if g.lang == 'ar' else 'No predictive tools for your role' }}</span>{% endfor %}
-        </div>
-        <div class="ai-strip-body" style="font-size:.72rem;color:var(--ihis-text-muted)">{{ 'نماذج محلية؛ يؤكد الطبيب كل نتيجة.' if g.lang == 'ar' else 'Local models; a clinician confirms every finding.' }}</div>
-    </div>
-    <div class="ai-strip-card">
-        <div class="ai-strip-label"><i class="fas fa-shield-halved" style="color:var(--ihis-primary)"></i> {{ 'محركات السلامة' if g.lang == 'ar' else 'Safety engines' }}</div>
-        <div class="ai-strip-list">
-            <a href="{{ url_for('clinical.alerts_all') }}?severity=critical&status=active"><i class="fas fa-triangle-exclamation" style="color:var(--ihis-danger)"></i> {{ 'نتائج حرجة مفتوحة' if g.lang == 'ar' else 'Open critical findings' }} <span class="ai-count" style="margin-inline-start:auto">{{ open_alerts_hi|length }}</span></a>
-            <a href="{{ url_for('copilot.radiology_ai') }}"><i class="fas fa-x-ray"></i> {{ 'محرك الأشعة الحرجة' if g.lang == 'ar' else 'Radiology critical-finding engine' }}</a>
-            <span class="ai-strip-row"><i class="fas fa-pills"></i> {{ 'فحص سلامة الأدوية عند الوصف' if g.lang == 'ar' else 'Medication safety while prescribing' }}</span>
-        </div>
-        <div class="ai-strip-body" style="font-size:.72rem;color:var(--ihis-text-muted)">{{ 'قواعد حتمية تعمل دائمًا؛ الذكاء يشرح فقط.' if g.lang == 'ar' else 'Deterministic rules, always on; AI only explains.' }}</div>
-    </div>
-</div>
+{# ---------- AI models (shared block) ---------- #}
+{% include '_ai_strip.html' %}
 
+<div class="dash-two">
 {# ---------- TODAY (open: the one list a physician needs first) ---------- #}
 <details class="section-details" open>
     <summary><i class="fas fa-sun" style="color:var(--ihis-warning)"></i> {{ 'اليوم' if g.lang == 'ar' else 'TODAY' }} <span class="ai-count">{{ todays_appts|length }}</span></summary>
@@ -146,6 +105,8 @@
         </div>
     </div>
 </details>
+
+</div>
 
 {# ---------- PATIENTS ---------- #}
 <details class="section-details">

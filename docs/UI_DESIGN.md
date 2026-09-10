@@ -154,3 +154,18 @@ no model over 500 MB.
 - Browser check on the dev server: landing, login, physician dashboard
   (EN + AR/RTL), AI Hub (light + dark), super-admin command center (desktop +
   375 px mobile), patient portal preview.
+
+## v4.3 — simple dashboards (2026-09-10)
+
+Goal: anyone opening the project understands it at a glance; the AI models stay the visual headline.
+
+* One shared AI block (`_ai_strip.html`, helper `ai_models_block()` in `app/__init__.py`) on every role home:
+  the four local imaging models (Chest X-ray Screening, Fracture Detection, Tooth Segmentation, Skin Lesion Detection)
+  as large cards in a fixed order, filtered by role, with real status from the AI Hub catalogue; the remaining AI
+  tools as small pills; one Copilot button. Roles without imaging models see "AI tools" with pills only.
+* Physician home: four tiles (Patients today, Waiting, Critical alerts, Results & tasks), the AI block, then
+  TODAY and SAFETY side by side; Patients / Work / Results stay as collapsed sections.
+* Admin home: the AI block first, then four KPI cards (Outpatients, Inpatients, Doctors, Appointments today);
+  Outpatients / Inpatients are clickable and open the patient list filtered by care setting.
+* Sidebar (Doctor): PRACTICE holds only Patients, Appointments, Clinical Inbox, Clinical Alerts; Lab Results,
+  Admissions, Referrals, Attachments moved under WORK (collapsed). The AI TOOLS group is hidden when empty.

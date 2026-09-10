@@ -10,18 +10,12 @@
 {% include '_ai_strip.html' %}
 
 <div class="kpi-grid mb-4">
-    <a class="kpi-card kpi-link" href="{{ url_for('doctor.patients') }}">
-        <div class="kpi-icon primary"><i class="fas fa-user-injured"></i></div>
-        <div class="kpi-body">
-            <div class="kpi-label">{{ t('patients') }}</div>
-            <div class="kpi-value">{{ total_patients }}</div>
-        </div>
-    </a>
     <a class="kpi-card kpi-link" href="{{ url_for('doctor.patients', setting='outpatient') }}" title="{{ 'مرضى العيادات الخارجية (غير منوَّمين)' if g.lang == 'ar' else 'Outpatient clinic patients (not admitted)' }}">
         <div class="kpi-icon info"><i class="fas fa-hospital-user"></i></div>
         <div class="kpi-body">
             <div class="kpi-label">{{ 'عيادات خارجية' if g.lang == 'ar' else 'Outpatients' }}</div>
             <div class="kpi-value">{{ outpatients }}</div>
+            <div class="kpi-sub">{{ 'من' if g.lang == 'ar' else 'of' }} {{ total_patients }} {{ 'مريضًا' if g.lang == 'ar' else 'patients' }}</div>
         </div>
     </a>
     <a class="kpi-card kpi-link" href="{{ url_for('doctor.patients', setting='inpatient') }}" title="{{ 'مرضى منوَّمون حاليًا' if g.lang == 'ar' else 'Currently admitted patients' }}">
@@ -29,27 +23,22 @@
         <div class="kpi-body">
             <div class="kpi-label">{{ 'تنويم' if g.lang == 'ar' else 'Inpatients' }}</div>
             <div class="kpi-value">{{ inpatients }}</div>
+            <div class="kpi-sub">{{ 'منوَّمون الآن' if g.lang == 'ar' else 'admitted now' }}</div>
         </div>
     </a>
-    <div class="kpi-card">
+    <a class="kpi-card kpi-link" href="{{ url_for('admin.doctors') }}">
         <div class="kpi-icon success"><i class="fas fa-user-md"></i></div>
         <div class="kpi-body">
             <div class="kpi-label">{{ t('doctors') }}</div>
             <div class="kpi-value">{{ total_doctors }}</div>
+            <div class="kpi-sub">{{ total_departments }} {{ 'أقسام' if g.lang == 'ar' else 'departments' }}</div>
         </div>
-    </div>
+    </a>
     <div class="kpi-card">
-        <div class="kpi-icon info"><i class="fas fa-calendar-check"></i></div>
+        <div class="kpi-icon primary"><i class="fas fa-calendar-check"></i></div>
         <div class="kpi-body">
             <div class="kpi-label">{{ t('appointments') }} {{ t('today') }}</div>
             <div class="kpi-value">{{ appointments_today }}</div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon warning"><i class="fas fa-building"></i></div>
-        <div class="kpi-body">
-            <div class="kpi-label">{{ t('departments') }}</div>
-            <div class="kpi-value">{{ total_departments }}</div>
         </div>
     </div>
 </div>

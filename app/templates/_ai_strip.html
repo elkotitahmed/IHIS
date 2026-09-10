@@ -1,25 +1,36 @@
-{# Dashboard AI strip — shared by every role home.
-   Shows the Copilot entry (when the role has AI_USE) and up to four AI tools
-   the role can reach, each with its real status. Never calls the AI provider. #}
+{# Dashboard AI block — shared by every role home.
+   One calm block: the four local imaging models as big cards (the ones the
+   role may use), then the other AI tools as small pills, plus the Copilot
+   entry. Statuses come from the AI Hub catalogue; nothing calls a provider. #}
 {% set ar = g.lang == 'ar' %}
-{% set quick = ai_quick_tools(4) %}
-{% if copilot_enabled or quick %}
-<div class="ai-surface" style="padding:16px 18px;margin-bottom:18px">
-    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-        <span class="ai-strip-title" style="font-size:.95rem"><span class="ai-spark">✦</span> {{ 'الذكاء الاصطناعي في عملك' if ar else 'AI in your work' }}</span>
+{% set blk = ai_models_block() %}
+{% if copilot_enabled or blk.models or blk.others %}
+<div class="ai-surface ai-block" style="margin-bottom:18px">
+    <div class="ai-block-head">
+        <span class="ai-strip-title" style="font-size:1rem"><span class="ai-spark">✦</span> {% if blk.models %}{{ 'نماذج الذكاء الاصطناعي' if ar else 'AI models' }}{% else %}{{ 'أدوات الذكاء الاصطناعي' if ar else 'AI tools' }}{% endif %}</span>
         {% if ai_status %}<span class="ai-pill ai-pill-{{ 'ready' if ai_status.state == 'READY' else 'limited' if ai_status.state == 'LIMITED' else 'limit' if ai_status.state == 'LIMIT_REACHED' else 'off' }}" title="{{ ai_status.reason }}">{{ 'جاهز' if ar and ai_status.state == 'READY' else ai_status.state.replace('_',' ') }}</span>{% endif %}
-        <span style="margin-inline-start:auto" class="d-flex gap-2 flex-wrap">
+        <span class="ai-block-sub">{{ 'نماذج محلية على هذا الخادم؛ الطبيب يؤكد كل نتيجة.' if ar else 'Local models on this server; a clinician confirms every finding.' }}</span>
+        <span class="ai-block-actions">
+            {% if copilot_enabled %}<button type="button" class="ai-btn ai-btn-sm" data-copilot-open=""><span class="ai-spark">✦</span> {{ 'المساعد الذكي' if ar else 'AI Copilot' }}</button>{% endif %}
             <a href="{{ url_for('ai.ai_hub') }}" class="btn-ihs btn-ihs-ghost btn-ihs-sm">{{ 'كل الأدوات' if ar else 'All AI tools' }} <i class="fas fa-arrow-{{ 'left' if ar else 'right' }}" style="font-size:.65rem"></i></a>
         </span>
     </div>
-    {% if quick %}
-    <div class="ai-quick">
-        {% for it in quick %}
-        <a href="{{ it.url }}" title="{{ it.desc_ar if ar else it.desc }}">
-            <span class="hub-card-icon {{ it.engine }}"><i class="fas {{ it.icon }}"></i></span>
-            <span>{{ it.label_ar if ar else it.label }}</span>
+    {% if blk.models %}
+    <div class="ai-models">
+        {% for it in blk.models %}
+        <a href="{{ it.url }}" class="ai-model-card {{ 'is-off' if it.status != 'AVAILABLE' }}">
+            <span class="ai-model-icon"><i class="fas {{ it.icon }}"></i></span>
+            <span class="ai-model-name">{{ it.label_ar if ar else it.label }}</span>
+            <span class="ai-model-desc">{{ (it.desc_ar if ar else it.desc)|truncate(78, True) }}</span>
             <span class="hub-status hub-status-{{ 'available' if it.status == 'AVAILABLE' else 'limited' if it.status == 'LIMITED' else 'soon' }}">{{ ('متاح' if it.status == 'AVAILABLE' else 'محدود' if it.status == 'LIMITED' else 'قريبًا') if ar else it.status }}</span>
         </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if blk.others %}
+    <div class="ai-others">
+        {% for it in blk.others %}
+        <a href="{{ it.url }}" class="ai-other {{ 'is-off' if it.status not in ('AVAILABLE', 'LIMITED') }}" title="{{ it.desc_ar if ar else it.desc }}"><i class="fas {{ it.icon }}"></i> {{ it.label_ar if ar else it.label }}</a>
         {% endfor %}
     </div>
     {% endif %}
