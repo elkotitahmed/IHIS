@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>سكربت عرض iHIS — 3 دقائق</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+  :root { --ink:#0f172a; --muted:#5f6b7c; --green:#0e7a5f; --ai1:#7c3aed; --ai2:#2563eb; --line:#e2e8f0; --soft:#f5f3ff; --surf:#f8fafc; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); font-size: 10.6pt; line-height: 1.6; margin: 0; direction: rtl; text-align: right; }
+  h1 { font-size: 22pt; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 10.5pt; margin-bottom: 12px; }
+  .kicker { display:inline-block; font-size:9pt; font-weight:700; letter-spacing:.04em; color:#fff; background:linear-gradient(90deg,var(--ai1),var(--ai2)); padding:3px 12px; border-radius:999px; margin-bottom:8px; }
+  .seg { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 0 0 8px; background: #fff; page-break-inside: avoid; }
+  .seg-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom: 4px; }
+  .time { font-family: Consolas, monospace; font-size: 10pt; font-weight:700; color: var(--green); background:#e6f4f0; padding:2px 8px; border-radius:6px; direction:ltr; }
+  .screen { font-size: 9.5pt; color: var(--muted); }
+  .seg p { margin: 0 0 6px; }
+  b.k { color: var(--green); }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  h2 { font-size: 15pt; color: var(--green); border-bottom: 2px solid var(--green); padding-bottom: 4px; margin: 0 0 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.8pt; margin: 6px 0 10px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: right; }
+  th { background: var(--surf); width: 28%; }
+  .tip { border-right: 4px solid var(--ai1); background: var(--soft); padding: 8px 12px; border-radius: 8px 0 0 8px; margin: 8px 0; }
+  .foot { margin-top: 10px; text-align: center; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+  ul { margin: 0 0 6px 0; padding-right: 20px; } li { margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <span class="kicker">✦ iHIS · نظام معلومات مستشفى بذكاء اصطناعي مدمج</span>
+  <h1>سكربت العرض — ثلاث دقائق</h1>
+  <div class="sub">نحو 420 كلمة بإيقاع هادئ. كل مقطع معه زمنه وما يجب أن يظهر على الشاشة.</div>
+
+  <div class="seg">
+    <div class="seg-head"><span class="time">0:00 – 0:25</span><span class="screen">الشاشة: الصفحة الرئيسية /home (بطاقات النماذج الخمسة)</span></div>
+    <p>اسمي … وده مشروع iHIS: نظام معلومات مستشفى متكامل، الذكاء الاصطناعي مدمج جوّه سير العمل نفسه، مش شات جانبي.</p>
+    <p>الفكرة اللي بنيت عليها كل حاجة: <b class="k">سجل واحد لكل مريض، والذكاء الاصطناعي يقرأ السجل ده ويشرح، لكن الطبيب هو اللي يقرر.</b></p>
+  </div>
+
+  <div class="seg">
+    <div class="seg-head"><span class="time">0:25 – 0:55</span><span class="screen">الشاشة: لوحة المدير (عيادات خارجية / تنويم)</span></div>
+    <p>النظام بيغطي المستشفى كلها: استقبال ومواعيد، ملف طبي وتشخيصات بأكواد ICD-10، مختبر، أشعة، صيدلية، تمريض، تنويم، أسنان، علاج طبيعي، وفوترة.</p>
+    <p>13 دور وظيفي، 91 جدول في قاعدة البيانات، أكثر من 300 صفحة وخدمة، وواجهة كاملة بالعربي والإنجليزي.</p>
+    <p>وكل موظف مش بيشوف غير مرضاه: الوصول بحسب الحاجة للمعرفة، وكل إجراء مسجّل في سجل تدقيق.</p>
+  </div>
+
+  <div class="seg">
+    <div class="seg-head"><span class="time">0:55 – 1:40</span><span class="screen">الشاشة: لوحة الأشعة — كتلة "نماذج الذكاء الاصطناعي"</span></div>
+    <p>الذكاء عندي على ثلاث طبقات:</p>
+    <p><b class="k">أولًا، محركات قواعد حتمية</b> هي المرجع: النتائج الحرجة في تقارير الأشعة، سلامة الأدوية، ودرجات الإنذار المبكر. دي مش بتخمّن؛ كل نتيجة ليها مصدر منشور.</p>
+    <p><b class="k">ثانيًا، خمسة نماذج صور بتشتغل محليًا على الجهاز</b>، كل واحد أقل من 500 ميجا وبدون كارت شاشة: أشعة الصدر، الكسور، تجزئة الأسنان، آفات الجلد، ونزف المخ في الأشعة المقطعية. وكل طبيب بيشوف نماذج تخصصه بس؛ طبيب الجلدية مثلًا مش هيلاقي غير نموذج الجلد.</p>
+    <p><b class="k">ثالثًا، مساعد سريري</b> موجود في كل صفحة، بيقرأ الملف ومبيكتبش فيه أبدًا، وبيستدعي النموذج اللغوي بضغطة صريحة بس. الربط بيتم عن طريق API: Gemini هو الأساسي، ولو وقع أو خلّص حصته النظام بيحوّل تلقائيًا على Groq بنفس الأمر ونفس ضوابط الأمان، والتحويل ده بيتسجل.</p>
+  </div>
+  <div class="foot">سكربت عرض iHIS · صفحة 1 من 2</div>
+</section>
+
+<section class="page">
+  <div class="seg">
+    <div class="seg-head"><span class="time">1:40 – 2:30</span><span class="screen">الشاشة: تقرير الأشعة الموقّع ← التنبيه الحرج، ثم صفحة الصيدلي للوصفة #2</span></div>
+    <p>خلّوني أوريكم سيناريو واحد. أخصائي الأشعة بيوقّع تقرير فيه جلطة رئوية. لحظة التوقيع، المحرك بيقرأ التقرير، بيفهم النفي يعني "لا يوجد استرواح" مش بتتحسب، وبيطلّع تنبيه حرج للطبيب المعالج مع مهمة عاجلة وإشعار، والطبيب لازم يقرّ ويكتب الإجراء اللي عمله. الرحلة كلها: تقرير، تنبيه، إقرار، تدقيق.</p>
+    <p>وفي الصيدلية: مريض على أبيكسابان وديلتيازيم وعنده قصور كلوي، الطبيب كتب كولشيسين. النظام حسب تصفية الكرياتينين من الملف، طلّع إن التركيبة دي مضاد استطباب حسب نشرة FDA، واقترح البديل، والصيدلي بضغطة واحدة يبعت تدخّل للطبيب.</p>
+  </div>
+
+  <div class="seg">
+    <div class="seg-head"><span class="time">2:30 – 3:00</span><span class="screen">الشاشة: مركز الذكاء (5/5 نماذج) أو الصفحة الرئيسية</span></div>
+    <p>بنيته بـ Python وFlask، واشتغلت مع Claude Code كشريك هندسي بقواعد ثابتة: مفيش ميزة تظهر إلا لو شغّالة فعلًا، مفيش تنبؤ أو تنبيه مصطنع، وكل تغيير لازم يعدّي 409 اختبار آلي وتجربة بمتصفح حقيقي قبل ما يترفع.</p>
+    <p>النظام كله شغّال على لابتوب عادي، ويتعرض على الإنترنت بأمر واحد.</p>
+    <p>الخلاصة: iHIS بيخلّي الذكاء الاصطناعي مفيد وآمن في نفس الوقت، لأنه دايمًا بيقولك <b class="k">من فين جاب الرقم ده</b>، والقرار الأخير للطبيب. شكرًا.</p>
+  </div>
+
+  <h2>إجابات جاهزة لو اتسألت</h2>
+  <table>
+    <tr><th>حجم النماذج؟</th><td>أكبرها نموذج نزف المخ: نموذجان بنحو 107 ميجا لكل منهما؛ أشعة الصدر 30 ميجا فقط. الخمسة تعمل على المعالج بدون كارت شاشة.</td></tr>
+    <tr><th>البيانات المرجعية؟</th><td>ICD-10-CM 2026 (74,719 كود)، DDInter (160,235 زوج دوائي)، openFDA وRxNorm، عتبات جرعات كلوية من نشرات FDA، ودرجات NEWS2 وqSOFA وLACE.</td></tr>
+    <tr><th>هل الذكاء بيكتب في الملف؟</th><td>لا. المساعد يقرأ فقط، والنماذج تنتج نتيجة وخريطة انتباه، والطبيب يسجّل مراجعته في سجل التدقيق.</td></tr>
+    <tr><th>لو Gemini وقع؟</th><td>التحويل على Groq تلقائي بنفس الأمر ونفس الضوابط، ولو الاثنان غير متاحين تعمل الصفحات بالأدوات المحلية وتقول "غير متاح" بصراحة.</td></tr>
+    <tr><th>الأمان؟</th><td>صلاحيات لكل دور، وصول للمرضى بحسب الحاجة، سجل تدقيق بدون نصوص مرضى، والصور لا تغادر الخادم.</td></tr>
+    <tr><th>ليه مش على السحابة؟</th><td>بالاختيار: بدون Docker ولا GPU ولا استضافة مدفوعة؛ العرض عبر نفق Cloudflare من الجهاز بأمر واحد.</td></tr>
+    <tr><th>الحدود؟</th><td>النماذج دعم قرار بحثي وليست أجهزة طبية؛ نموذج تسلسل الأشعة المقطعية (LSTM) غير مثبّت بعد؛ رخصة DDInter غير تجارية.</td></tr>
+  </table>
+
+  <div class="tip"><b>قبل العرض بدقيقتين:</b> شغّل <span dir="ltr">scripts\tunnel_renew.bat</span>، وافتح ثلاث تبويبات جاهزة بالترتيب: الصفحة الرئيسية، لوحة الأشعة (بطاقات النماذج)، وصفحة الصيدلي للوصفة #2 لروبرت ميلر. كلمة سر كل الحسابات التجريبية 123456.</div>
+  <div class="foot">سكربت عرض iHIS · صفحة 2 من 2</div>
+</section>
+
+</body>
+</html>
