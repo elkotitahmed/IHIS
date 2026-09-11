@@ -98,6 +98,15 @@ Cloudflare *quick tunnel* (`cloudflared tunnel --url`; no account) and prints
 a `https://<random>.trycloudflare.com` URL, also copied to the clipboard.
 Ctrl+C stops both. The URL changes on every run.
 
+Fresh link in one command (the tunnel keeps running in the background, no window to keep open;
+starts the server first if port 5000 is idle; skips random names that would look odd on a slide):
+
+```powershell
+.\scripts\tunnel_renew.ps1                 # or double-click scripts\tunnel_renew.bat
+```
+
+The URL is printed, copied to the clipboard and saved to `var/tunnel_url.txt`.
+
 Fixed URL: create a free ngrok account, run `ngrok config add-authtoken …`
 once, claim the free static domain in the ngrok dashboard, then
 
