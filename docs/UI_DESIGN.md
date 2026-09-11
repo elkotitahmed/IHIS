@@ -212,3 +212,9 @@ Registered everywhere the other four models are: sidebar AI TOOLS, dashboard AI 
 auto-fit grid), AI Hub (5/5), landing page, Platform Capabilities, specialty policy (Radiologist,
 Radiology Technician, Emergency, Surgery, Neurology, Neurosurgery; physicians without a specialty),
 media route, tests (`tests/test_ich_detection.py`).
+
+### v4.4a — "Analyze image with AI" lists all five models (2026-09-11)
+
+- One helper, `image_ai_tools()` (`app/services/ai/specialty_models.py`), builds the per-document AI actions from the same five-model policy used by the hub and sidebars. Patient 360 (Documents card), Attachments and the patient record all loop over it instead of three hard-coded links.
+- Clinical roles (Doctor, Radiologist, RadiologyTechnician, Nurse, Dentist, Physiotherapist, Admin) now hold `PATIENT_DOCUMENT_VIEW`; before, only SuperAdmin did, so the Documents card and its AI menu were invisible to clinicians. `seed_permissions()` re-applied on the dev DB.
+- Verified in a real browser: Radiologist sees 4 tools, ED physician 3 (chest, fracture, head CT), dermatologist only skin, SuperAdmin 5.

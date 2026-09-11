@@ -260,7 +260,7 @@
                                     <div style="display:flex;gap:var(--sp-1)">
                                         <a class="btn-ihs btn-ihs-outline btn-ihs-sm" href="{{ url_for('patient.download_document', doc_id=doc.id, inline=1) }}" target="_blank"><i class="fas fa-eye"></i></a>
                                         <a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('patient.download_document', doc_id=doc.id) }}"><i class="fas fa-download"></i></a>
-                                        {% if is_img %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for('ai.skin_lesion_detection', doc=doc.id) }}" title="AI"><i class="fas fa-wand-magic-sparkles"></i></a>{% endif %}
+                                        {% if is_img %}{% for t in image_ai_tools() %}<a class="btn-ihs btn-ihs-ghost btn-ihs-sm" href="{{ url_for(t.endpoint, doc=doc.id) }}" title="{{ t.label_ar if g.lang == 'ar' else t.label }}"><i class="fas {{ t.icon }}"></i></a>{% endfor %}{% endif %}
                                     </div>
                                 </td>
                             </tr>

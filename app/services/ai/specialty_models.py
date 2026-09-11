@@ -126,3 +126,27 @@ def require_model(key):
         return None
     flash('This AI model is not part of your specialty workflow. Ask an administrator if you need it.', 'warning')
     return redirect(url_for('ai.ai_hub'))
+
+
+# Per-document "Analyze image with AI" actions: the same five models, filtered by
+# the same policy, in a fixed order. Used by Patient 360, the attachments page
+# and the patient record.
+IMAGE_TOOLS = (
+    ('chest', 'ai.chest_xray', 'fa-lungs', 'Chest X-ray Screening', 'فحص أشعة الصدر'),
+    ('fracture', 'ai.fracture_detection', 'fa-bone', 'Fracture Detection', 'كشف الكسور'),
+    ('tooth', 'ai.tooth_segmentation', 'fa-teeth', 'Tooth Segmentation', 'تجزئة الأسنان'),
+    ('skin', 'ai.skin_lesion_detection', 'fa-person-circle-question', 'Skin Lesion Detection', 'كشف آفات الجلد'),
+    ('ich', 'ai.ich_detection', 'fa-brain', 'Head CT Haemorrhage Detection', 'كشف النزف الدماغي (CT)'),
+)
+
+
+def image_ai_tools(user=None):
+    """List of {'id', 'endpoint', 'icon', 'label', 'label_ar'} for the models the
+    user may open (role + specialty policy, honouring the SuperAdmin preview)."""
+    from flask_login import current_user
+    user = user or current_user
+    if not getattr(user, 'is_authenticated', False):
+        return []
+    allowed = allowed_models(user, effective_roles_for(user))
+    return [{'id': k, 'endpoint': ep, 'icon': ic, 'label': lb, 'label_ar': lar}
+            for k, ep, ic, lb, lar in IMAGE_TOOLS if k in allowed]

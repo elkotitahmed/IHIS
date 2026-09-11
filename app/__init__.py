@@ -699,6 +699,7 @@ def register_context_processors(app):
         'current_user_menus': menus,
         'ai_quick_tools': ai_quick_tools,
         'ai_models_block': ai_models_block,
+        'image_ai_tools': lambda: __import__('app.services.ai.specialty_models', fromlist=['image_ai_tools']).image_ai_tools(),
         'is_superadmin_real': _is_superadmin,
         'is_previewing': _is_previewing,
         'preview_role': lambda: session.get('preview_role'),

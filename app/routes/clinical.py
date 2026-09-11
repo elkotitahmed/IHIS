@@ -48,27 +48,11 @@ def _doctor():
 
 
 def _ai_image_tools():
-    """AI image-analysis tools the current user is allowed to run, used to build
-    per-document "Analyze" actions in the patient record."""
-    roles = {r.name for r in current_user.roles}
-    tools = []
-    if roles & {'Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin'}:
-        tools.append({'id': 'skin', 'label': 'Skin Lesion',
-                      'label_ar': 'آفات الجلد',
-                      'endpoint': 'ai.skin_lesion_detection',
-                      'icon': 'fa-person-rays'})
-    if roles & {'Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin'}:
-        tools.append({'id': 'tooth', 'label': 'Tooth Segmentation',
-                      'label_ar': 'تقسيم الأسنان',
-                      'endpoint': 'ai.tooth_segmentation',
-                      'icon': 'fa-tooth'})
-    if roles & {'Radiologist', 'Doctor', 'Nurse', 'Physiotherapist',
-                'Dentist', 'Admin', 'SuperAdmin'}:
-        tools.append({'id': 'fracture', 'label': 'Fracture Detection',
-                      'label_ar': 'كشف الكسور',
-                      'endpoint': 'ai.fracture_detection',
-                      'icon': 'fa-bone'})
-    return tools
+    """AI image-analysis tools the current user is allowed to run (all five
+    models, filtered by role and specialty), used to build per-document
+    "Analyze" actions in the patient record."""
+    from app.services.ai.specialty_models import image_ai_tools
+    return image_ai_tools(current_user)
 
 
 @clinical_bp.route('')

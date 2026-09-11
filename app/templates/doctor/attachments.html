@@ -17,7 +17,7 @@
         <a href="{{ url_for('doctor.dashboard') }}" class="btn-ihs btn-ihs-outline btn-ihs-sm">
             <i class="fas fa-arrow-left"></i> {{ 'لوحة التحكم' if g.lang == 'ar' else 'Dashboard' }}
         </a>
-        <a href="{{ url_for('ai.skin_lesion_detection') }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
+        <a href="{{ url_for('ai.ai_hub') }}" class="btn-ihs btn-ihs-primary btn-ihs-sm">
             <i class="fas fa-wand-magic-sparkles"></i> {{ 'أداة الذكاء الاصطناعي' if g.lang == 'ar' else 'AI Tool' }}
         </a>
     </div>
@@ -68,24 +68,14 @@
                             </summary>
                             <div class="card-premium" style="position:absolute;right:0;top:calc(100% + 6px);z-index:50;min-width:230px;padding:10px;box-shadow:var(--ihis-shadow)">
                                 <div class="t-h4 mb-2">{{ 'حلل الصورة' if g.lang == 'ar' else 'Analyze with AI' }}</div>
-                                {% if current_user.has_any_role('Doctor', 'Dentist', 'Nurse', 'Admin', 'SuperAdmin') %}
+                                {% for t in image_ai_tools() %}
                                 <a class="btn-ihs btn-ihs-outline btn-ihs-sm w-100 mb-1" style="justify-content:flex-start"
-                                   href="{{ url_for('ai.skin_lesion_detection', doc=doc.id) }}">
-                                    <i class="fas fa-person-circle-question me-2"></i>{{ 'آفات الجلد' if g.lang == 'ar' else 'Skin Lesion' }}
+                                   href="{{ url_for(t.endpoint, doc=doc.id) }}">
+                                    <i class="fas {{ t.icon }} me-2"></i>{{ t.label_ar if g.lang == 'ar' else t.label }}
                                 </a>
-                                {% endif %}
-                                {% if current_user.has_any_role('Radiologist', 'Doctor', 'Nurse', 'Physiotherapist', 'Dentist', 'Admin', 'SuperAdmin') %}
-                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm w-100 mb-1" style="justify-content:flex-start"
-                                   href="{{ url_for('ai.fracture_detection', doc=doc.id) }}">
-                                    <i class="fas fa-bone me-2"></i>{{ 'كشف الكسور' if g.lang == 'ar' else 'Fracture Detection' }}
-                                </a>
-                                {% endif %}
-                                {% if current_user.has_any_role('Dentist', 'Radiologist', 'Nurse', 'Admin', 'SuperAdmin') %}
-                                <a class="btn-ihs btn-ihs-outline btn-ihs-sm w-100 mb-1" style="justify-content:flex-start"
-                                   href="{{ url_for('ai.tooth_segmentation', doc=doc.id) }}">
-                                    <i class="fas fa-tooth me-2"></i>{{ 'تقسيم الأسنان' if g.lang == 'ar' else 'Tooth Segmentation' }}
-                                </a>
-                                {% endif %}
+                                {% else %}
+                                <p class="cell-muted mb-1" style="font-size:.75rem">{{ 'لا نماذج صور متاحة لدورك' if g.lang == 'ar' else 'No image models available for your role' }}</p>
+                                {% endfor %}
                                 <p class="cell-muted mb-0" style="font-size:.6875rem">
                                     <i class="fas fa-shield-halved"></i>
                                     {{ 'مربوطة بسرية المريض وامتيازات دورك' if g.lang == 'ar' else 'Tied to patient confidentiality and your role' }}
