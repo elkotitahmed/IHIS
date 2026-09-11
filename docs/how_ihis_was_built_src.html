@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How iHIS Was Built</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+  :root { --ink:#0f172a; --muted:#5f6b7c; --green:#0e7a5f; --ai1:#7c3aed; --ai2:#2563eb; --line:#e2e8f0; --soft:#f5f3ff; --surf:#f8fafc; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Inter, Arial, sans-serif; color: var(--ink); font-size: 9.9pt; line-height: 1.42; margin: 0; }
+  h1 { font-size: 24pt; letter-spacing: -.02em; margin: 0 0 4px; }
+  h2 { font-size: 14pt; margin: 0 0 6px; color: var(--green); border-bottom: 2px solid var(--green); padding-bottom: 4px; }
+  h3 { font-size: 11pt; margin: 9px 0 3px; }
+  p { margin: 0 0 8px; }
+  ul { margin: 0 0 8px 18px; padding: 0; } li { margin: 2px 0; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .kicker { display:inline-block; font-size:8.5pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#fff; background:linear-gradient(90deg,var(--ai1),var(--ai2)); padding:3px 10px; border-radius:999px; margin-bottom:8px; }
+  .sub { color: var(--muted); font-size: 11pt; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0 10px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--surf); }
+  .card.ai { border-color: #c4b5fd; background: var(--soft); }
+  .card b { display:block; font-size: 10.5pt; margin-bottom: 2px; }
+  .card small { color: var(--muted); }
+  .stat { text-align:center; padding: 10px 6px; }
+  .stat .n { font-size: 20pt; font-weight: 800; color: var(--green); line-height: 1; }
+  .stat .l { font-size: 8.5pt; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 5px 0 8px; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: var(--surf); font-weight: 700; }
+  .flow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin: 6px 0 10px; }
+  .flow span { border:1px solid var(--line); border-radius: 8px; padding: 4px 9px; font-size: 9.5pt; background:#fff; }
+  .flow i { color: var(--muted); font-style: normal; }
+  .quote { border-left: 4px solid var(--ai1); background: var(--soft); padding: 6px 10px; border-radius: 0 8px 8px 0; margin: 8px 0 10px; font-size: 10pt; }
+  .foot { margin-top: 10px; text-align: center; font-size: 8pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+  .tag { display:inline-block; font-size:8pt; font-weight:700; padding:1px 6px; border-radius:6px; background:#e6f4f0; color:var(--green); margin-left:4px; }
+  .tag.ai { background:#ede9fe; color:var(--ai1); }
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 ============================ -->
+<section class="page">
+  <span class="kicker">✦ iHIS · Intelligent Hospital Information System</span>
+  <h1>How iHIS Was Built</h1>
+  <div class="sub">One patient, one record, one connected hospital — with artificial intelligence built into the workflow, not bolted onto it. A five-page account of the vision, the architecture, the clinical workflows, the AI layer, and the engineering process (29 Aug – 11 Sep 2026).</div>
+
+  <h2>1. The problem and the idea</h2>
+  <p>Hospitals run on fragmented systems: reception, physicians, laboratory, radiology, pharmacy, nursing and billing each keep their own view of the patient, and the "AI" offered to them is usually a chat window that knows nothing about the chart. iHIS started from a different premise: <b>the record is the product</b>, and AI is valuable only when it reads that record, explains itself, and hands every decision back to a licensed clinician.</p>
+  <p>The system was therefore designed around four rules that never changed during development:</p>
+  <div class="grid">
+    <div class="card"><b>Rules first, AI explains</b><small>Critical findings, medication safety, early-warning scores and risk profiles run on deterministic engines. A language model may elaborate on them, but it can never contradict them, create a diagnosis, or write to the chart.</small></div>
+    <div class="card"><b>Nothing fake</b><small>Every AI feature shown as "available" really runs on this server. Anything not installed says "coming soon". Every number on screen is traceable to a record, a rule or a model output.</small></div>
+    <div class="card"><b>Need-to-know access</b><small>A physician sees the patients they treat; a dermatologist sees the dermatology model, not the chest X-ray one. Access is documented, and every action is audited.</small></div>
+    <div class="card"><b>Local and small</b><small>All image models run on the machine's CPU, each under 500 MB; images and reports never leave the server. The language model is an optional add-on with a plan B.</small></div>
+  </div>
+
+  <h3>What it became</h3>
+  <div class="grid3">
+    <div class="card stat"><div class="n">13</div><div class="l">clinical & admin roles</div></div>
+    <div class="card stat"><div class="n">91</div><div class="l">database tables</div></div>
+    <div class="card stat"><div class="n">313</div><div class="l">web routes</div></div>
+    <div class="card stat"><div class="n">5</div><div class="l">local imaging models</div></div>
+    <div class="card stat"><div class="n">175</div><div class="l">screens (templates)</div></div>
+    <div class="card stat"><div class="n">409</div><div class="l">automated tests</div></div>
+  </div>
+  <p>The whole system — records, appointments, laboratory, imaging, pharmacy, nursing, admissions, dentistry, physiotherapy, billing, reports and the AI layer — is a single Python application of about 26,600 lines, built in fourteen days across fifty commits, and it runs on a laptop without Docker, cloud services or a GPU.</p>
+  <div class="foot">How iHIS Was Built · page 1 of 5</div>
+</section>
+
+<!-- ============================ PAGE 2 ============================ -->
+<section class="page">
+  <h2>2. Architecture and technology</h2>
+  <p>iHIS is a server-rendered web application: Python 3 with <b>Flask 3</b> (application factory, blueprints per department), <b>SQLAlchemy</b> models with <b>Alembic</b> migrations, Jinja2 templates with a bilingual English/Arabic layer (right-to-left aware), Flask-Login sessions, CSRF protection, rate limiting and structured audit logging. SQLite is used locally; PostgreSQL is a configuration change.</p>
+
+  <h3>The data model</h3>
+  <p>Ninety-one tables describe the hospital: users, roles and fine-grained permissions; patients with a generated medical record number; appointments and queues; encounters with diagnoses (ICD-10-CM), structured problem lists and allergies; laboratory orders, specimens and verified results with critical thresholds; radiology orders, reports with versions, dose records and a critical-finding register; prescriptions, dispensing, inventory batches, reconciliations and pharmacist interventions; vital signs, nursing notes, medication administration; wards, beds and admissions; dental charts and therapy plans; bills and payments; tasks, notifications, a cross-department timeline, clinical alerts with a full lifecycle, and an AI usage log.</p>
+
+  <h3>Roles and access</h3>
+  <p>Thirteen roles (Super Administrator, Administrator, Physician, Nurse, Laboratory Technician, Radiologist, Radiology Technician, Pharmacist, Receptionist, Dentist, Physiotherapist, Cashier, Patient) map to permissions, and permissions gate routes. On top of role checks sits a <b>need-to-know</b> layer: a staff member can open a patient only through a documented relationship — an appointment, an order, an admission, a referral, a care-team membership or a department assignment. Patient lists, AI tools and document access all flow through the same rule, so a filtered list never leads to a forbidden page.</p>
+
+  <h3>Reference data that makes the rules real</h3>
+  <table>
+    <tr><th>Reference</th><th>Size</th><th>Used for</th></tr>
+    <tr><td>ICD-10-CM 2026 (CDC, public domain)</td><td>74,719 codes</td><td>Diagnosis entry with local-first autocomplete</td></tr>
+    <tr><td>DDInter drug–drug interactions (CC BY-NC-SA 4.0)</td><td>160,235 pairs</td><td>Interaction checks under the local formulary</td></tr>
+    <tr><td>openFDA drug labels + RxNorm</td><td>live, cached 12 h</td><td>Official label sections and identifiers per medication</td></tr>
+    <tr><td>FDA / SmPC renal-dosing thresholds (curated)</td><td>~35 drugs</td><td>Dose rules by creatinine clearance</td></tr>
+    <tr><td>NEWS2, qSOFA, LACE, Charlson-style comorbidity</td><td>published scores</td><td>Early warning, sepsis screen, readmission, risk profile</td></tr>
+  </table>
+
+  <h3>Design system</h3>
+  <p>One visual language across all 175 screens: green is the hospital, a violet-to-blue gradient is reserved for AI, so anyone can tell at a glance what a model produced and what the record holds. Every role home follows the same shape — a few numbers, one AI block with the local models as large cards, then the day's work. The interface passed a WCAG 2.1 AA scan and real-browser journey tests, and every screen exists in English and Arabic.</p>
+  <div class="foot">How iHIS Was Built · page 2 of 5</div>
+</section>
+
+<!-- ============================ PAGE 3 ============================ -->
+<section class="page">
+  <h2>3. Clinical workflows, end to end</h2>
+  <p>Each department got a complete, auditable workflow before any AI was attached to it. Three of them show how the pieces connect.</p>
+
+  <h3>Radiology critical finding <span class="tag">rules</span><span class="tag ai">AI-assisted</span></h3>
+  <div class="flow"><span>Reception registers patient</span><i>→</i><span>Physician orders CT (urgent)</span><i>→</i><span>Radiology schedules · arrives · performs</span><i>→</i><span>Radiologist enters and signs the report</span><i>→</i><span>Critical-finding engine</span><i>→</i><span>CRITICAL alert · urgent task · notification</span><i>→</i><span>Physician acknowledges, documents the action, resolves</span><i>→</i><span>Audit trail</span></div>
+  <p>The engine reads every signed report with clinical rules (pulmonary embolism, pneumothorax, aortic dissection, intracranial haemorrhage and more) plus a local negation classifier so "no evidence of pneumothorax" is not flagged. The alert is assigned to the ordering physician, appears as a red banner on their home, and is mirrored in the radiology department's critical-finding register; acknowledging one acknowledges the other. The whole chain was exercised through the user interface, click by click, with a synthetic CT pulmonary angiography case.</p>
+
+  <h3>Clinical pharmacist review <span class="tag">rules</span></h3>
+  <p>When a prescription is written, a deterministic review runs against the entire chart, not only the lines on that prescription: renal function estimated by Cockcroft-Gault from the latest creatinine, weight, age and sex; renal dose rules from drug labels; interactions against every other active medication (formulary pairs with mechanism and management first, DDInter as the reference layer); label contraindications such as colchicine with a P-gp / CYP3A4 inhibitor in renal impairment; drug–laboratory conflicts such as an ACE inhibitor with a high potassium; allergies (with "NKDA" recognised) and duplicates. Each finding raises its own alert, and the pharmacist's prescription page shows a review card with the renal panel, the findings with sources, and one-click pre-filled interventions to the prescriber. The demo patient — a 68-year-old on apixaban and diltiazem with stage 3b kidney disease receiving a colchicine loading dose — returns a verdict of CRITICAL with prednisone suggested as the alternative, exactly as a clinical pharmacist would write it.</p>
+
+  <h3>Dermatology outpatient clinic <span class="tag ai">local model</span></h3>
+  <p>Two synthetic cases prepared by the dermatologist: a changing shoulder mole with a positive ABCDE assessment and a stable, uniform mole on the back. Each patient is registered under Dermatology, seen in clinic, documented in a signed note, and has a real dermoscopic image (ISIC archive, public domain) attached to the chart. The skin-lesion model is run on the attached image through the same code the page uses; the first case returns melanoma at 98 % with a Grad-CAM heatmap and produces a critical alert, an urgent task, a biopsy order and a lymph-node referral; the second returns a benign nevus at 99.9 % and produces nothing but a baseline record and a twelve-month follow-up. Nothing in either outcome is hard-coded.</p>
+
+  <h3>Everything else</h3>
+  <ul>
+    <li><b>Laboratory:</b> order → specimen → result → verification, with critical values escalating to the physician.</li>
+    <li><b>Nursing:</b> vitals feed NEWS2 and qSOFA automatically; medication administration, care plans, fluid balance.</li>
+    <li><b>Admissions:</b> atomic bed claims, transfers, discharge summaries; inpatient and outpatient views split on every list.</li>
+    <li><b>Pharmacy operations:</b> FEFO batch dispensing, partial dispensing, expiry and stock alerts, reconciliation at transitions of care.</li>
+    <li><b>Front desk and finance:</b> registration, booking, queues, bills generated from clinical events, receipts and reports.</li>
+    <li><b>Patient portal:</b> own record, appointments, results explained in plain language by a safe patient AI that never diagnoses.</li>
+  </ul>
+  <div class="foot">How iHIS Was Built · page 3 of 5</div>
+</section>
+
+<!-- ============================ PAGE 4 ============================ -->
+<section class="page">
+  <h2>4. The AI layer</h2>
+  <p>AI in iHIS has three tiers, in decreasing order of authority: deterministic engines, local models, and an optional language model. The tiers are visible in the interface — a "RULES" or "MODEL" tag on one side, an "AI-ASSISTED · NOT A FINAL DIAGNOSIS" tag on the other.</p>
+
+  <h3>Five local imaging models (all under 500 MB, CPU only)</h3>
+  <table>
+    <tr><th>Model</th><th>Engine</th><th>Output</th><th>Who sees it</th></tr>
+    <tr><td>Chest X-ray Screening</td><td>TorchXRayVision DenseNet-121 (~30 MB)</td><td>18 findings with probabilities; confident critical ones alert</td><td>Radiology, internal medicine, cardiology, pulmonology…</td></tr>
+    <tr><td>Fracture Detection</td><td>YOLOv8</td><td>Annotated bone X-ray</td><td>Radiology, orthopaedics, emergency, surgery</td></tr>
+    <tr><td>Tooth Segmentation</td><td>U-Net</td><td>Segmentation mask on panoramic X-rays</td><td>Dentistry, radiology</td></tr>
+    <tr><td>Skin Lesion Detection</td><td>ResNet-50 + EfficientNet-B0 ensemble</td><td>Melanoma vs nevus with Grad-CAM; image-quality check</td><td>Dermatology, family medicine, oncology</td></tr>
+    <tr><td>Head CT Haemorrhage Detection</td><td>ConvNeXt-Tiny + Swin-Tiny (~107 MB each)</td><td>Slice or whole-series calls on DICOM windows with LayerCAM</td><td>Radiology, emergency, neurology, neurosurgery</td></tr>
+  </table>
+  <p>A single <b>specialty policy</b> decides which models each user sees and can open; it is applied identically to the sidebar, the dashboard block, the AI hub and the routes themselves, and it follows the physician's specialty on file. Every run writes an audit row, a clinician records an explicit review, and positive findings on patient-linked images enter the same alert lifecycle as a critical laboratory value.</p>
+
+  <h3>The Clinical Copilot and the language-model providers</h3>
+  <p>One assistant is reachable from every clinical page. It reads verified chart data first — summaries, differentials, documentation drafts, safety review, patient communication — and calls the language model only on an explicit click, with the deterministic findings passed in as an authoritative block it may not contradict. Prompts are wrapped in a guard that treats patient text strictly as data, and instruction-like content in the record is flagged rather than obeyed. Google Gemini is the primary provider; <b>Groq</b> is the automatic plan B when Gemini is missing, over budget, cooling down after a rate limit, or failing — same prompt, same guard, same audit row with the provider named. A per-minute and per-day budget, a cache, and a control centre for usage, failures and latency keep the free tiers within limits. Local dictation (faster-whisper) sits next to every clinical note.</p>
+
+  <h3>Explainable risk, not a black box</h3>
+  <p>The patient <b>Health Insights</b> page replaced an early heuristic with a transparent profile: age, Charlson-style comorbidity, kidney function, potassium, recent abnormal and critical laboratory results, NEWS2, polypharmacy and high-risk drug classes, pharmacist findings, documented allergies, admissions and open alerts. Every factor shows its points, its evidence and its source; data gaps are listed; and the optional AI narrative explains the factors without changing the score.</p>
+  <div class="quote">The recurring design test throughout was a single question: <b>if a judge clicks this, can we show exactly where the number came from?</b> Anything that failed the test was rewritten or removed — including an early "AI alert scanner" and a demo page whose scenarios pointed at whatever record happened to be newest.</div>
+  <div class="foot">How iHIS Was Built · page 4 of 5</div>
+</section>
+
+<!-- ============================ PAGE 5 ============================ -->
+<section class="page">
+  <h2>5. How the work was done, and what is next</h2>
+
+  <h3>An AI-assisted engineering process</h3>
+  <p>iHIS was built by a small team working with <b>Claude Code</b> as an engineering partner, in short missions with explicit rules: work autonomously, never claim a feature that is not implemented, never fabricate a prediction or an alert, never spend live language-model quota inside the test suite, never expose secrets, and never claim something was verified unless it actually was. Each mission ended with the same checklist — tests green, the change exercised in a real browser, documentation updated, commit pushed. The result is fifty commits over fourteen days, each one describing what changed and why.</p>
+
+  <h3>Quality gates</h3>
+  <div class="grid">
+    <div class="card"><b>409 automated tests (55 files)</b><small>Unit and route tests with mocked models and providers: access matrices per role, alert lifecycles, dose rules, provider fallback, media privacy, page rendering health for every role.</small></div>
+    <div class="card"><b>Real-browser journeys (Playwright)</b><small>Login, ordering, reporting, signing, acknowledging — driven through the actual interface with screenshots at every step; the radiology critical-finding case was created entirely by clicking.</small></div>
+    <div class="card"><b>Accessibility and language</b><small>WCAG 2.1 AA scan with axe, keyboard navigation, contrast tokens, ARIA labels; a full Arabic layer audited string by string.</small></div>
+    <div class="card"><b>Link and route crawl</b><small>Every link and form for all thirteen roles crawled; zero broken pages; duplicates retired with redirects.</small></div>
+  </div>
+
+  <h3>Demo and deployment</h3>
+  <p>The project stays on a local machine by choice: no Docker, no GPU, no paid hosting. For a presentation, a one-command script opens a Cloudflare tunnel from the laptop and prints a public HTTPS link, so an audience can use every feature — including the image models — from their phones. Free cloud tiers were evaluated and documented honestly: none of them can host the model stack for free, and Hugging Face Spaces becomes an option once the account meets its age requirement. Three prepared demo patients (a pharmacology case, two dermatology cases) and a click-through radiology case, plus illustrated Arabic role guides and a judging walkthrough, make the demonstration repeatable in minutes.</p>
+
+  <h3>Known limits</h3>
+  <ul>
+    <li>The imaging models are research-grade decision support, not medical devices; thresholds and labels come from their authors' test sets, and the interface says so on every result.</li>
+    <li>The head-CT sequence model (LSTM stage) is not installed; series are scored by the convolutional model alone until the checkpoint is added.</li>
+    <li>DDInter is licensed for non-commercial use; a commercial deployment would need a licensed interaction source.</li>
+    <li>The built-in development server and SQLite are suitable for demonstration; production needs a WSGI server and PostgreSQL, both already supported by configuration.</li>
+  </ul>
+
+  <h3>What comes next</h3>
+  <p>The natural extensions are the ones the architecture already anticipates: a real head-CT series for the fifth model, local accuracy monitoring of each model on the hospital's own confirmed cases, FHIR export of the record (a read-only FHIR surface exists), and a grounded clinical-reasoning engine in which every generated claim is checked against the chart before it is shown. Each of these builds on the same principle that shaped everything else in iHIS: <b>the clinician decides; the system makes sure the decision is informed, traceable and safe.</b></p>
+  <div class="foot">How iHIS Was Built · page 5 of 5</div>
+</section>
+
+</body>
+</html>
