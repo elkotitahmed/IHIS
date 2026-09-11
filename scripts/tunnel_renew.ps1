@@ -41,7 +41,7 @@ if (-not $bin) {
 }
 
 # 3. restart the quick tunnel until the random name is presentable
-$bad = 'underwear|terror|sex|kill|drug|naked|porn|dead|death|mortal|sacrifice|mating|hell|damn|war|gun|bomb|fatal|disease|cancer|suicide|abuse|blood|corpse'
+$bad = 'underwear|terror|sex|kill|drug|naked|porn|dead|death|mortal|sacrifice|mating|hell|damn|war|gun|bomb|fatal|disease|cancer|suicide|abuse|blood|corpse|toilet|butt|poop|crap|pee|sewage|vomit|drunk|nude|breast|genital|ugly|stupid'
 $log = Join-Path $env:TEMP 'ihis_cloudflared.log'
 $url = $null
 for ($try = 1; $try -le $MaxTries; $try++) {
@@ -66,6 +66,7 @@ if (-not $url) { throw "Could not obtain a tunnel URL (see $log)." }
 
 # 4. verify from outside (a brand-new name can take up to a minute to appear in DNS), print, copy, remember
 $code = -1
+Start-Sleep -Seconds 15      # let the new name reach public DNS before the first lookup (avoids a cached "no such host")
 for ($i = 0; $i -lt 8; $i++) {
     try { $code = (Invoke-WebRequest -Uri "$url/auth/login" -UseBasicParsing -TimeoutSec 20).StatusCode; break } catch { Start-Sleep -Seconds 8 }
 }
