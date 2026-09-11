@@ -23,3 +23,5 @@ select all 24 `.dcm` files for series mode, or one file for slice mode. The mode
 whatever the ConvNeXt-Tiny / Swin-Tiny classifiers return; nothing is hard-coded. Note: this series is a
 synthetic phantom (uniform disc with a marker), not a patient head, so the two models disagree on it;
 real non-contrast head CT DICOMs give meaningful calls.
+
+| head_ct/head_ct_case1_mahmoud.jpg, head_ct_case2_nadia.jpg, head_ct_case3_ahmed.jpg | Axial non-contrast head CT slices supplied by the project team for the three emergency cases in `scripts/seed_head_ct_cases.py` (JPEG exports, not DICOM; case 1 carries a stock-photo watermark) | supplied by the project team for demonstration; no patient of this hospital |
